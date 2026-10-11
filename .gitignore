@@ -1,0 +1,23 @@
+# Python / backend
+venv/
+backend/venv/
+__pycache__/
+*.pyc
+backend/db.sqlite3
+backend/logs/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Variables d'environnement (secrets)
+.env
+
+# Paquets hors-ligne téléchargés (voir DEPLOY.md)
+deploy/offline_packages/
+
+# OS / éditeurs
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

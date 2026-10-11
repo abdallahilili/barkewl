@@ -1,0 +1,315 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { @apply text-slate-800; }
+  body { @apply bg-slate-50 antialiased; }
+  h1, h2, h3 { @apply text-slate-900; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-marque-600; }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primaire { @apply btn bg-marque-600 text-white hover:bg-marque-700; }
+  .btn-secondaire { @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50; }
+  .btn-succes { @apply btn bg-emerald-600 text-white hover:bg-emerald-700; }
+  .btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
+  .btn-discret { @apply btn text-slate-600 hover:bg-slate-100; }
+  .btn-petit { @apply px-2.5 py-1.5 text-xs; }
+  .champ { @apply block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-marque-600 focus:outline-none focus:ring-1 focus:ring-marque-600 disabled:bg-slate-100; }
+  .carte { @apply rounded-lg border border-slate-200 bg-white; }
+  .etiquette { @apply mb-1 block text-sm font-medium text-slate-700; }
+  .lien { @apply text-marque-700 hover:underline; }
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .zone-impression, .zone-impression * { visibility: visible; }
+  .zone-impression { position: fixed; left: 0; top: 0; width: 100%; box-shadow: none !important; border: 0 !important; }
+  .sans-impression { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RECEIPT STYLES — Black & white receipt for half-A4 on A4 page
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Main container */
+.recu-conteneur {
+  width: 100%;
+  max-width: 194mm;
+  margin: 0 auto;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #000;
+}
+
+/* Outer frame — fills top half of A4 with rounded border */
+.recu-cadre {
+  border: 1.75px solid #000;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: #fff;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+}
+
+/* ── Header: logo & name left, address & phone list right ── */
+.recu-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 9px;
+  border-bottom: 1.5px solid #000;
+}
+.recu-entete-gauche {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.recu-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.recu-icone-pharmacie {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000;
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: #000;
+}
+.recu-pharmacie-nom {
+  font-size: 18px;
+  font-weight: 900;
+  color: #000;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.2;
+}
+.recu-entete-droite {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+  font-size: 11px;
+}
+.recu-entete-ligne {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+.recu-entete-label {
+  font-weight: 700;
+  color: #000;
+}
+.recu-entete-valeur {
+  font-weight: 500;
+  color: #111;
+}
+
+/* ── Info grid: 2 columns, clean alignment without dotted lines ── */
+.recu-info-grille {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 28px;
+  padding: 9px 0;
+  border-bottom: 1px solid #111;
+  margin-bottom: 9px;
+}
+.recu-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.recu-info-ligne {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.recu-info-label {
+  font-weight: 700;
+  color: #000;
+  min-width: 62px;
+}
+.recu-info-valeur {
+  font-weight: 600;
+  color: #111;
+}
+
+/* ── Cancelled banner ── */
+.recu-annulee {
+  text-align: center;
+  font-weight: 900;
+  font-size: 13px;
+  color: #000;
+  border: 2px solid #000;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+
+/* ── Items table with rounded corners ── */
+.recu-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1.25px solid #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.recu-th {
+  background: #000;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 5px 8px;
+  border: none;
+}
+.recu-th-gauche { text-align: left; }
+.recu-th-centre { text-align: center; }
+.recu-th-droite { text-align: right; }
+
+.recu-td {
+  padding: 5px 8px;
+  font-size: 11.5px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #000;
+}
+.recu-tr-alt {
+  background: #f9fafb;
+}
+.recu-table tbody tr:last-child .recu-td {
+  border-bottom: none;
+}
+.recu-td-centre { text-align: center; }
+.recu-td-droite { text-align: right; }
+.recu-td-gras { font-weight: 700; }
+.recu-td-nom { vertical-align: middle; }
+.recu-med-nom { font-weight: 600; }
+.recu-med-dosage {
+  font-weight: 400;
+  color: #4b5563;
+  font-size: 10.5px;
+}
+
+/* ── Total box ── */
+.recu-total-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1.5px solid #000;
+  border-radius: 8px;
+  padding: 7px 12px;
+  margin-top: 8px;
+  background: #fff;
+}
+.recu-total-label {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.recu-total-montant {
+  font-size: 16px;
+  font-weight: 900;
+  color: #000;
+  letter-spacing: 0.5px;
+}
+
+/* ── Payment section: aligned to the right under total ── */
+.recu-paiement-section {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-end;
+  gap: 2px;
+  min-width: 180px;
+  margin-top: 6px;
+  padding-right: 4px;
+}
+.recu-paiement-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 11px;
+}
+.recu-paiement-mode {
+  font-weight: 600;
+  color: #1f2937;
+}
+.recu-paiement-montant {
+  font-weight: 800;
+  color: #000;
+}
+
+/* ── Footer message: alone at the bottom ── */
+.recu-pied-message {
+  margin-top: auto;
+  padding-top: 10px;
+  text-align: center;
+  width: 100%;
+}
+.recu-message {
+  font-size: 11px;
+  color: #374151;
+  font-style: italic;
+  margin: 0;
+  text-align: center;
+}
+
+/* ══════════════════════════════════════════
+   PRINT — A4 page, receipt = top half
+   ══════════════════════════════════════════ */
+@media print {
+  html, body {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+  .recu-conteneur {
+    max-width: 100% !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .recu-cadre {
+    min-height: 130mm !important;
+    max-height: 138mm !important;
+    border: 1.75px solid #000 !important;
+    border-radius: 12px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .recu-th {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .recu-tr-alt {
+    background: #f9fafb !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+
+
