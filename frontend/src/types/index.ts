@@ -46,6 +46,7 @@ export interface Medicament {
   stock_minimum: number
   actif: boolean
   stock_total: number
+  frequence_vente: number
 }
 
 export interface Lot {
@@ -276,6 +277,7 @@ export interface ResultatCaisse {
   prix_vente: number
   stock_disponible: number
   prochaine_peremption: string | null
+  frequence_vente: number
 }
 
 export interface Parametre { cle: string; valeur: string; description: string }

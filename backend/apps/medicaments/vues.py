@@ -77,24 +77,29 @@ class MedicamentViewSet(ViewSetGestion):
 
     @action(detail=False, methods=["get"], url_path="recherche-caisse")
     def recherche_caisse(self, request):
-        """Recherche rapide pour la caisse : nom, nom générique, code, code-barres."""
+        """Recherche rapide pour la caisse : nom, nom générique, code, code-barres.
+        Sans terme de recherche, renvoie les médicaments les plus vendus (frequence_vente)."""
         from apps.stock.models import Stock
 
         terme = request.query_params.get("q", "").strip()
-        if not terme:
-            return Response([])
         depot_id = request.query_params.get("depot")
         aujourdhui = timezone.localdate()
-        candidats = list(
-            Medicament.objects.filter(actif=True).filter(
-                Q(nom__icontains=terme) | Q(nom_generique__icontains=terme)
-                | Q(code__icontains=terme) | Q(code_barre=terme)
-            )[:30]
-        )
-        exacts = [m for m in candidats if terme in (m.code_barre, m.code)]
-        debutent = [m for m in candidats if m not in exacts and m.nom.lower().startswith(terme.lower())]
-        autres = [m for m in candidats if m not in exacts and m not in debutent]
-        medicaments = (exacts + debutent + autres)[:20]
+
+        if terme:
+            candidats = list(
+                Medicament.objects.filter(actif=True).filter(
+                    Q(nom__icontains=terme) | Q(nom_generique__icontains=terme)
+                    | Q(code__icontains=terme) | Q(code_barre=terme)
+                )[:30]
+            )
+            exacts = [m for m in candidats if terme in (m.code_barre, m.code)]
+            debutent = [m for m in candidats if m not in exacts and m.nom.lower().startswith(terme.lower())]
+            autres = [m for m in candidats if m not in exacts and m not in debutent]
+            medicaments = (exacts + debutent + autres)[:20]
+        else:
+            medicaments = list(
+                Medicament.objects.filter(actif=True).order_by("-frequence_vente", "nom")
+            )
 
         stocks = Stock.objects.filter(
             lot__medicament__in=medicaments, quantite__gt=0, lot__date_peremption__gte=aujourdhui
@@ -116,6 +121,7 @@ class MedicamentViewSet(ViewSetGestion):
                     "prix_vente": lots[0].lot.prix_vente_effectif if lots else m.prix_vente,
                     "stock_disponible": sum(s.quantite for s in lots),
                     "prochaine_peremption": lots[0].lot.date_peremption if lots else None,
+                    "frequence_vente": m.frequence_vente,
                 }
             )
         return Response(resultat)

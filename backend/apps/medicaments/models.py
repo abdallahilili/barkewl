@@ -30,6 +30,9 @@ class Medicament(models.Model):
     prix_achat = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     prix_vente = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     stock_minimum = models.PositiveIntegerField(default=0)
+    frequence_vente = models.PositiveIntegerField(
+        default=0, help_text="Quantité totale vendue (cumulée à chaque vente, utilisée pour le classement des médicaments les plus vendus)."
+    )
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)

@@ -173,7 +173,7 @@
   overflow: hidden;
 }
 .recu-th {
-  background: #000;
+  background: #6b7280;
   color: #fff;
   font-size: 10.5px;
   font-weight: 800;
@@ -299,7 +299,7 @@
     print-color-adjust: exact !important;
   }
   .recu-th {
-    background: #000 !important;
+    background: #6b7280 !important;
     color: #fff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

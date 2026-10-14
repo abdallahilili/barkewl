@@ -46,7 +46,7 @@ function SelectSource({ source, valeur, onChange, vide, disabled }: {
   )
 }
 
-function ChampFormulaire({ def, formulaire, maj, erreur, enEdition }: {
+export function ChampFormulaire({ def, formulaire, maj, erreur, enEdition }: {
   def: ChampDef; formulaire: Formulaire; maj: (nom: string, v: Valeur) => void; erreur?: string; enEdition: boolean
 }) {
   const valeur = formulaire[def.nom]
@@ -85,6 +85,20 @@ function ChampFormulaire({ def, formulaire, maj, erreur, enEdition }: {
       {entree}
     </Champ>
   )
+}
+
+export function construireCharge(champs: ChampDef[], formulaire: Formulaire, enEdition: boolean): Record<string, unknown> {
+  const charge: Record<string, unknown> = {}
+  for (const c of champs) {
+    if (c.masque && !c.masque(formulaire, enEdition)) continue
+    const v = formulaire[c.nom]
+    if (c.type === 'motdepasse' && enEdition && !v) continue
+    if (c.type === 'nombre' || c.type === 'decimal') charge[c.nom] = v === '' || v == null ? (c.requis ? v : null) : Number(v)
+    else if (c.type === 'date') charge[c.nom] = v || null
+    else if (c.type === 'select') charge[c.nom] = v === '' || v == null ? null : (c.options?.some((o) => typeof o.valeur === 'string') ? v : Number(v))
+    else charge[c.nom] = v
+  }
+  return charge
 }
 
 interface Props<T extends { id: number }> {
@@ -136,16 +150,7 @@ export function PageCrud<T extends { id: number }>({
   const soumettre = async (e: FormEvent) => {
     e.preventDefault()
     setEnvoi(true); setErreurs({}); setErreurGlobale(null)
-    const charge: Record<string, unknown> = {}
-    for (const c of champs) {
-      if (c.masque && !c.masque(formulaire, !!enEdition)) continue
-      const v = formulaire[c.nom]
-      if (c.type === 'motdepasse' && enEdition && !v) continue
-      if (c.type === 'nombre' || c.type === 'decimal') charge[c.nom] = v === '' || v == null ? (c.requis ? v : null) : Number(v)
-      else if (c.type === 'date') charge[c.nom] = v || null
-      else if (c.type === 'select') charge[c.nom] = v === '' || v == null ? null : (c.options?.some((o) => typeof o.valeur === 'string') ? v : Number(v))
-      else charge[c.nom] = v
-    }
+    const charge = construireCharge(champs, formulaire, !!enEdition)
     try {
       if (enEdition) await api.patch(`${endpoint}${enEdition.id}/`, charge)
       else await api.post(endpoint, charge)

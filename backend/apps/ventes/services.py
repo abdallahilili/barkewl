@@ -2,6 +2,8 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import F
+from django.db.models.functions import Greatest
 from django.utils import timezone
 
 from apps.caisse.models import (
@@ -73,6 +75,7 @@ def creer_vente(*, utilisateur, articles, paiements, client=None, montant_recu=N
                                   prix_unitaire=l["prix_unitaire"], total=l["total"])
         appliquer_mouvement(lot=l["lot"], depot=depot, quantite=-l["quantite"], type_mouvement=TypeMouvement.VENTE,
                             utilisateur=utilisateur, motif="Vente", reference=vente.reference)
+        Medicament.objects.filter(pk=l["medicament"].pk).update(frequence_vente=F("frequence_vente") + l["quantite"])
     for p in paiements:
         PaiementVente.objects.create(vente=vente, mode_paiement=p["mode_paiement"], montant=p["montant"],
                                      reference_transaction=p.get("reference_transaction", ""))
@@ -101,6 +104,9 @@ def annuler_vente(vente_id, utilisateur, motif):
     for ligne in vente.lignes.select_related("lot__medicament"):
         appliquer_mouvement(lot=ligne.lot, depot=vente.depot, quantite=ligne.quantite, type_mouvement=TypeMouvement.RETOUR,
                             utilisateur=utilisateur, motif=f"Annulation de la vente {vente.reference}", reference=vente.reference)
+        Medicament.objects.filter(pk=ligne.lot.medicament_id).update(
+            frequence_vente=Greatest(F("frequence_vente") - ligne.quantite, 0)
+        )
     for paiement in vente.paiements.select_related("mode_paiement"):
         MouvementCaisse.objects.create(
             session=session_cible, type_mouvement=TypeMouvementCaisse.REMBOURSEMENT, mode_paiement=paiement.mode_paiement,

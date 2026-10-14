@@ -27,8 +27,21 @@ function FormulaireEntree({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
   const depots = useOptions<Depot>('/depots/', { actif: 1 })
   const vide = { medicament: null as { id: number; nom: string } | null, numero_lot: '', date_fabrication: '', date_peremption: '', depot: '', quantite: '', prix_achat: '', prix_vente: '', motif: 'RETOUR_CLIENT', note: '' }
   const [f, setF] = useState(vide)
+  const [venteManuelle, setVenteManuelle] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [erreurs, setErreurs] = useState<Record<string, string>>({})
+
+  // Suggestion automatique du prix de vente du lot : +25% si prix d'achat < 200, +15% au-delà.
+  const prixAchatChange = (valeur: string) => {
+    const achat = Number(valeur)
+    if (!venteManuelle && valeur !== '' && !Number.isNaN(achat)) {
+      const taux = achat < 200 ? 0.25 : 0.15
+      const vente = Math.round(achat * (1 + taux) * 100) / 100
+      setF((p) => ({ ...p, prix_achat: valeur, prix_vente: String(vente) }))
+    } else {
+      setF((p) => ({ ...p, prix_achat: valeur }))
+    }
+  }
 
   const soumettre = async (e: FormEvent) => {
     e.preventDefault()
@@ -40,7 +53,7 @@ function FormulaireEntree({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
         prix_vente: f.prix_vente === '' ? null : Number(f.prix_vente), motif: f.motif, note: f.note,
       })
       notifier.succes('Entrée en stock enregistrée.')
-      setF(vide); onFermer(); apres()
+      setF(vide); setVenteManuelle(false); onFermer(); apres()
     } catch (err) { setErreur(extraireErreur(err)); setErreurs(erreursParChamp(err)) }
   }
 
@@ -62,8 +75,10 @@ function FormulaireEntree({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
           <Champ libelle="Motif" requis>
             <select className="champ" value={f.motif} onChange={(e) => setF({ ...f, motif: e.target.value })}>{motifsEntree.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select>
           </Champ>
-          <Champ libelle="Prix d'achat" aide="Utilisé si le lot est nouveau."><input className="champ" type="number" min={0} step="0.01" value={f.prix_achat} onChange={(e) => setF({ ...f, prix_achat: e.target.value })} /></Champ>
-          <Champ libelle="Prix de vente du lot" aide="Vide = prix du médicament."><input className="champ" type="number" min={0} step="0.01" value={f.prix_vente} onChange={(e) => setF({ ...f, prix_vente: e.target.value })} /></Champ>
+          <Champ libelle="Prix d'achat" aide="Utilisé si le lot est nouveau."><input className="champ" type="number" min={0} step="0.01" value={f.prix_achat} onChange={(e) => prixAchatChange(e.target.value)} /></Champ>
+          <Champ libelle="Prix de vente du lot" aide="Calculé automatiquement (+25% si < 200, +15% sinon) — modifiable.">
+            <input className="champ" type="number" min={0} step="0.01" value={f.prix_vente} onChange={(e) => { setVenteManuelle(true); setF({ ...f, prix_vente: e.target.value }) }} />
+          </Champ>
           <Champ libelle="Note" className="sm:col-span-2"><input className="champ" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Champ>
         </div>
       </form>

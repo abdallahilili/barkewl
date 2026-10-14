@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, Boxes, Lock, Pill, ShieldCheck, ShoppingCart, Truck, User } from 'lucide-react'
+import { ArrowRight, BarChart3, Boxes, Eye, EyeOff, Lock, Pill, ShieldCheck, ShoppingCart, Truck, User } from 'lucide-react'
 import { FormEvent, useEffect, useState } from 'react'
 import { MessageErreur } from '../composants/EnTetePage'
 import { useAuth } from '../hooks/useAuth'
@@ -11,6 +11,7 @@ export default function Connexion() {
   const [motDePasse, setMotDePasse] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
+  const [afficherMotDePasse, setAfficherMotDePasse] = useState(false)
   const [identite, setIdentite] = useState<{ nom: string; logo: string } | null>(null)
 
   useEffect(() => {
@@ -105,14 +106,32 @@ export default function Connexion() {
                   <label className="etiquette" htmlFor="identifiant">Identifiant</label>
                   <div className="relative">
                     <User size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input id="identifiant" className="champ bg-slate-50 py-2.5 pl-10" value={identifiant} onChange={(e) => setIdentifiant(e.target.value)} autoComplete="username" autoFocus required />
+                    <input id="identifiant" className="champ bg-slate-50 py-2.5 pl-10" placeholder="Votre identifiant" value={identifiant} onChange={(e) => setIdentifiant(e.target.value)} autoComplete="username" autoFocus required />
                   </div>
                 </div>
                 <div>
                   <label className="etiquette" htmlFor="mot-de-passe">Mot de passe</label>
                   <div className="relative">
                     <Lock size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input id="mot-de-passe" className="champ bg-slate-50 py-2.5 pl-10" type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} autoComplete="current-password" required />
+                    <input
+                      id="mot-de-passe"
+                      className="champ bg-slate-50 py-2.5 pl-10 pr-10"
+                      type={afficherMotDePasse ? 'text' : 'password'}
+                      placeholder="Votre mot de passe"
+                      value={motDePasse}
+                      onChange={(e) => setMotDePasse(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAfficherMotDePasse((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={afficherMotDePasse ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                      tabIndex={-1}
+                    >
+                      {afficherMotDePasse ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
                   </div>
                 </div>
                 <button className="btn-primaire group w-full py-2.5" disabled={envoi}>

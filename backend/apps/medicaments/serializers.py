@@ -23,9 +23,9 @@ class MedicamentSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):
         fields = [
             "id", "nom", "nom_generique", "code", "code_barre", "categorie", "categorie_nom",
             "forme", "dosage", "unite", "laboratoire", "emplacement", "prix_achat", "prix_vente",
-            "stock_minimum", "actif", "stock_total", "date_creation", "date_modification",
+            "stock_minimum", "actif", "stock_total", "frequence_vente", "date_creation", "date_modification",
         ]
-        read_only_fields = ["date_creation", "date_modification"]
+        read_only_fields = ["frequence_vente", "date_creation", "date_modification"]
 
     def validate_code_barre(self, valeur):
         valeur = (valeur or "").strip()

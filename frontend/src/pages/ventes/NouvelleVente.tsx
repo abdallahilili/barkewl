@@ -47,7 +47,14 @@ export default function NouvelleVente() {
   }, [])
 
   useEffect(() => {
-    if (!session || !texte.trim()) { setResultats([]); return }
+    if (!session) { setResultats([]); return }
+    if (!texte.trim()) {
+      // Pas de recherche en cours : on affiche les médicaments les plus vendus.
+      setRecherche(true)
+      api.get<ResultatCaisse[]>('/medicaments/recherche-caisse/', { params: { depot: session.depot } })
+        .then((r) => setResultats(r.data)).catch(() => setResultats([])).finally(() => setRecherche(false))
+      return
+    }
     const t = setTimeout(() => {
       setRecherche(true)
       api.get<ResultatCaisse[]>('/medicaments/recherche-caisse/', { params: { q: texte.trim(), depot: session.depot } })
@@ -160,7 +167,12 @@ export default function NouvelleVente() {
               placeholder="Scannez un code-barres ou tapez le nom du médicament…" aria-label="Recherche de médicament" />
             {recherche && <span className="absolute right-3 top-3.5 text-xs text-slate-400">Recherche…</span>}
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {resultats.length > 0 && (
+            <p className="mb-2 mt-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+              {texte.trim() ? 'Résultats' : 'Tous les médicaments (les plus vendus en premier)'}
+            </p>
+          )}
+          <div className="grid gap-2 sm:grid-cols-2">
             {resultats.map((r) => (
               <button key={r.id} onClick={() => ajouter(r)} disabled={r.stock_disponible <= 0}
                 className="carte flex items-start justify-between gap-2 p-3 text-left hover:border-marque-500 disabled:cursor-not-allowed disabled:opacity-60">
@@ -173,6 +185,7 @@ export default function NouvelleVente() {
                     </span>
                   )}
                   {r.prochaine_peremption && <span className="block text-xs text-slate-400">Péremption : {formaterDate(r.prochaine_peremption)}</span>}
+                  {r.frequence_vente > 0 && <span className="block text-xs text-slate-400">Vendu {formaterNombre(r.frequence_vente)} fois</span>}
                 </span>
                 <span className="shrink-0 text-right">
                   <span className="block font-semibold">{formaterMontant(r.prix_vente)}</span>

@@ -1,7 +1,8 @@
-import { X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
 import type { Medicament, ReponsePaginee } from '../types'
+import { ModaleNouveauMedicament } from './ModaleNouveauMedicament'
 
 export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Rechercher un médicament (nom, code, code-barres)…' }: {
   valeur: { id: number; nom: string } | null
@@ -12,6 +13,7 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Recherch
   const [resultats, setResultats] = useState<Medicament[]>([])
   const [ouvert, setOuvert] = useState(false)
   const [actif, setActif] = useState(0)
+  const [ajoutOuvert, setAjoutOuvert] = useState(false)
   const conteneur = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -62,8 +64,17 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Recherch
               </button>
             </li>
           ))}
+          <li className="border-t border-slate-100">
+            <button type="button" onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { setAjoutOuvert(true); setOuvert(false) }}
+              className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium text-marque-700 hover:bg-marque-50">
+              <Plus size={14} /> {texte.trim() ? `Ajouter « ${texte.trim()} » comme nouveau médicament` : 'Ajouter un nouveau médicament'}
+            </button>
+          </li>
         </ul>
       )}
+      <ModaleNouveauMedicament ouverte={ajoutOuvert} nomInitial={texte.trim()} onFermer={() => setAjoutOuvert(false)}
+        onCree={(m) => { choisir(m); setAjoutOuvert(false) }} />
     </div>
   )
 }
