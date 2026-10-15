@@ -185,6 +185,57 @@ export interface Achat {
   lignes?: LigneAchat[]
 }
 
+export type EtapeDocumentVente = 'DEVIS' | 'BON_LIVRAISON' | 'FACTURE'
+
+export interface LigneDocumentVente {
+  id?: number
+  medicament: number | null
+  medicament_nom?: string
+  medicament_prix_achat?: number
+  unite?: string
+  designation?: string
+  quantite_devis: number
+  quantite_livree?: number
+  prix_unitaire: number
+  total?: number
+}
+
+export interface PaiementFactureVente {
+  id: number
+  montant: number
+  mode_paiement: number
+  mode_paiement_nom: string
+  utilisateur_nom: string
+  date_paiement: string
+}
+
+export interface DocumentVente {
+  id: number
+  reference: string
+  client: number
+  client_nom: string
+  client_telephone: string
+  client_adresse: string
+  depot: number
+  depot_nom: string
+  personnel_nom: string
+  etape: EtapeDocumentVente
+  etape_libelle: string
+  annule: boolean
+  numero_bl: string
+  numero_facture: string
+  date_devis: string
+  date_bl: string | null
+  date_facture: string | null
+  total: number
+  montant_paye: number
+  reste_a_payer: number
+  note?: string
+  lignes?: LigneDocumentVente[]
+  paiements?: PaiementFactureVente[]
+  pharmacie?: IdentiteDocumentVente
+}
+
 export interface ResumeSession {
   nombre_ventes: number
   total_ventes: number
@@ -240,21 +291,38 @@ export interface Vente {
   paiements?: { id: number; mode_paiement_nom: string; montant: number }[]
 }
 
+/** Coordonnées de la pharmacie imprimées en en-tête des reçus et documents de vente. */
+export interface IdentiteDocument {
+  nom: string
+  adresse: string
+  telephone: string
+  telephone_2?: string
+  telephone_3?: string
+  whatsapp?: string
+  whatsapp_2?: string
+  email?: string
+  nif?: string
+  devise: string
+  message: string
+  logo: string
+  /** Image d'en-tête personnalisée (data URL) ; vide = en-tête par défaut (logo, nom, contacts). */
+  entete_image?: string
+}
+
+export interface IdentiteDocumentVente extends IdentiteDocument {
+  message_devis: string
+  message_bl: string
+  message_facture: string
+  /** Bon de livraison : afficher les colonnes Prix et Total. */
+  bl_afficher_prix: boolean
+}
+
 export interface Recu {
   id: number
   reference: string
   date_vente: string
   statut: string
-  pharmacie: {
-    nom: string
-    adresse: string
-    telephone: string
-    telephone_2?: string
-    telephone_3?: string
-    devise: string
-    message: string
-    logo: string
-  }
+  pharmacie: IdentiteDocument
   client: string | null
   caissier: string
   depot: string

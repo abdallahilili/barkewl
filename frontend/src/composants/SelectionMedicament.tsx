@@ -58,9 +58,12 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Recherch
           {resultats.map((m, i) => (
             <li key={m.id}>
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => choisir(m)}
-                className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${i === actif ? 'bg-marque-50' : 'hover:bg-slate-50'}`}>
-                <span>{m.nom} <span className="text-slate-500">{m.dosage} {m.forme}</span></span>
-                <span className="text-xs text-slate-400">{m.code}</span>
+                className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm ${i === actif ? 'bg-marque-50' : 'hover:bg-slate-50'}`}>
+                <span className="w-full truncate font-medium">{m.nom}</span>
+                <span className="flex w-full items-center justify-between gap-2 text-xs text-slate-500">
+                  <span className="truncate">{m.dosage} {m.forme}</span>
+                  <span className="shrink-0 whitespace-nowrap text-slate-400">{m.code}</span>
+                </span>
               </button>
             </li>
           ))}

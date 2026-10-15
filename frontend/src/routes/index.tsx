@@ -7,6 +7,8 @@ import Parametres from '../pages/administration/Parametres'
 import HistoriqueSessions from '../pages/caisse/HistoriqueSessions'
 import SessionActuelle from '../pages/caisse/SessionActuelle'
 import Depots from '../pages/Depots'
+import DocumentVenteDetail from '../pages/facturation/DocumentVenteDetail'
+import Facturation from '../pages/facturation/Facturation'
 import Categories from '../pages/medicaments/Categories'
 import Lots from '../pages/medicaments/Lots'
 import Medicaments from '../pages/medicaments/Medicaments'
@@ -45,6 +47,9 @@ export const routesProtegees: RouteProtegee[] = [
   { chemin: '/achats/nouveau', module: 'achats', element: <AchatDetail /> },
   { chemin: '/achats/:id', module: 'achats', element: <AchatDetail /> },
   { chemin: '/fournisseurs', module: 'achats', element: <Fournisseurs /> },
+  { chemin: '/facturation', module: 'facturation', element: <Facturation /> },
+  { chemin: '/facturation/nouveau', module: 'facturation', element: <DocumentVenteDetail /> },
+  { chemin: '/facturation/:id', module: 'facturation', element: <DocumentVenteDetail /> },
   { chemin: '/caisse', module: 'caisse', element: <SessionActuelle /> },
   { chemin: '/caisse/historique', module: 'caisse', element: <HistoriqueSessions /> },
   { chemin: '/depots', module: 'depots', element: <Depots /> },

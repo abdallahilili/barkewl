@@ -4,7 +4,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.caisse.models import ModePaiement
-from apps.commun.parametres import obtenir_parametre
+from apps.commun.parametres import identite_documents
 from apps.medicaments.models import Medicament
 
 from .models import Client, LigneVente, PaiementVente, Vente
@@ -108,14 +108,7 @@ def construire_recu(vente):
         "reference": vente.reference,
         "date_vente": vente.date_vente,
         "statut": vente.statut,
-        "pharmacie": {
-            "nom": obtenir_parametre("nom_pharmacie"), "adresse": obtenir_parametre("adresse_pharmacie"),
-            "telephone": obtenir_parametre("telephone_pharmacie"),
-            "telephone_2": obtenir_parametre("telephone_pharmacie_2"),
-            "telephone_3": obtenir_parametre("telephone_pharmacie_3"),
-            "devise": obtenir_parametre("devise"),
-            "message": obtenir_parametre("message_recu"), "logo": obtenir_parametre("logo_pharmacie"),
-        },
+        "pharmacie": identite_documents(),
         "client": vente.client.nom if vente.client else None,
         "caissier": vente.caissier.nom_complet,
         "depot": vente.depot.nom,

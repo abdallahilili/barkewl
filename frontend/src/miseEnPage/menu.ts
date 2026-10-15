@@ -44,6 +44,12 @@ export const menu: GroupeMenu[] = [
     ],
   },
   {
+    titre: 'Facturation',
+    elements: [
+      { libelle: 'Devis / BL / Factures', chemin: '/facturation', module: 'facturation', icone: FileText },
+    ],
+  },
+  {
     titre: 'Caisse',
     elements: [
       { libelle: 'Session actuelle', chemin: '/caisse', module: 'caisse', icone: Wallet },

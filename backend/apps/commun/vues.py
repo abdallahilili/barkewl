@@ -7,7 +7,7 @@ from .audit import enregistrer_audit
 from .constantes import TOUS_LES_ROLES
 from .exceptions import ErreurMetier
 from .models import JournalAudit
-from .parametres import DEFAUTS, definir_parametre, obtenir_parametre
+from .parametres import DEFAUTS, PARAMETRES_IMAGE, definir_parametre, obtenir_parametre
 from .serializers import JournalAuditSerializer
 from .vues_base import ViewSetLecture
 
@@ -46,8 +46,8 @@ class ParametresView(APIView):
                 if cle == "jours_alerte_peremption" and (not str(valeur).isdigit() or int(valeur) < 1):
                     raise ErreurMetier("Le nombre de jours doit être un entier positif.")
                 definir_parametre(cle, valeur)
-                resume = "(image)" if cle == "logo_pharmacie" else str(valeur)
-                resume_ancienne = "(image)" if cle == "logo_pharmacie" and ancienne else ancienne
+                resume = "(image)" if cle in PARAMETRES_IMAGE and valeur else str(valeur)
+                resume_ancienne = "(image)" if cle in PARAMETRES_IMAGE and ancienne else ancienne
                 enregistrer_audit(
                     request.user, "MODIFICATION", "Parametre", cle, reference=cle,
                     ancienne={"valeur": resume_ancienne}, nouvelle={"valeur": resume},

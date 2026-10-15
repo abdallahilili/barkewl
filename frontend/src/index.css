@@ -57,6 +57,11 @@
   min-height: 480px;
 }
 
+/* Variante pleine page (Devis / BL / Facture) au lieu du demi-A4 des reçus de caisse */
+.recu-cadre--pleine-page {
+  min-height: 900px;
+}
+
 /* ── Header: logo & name left, address & phone list right ── */
 .recu-entete {
   display: flex;
@@ -267,12 +272,28 @@
   text-align: center;
   width: 100%;
 }
+/* Message du pied : retours à la ligne respectés, mise en forme libre (texte riche des paramètres) */
 .recu-message {
   font-size: 11px;
   color: #374151;
   font-style: italic;
   margin: 0;
   text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.recu-message p, .recu-message div { margin: 0; }
+
+/* ── Header: image d'en-tête personnalisée (téléversée dans les paramètres) ── */
+.recu-entete-personnalise {
+  padding-bottom: 9px;
+  border-bottom: 1.5px solid #000;
+}
+.recu-entete-image {
+  display: block;
+  width: 100%;
+  max-height: 130px;
+  object-fit: contain;
 }
 
 /* ══════════════════════════════════════════
@@ -297,6 +318,11 @@
     border-radius: 12px !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+  /* Devis / BL / Facture : document complet, pas un demi-reçu */
+  .recu-cadre--pleine-page {
+    min-height: 277mm !important;
+    max-height: none !important;
   }
   .recu-th {
     background: #6b7280 !important;

@@ -1,6 +1,7 @@
 import { Printer } from 'lucide-react'
 import type { Recu } from '../types'
 import { formaterDateHeure, formaterNombre } from '../utilitaires/formatage'
+import { EnTeteDocument, MessagePied } from './EnTeteDocument'
 import { Modale } from './Modale'
 
 export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer: () => void }) {
@@ -29,46 +30,7 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
             {/* ── Outer frame = top half of A4 with rounded border ── */}
             <div className="recu-cadre">
 
-              {/* ── Header: logo & name left, address & phone list right ── */}
-              {(() => {
-                const telephones = [
-                  recu.pharmacie.telephone,
-                  recu.pharmacie.telephone_2,
-                  recu.pharmacie.telephone_3,
-                ].filter(Boolean) as string[]
-
-                return (
-                  <div className="recu-entete">
-                    <div className="recu-entete-gauche">
-                      {recu.pharmacie.logo ? (
-                        <img src={recu.pharmacie.logo} alt="" className="recu-logo" />
-                      ) : (
-                        <div className="recu-icone-pharmacie">
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 2v20M2 12h20" />
-                          </svg>
-                        </div>
-                      )}
-                      <h1 className="recu-pharmacie-nom">{recu.pharmacie.nom}</h1>
-                    </div>
-
-                    <div className="recu-entete-droite">
-                      {recu.pharmacie.adresse && (
-                        <div className="recu-entete-ligne">
-                          <span className="recu-entete-label">Adresse :</span>
-                          <span className="recu-entete-valeur">{recu.pharmacie.adresse}</span>
-                        </div>
-                      )}
-                      {telephones.map((tel, idx) => (
-                        <div key={idx} className="recu-entete-ligne">
-                          <span className="recu-entete-label">{telephones.length === 1 ? 'Tél :' : `Tél ${idx + 1} :`}</span>
-                          <span className="recu-entete-valeur">{tel}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
+              <EnTeteDocument identite={recu.pharmacie} />
 
               {/* ── Info grid: 2 columns, clean labels & values without dotted lines ── */}
               <div className="recu-info-grille">
@@ -152,12 +114,7 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
                 )}
               </div>
 
-              {/* ── Footer message: alone at the bottom ── */}
-              {recu.pharmacie.message && (
-                <div className="recu-pied-message">
-                  <p className="recu-message">{recu.pharmacie.message}</p>
-                </div>
-              )}
+              <MessagePied message={recu.pharmacie.message} />
 
             </div>
           </div>

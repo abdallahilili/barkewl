@@ -17,10 +17,10 @@ TOUS_LES_ROLES = (ADMIN, CAISSIER, MAGASINIER)
 MODULES_PAR_ROLE = {
     ADMIN: [
         "tableau_de_bord", "ventes", "stock_etat", "stock_gestion", "medicaments",
-        "lots", "achats", "caisse", "depots", "rapports", "administration",
+        "lots", "achats", "caisse", "facturation", "depots", "rapports", "administration",
     ],
-    CAISSIER: ["tableau_de_bord", "ventes", "stock_etat", "caisse"],
-    MAGASINIER: ["tableau_de_bord", "stock_etat", "stock_gestion", "medicaments", "lots"],
+    CAISSIER: ["tableau_de_bord", "ventes", "stock_etat", "caisse", "facturation"],
+    MAGASINIER: ["tableau_de_bord", "stock_etat", "stock_gestion", "medicaments", "lots", "facturation"],
 }
 
 

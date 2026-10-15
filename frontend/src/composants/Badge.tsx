@@ -24,4 +24,5 @@ export const tonEtatStock = (etat: string): Ton =>
 export const tonStatut = (statut: string): Ton =>
   ({
     BROUILLON: 'gris', VALIDE: 'vert', VALIDEE: 'vert', ANNULE: 'rouge', ANNULEE: 'rouge', OUVERTE: 'bleu', FERMEE: 'gris',
+    DEVIS: 'gris', BON_LIVRAISON: 'bleu', FACTURE: 'vert',
   } as Record<string, Ton>)[statut] ?? 'gris'
