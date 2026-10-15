@@ -46,6 +46,7 @@ export interface Medicament {
   stock_minimum: number
   actif: boolean
   stock_total: number
+  stock_depot?: number | null
   frequence_vente: number
 }
 
@@ -218,6 +219,7 @@ export interface DocumentVente {
   client_adresse: string
   depot: number
   depot_nom: string
+  personnel: number
   personnel_nom: string
   etape: EtapeDocumentVente
   etape_libelle: string

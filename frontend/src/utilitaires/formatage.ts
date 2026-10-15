@@ -54,6 +54,8 @@ export const ilYaJours = (jours: number) => {
   d.setDate(d.getDate() - jours)
   return d.toISOString().slice(0, 10)
 }
+export const premierJourMois = () => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10) }
+export const premierJourAnnee = () => { const d = new Date(); d.setMonth(0, 1); return d.toISOString().slice(0, 10) }
 
 export const libelleRole = (role: string) =>
   ({ ADMIN: 'Administrateur', CAISSIER: 'Caissier', MAGASINIER: 'Magasinier' } as Record<string, string>)[role] ?? role

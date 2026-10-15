@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from apps.caisse.models import MouvementCaisse, SessionCaisse, StatutSession, TypeMouvementCaisse
 from apps.commun.audit import enregistrer_audit
+from apps.commun.constantes import CAISSIER
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.references import prochaine_reference
 from apps.stock.models import TypeMouvement
@@ -65,6 +66,8 @@ def valider_facture(document_id, utilisateur):
     document = DocumentVente.objects.select_for_update().get(pk=document_id)
     if document.etape != EtapeDocument.BON_LIVRAISON:
         raise ErreurMetier("Seul un bon de livraison peut être transformé en facture.")
+    if utilisateur.role == CAISSIER and document.personnel_id != utilisateur.id:
+        raise ErreurMetier("Vous ne pouvez transformer en facture que les devis que vous avez vous-même créés.")
     document.numero_facture = prochaine_reference("FAC")
     document.date_facture = timezone.now()
     document.etape = EtapeDocument.FACTURE

@@ -199,10 +199,11 @@ class TableauDeBordView(APIView):
     def get(self, request):
         role = request.user.role
         aujourdhui = timezone.localdate()
-        donnees = {"date": aujourdhui, "role": role}
+        debut, fin = plage_dates(request.query_params, jours_par_defaut=0)
+        donnees = {"date": aujourdhui, "role": role, "periode": {"date_debut": debut, "date_fin": fin}}
 
         if role in (ADMIN, CAISSIER):
-            ventes = Vente.objects.filter(statut="VALIDEE", date_vente__date=aujourdhui)
+            ventes = Vente.objects.filter(statut="VALIDEE", date_vente__date__range=(debut, fin))
             if role == CAISSIER:
                 ventes = ventes.filter(caissier=request.user)
             agregat = ventes.aggregate(nombre=Count("id"), total=_somme("total"))
@@ -221,7 +222,7 @@ class TableauDeBordView(APIView):
                 donnees["session_caisse"] = None
 
         if role == ADMIN:
-            achats = Achat.objects.filter(statut="VALIDE", date_achat=aujourdhui).aggregate(nombre=Count("id"), total=_somme("total"))
+            achats = Achat.objects.filter(statut="VALIDE", date_achat__range=(debut, fin)).aggregate(nombre=Count("id"), total=_somme("total"))
             donnees["achats_aujourdhui"] = {"nombre": achats["nombre"], "total": achats["total"]}
             donnees["dettes_fournisseurs"] = Achat.objects.filter(statut="VALIDE").aggregate(
                 t=_somme(ExpressionWrapper(F("total") - F("montant_paye"), output_field=MONNAIE)))["t"]

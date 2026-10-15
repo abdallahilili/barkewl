@@ -15,6 +15,8 @@ class CategorieSerializer(serializers.ModelSerializer):
 class MedicamentSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):
     categorie_nom = serializers.CharField(source="categorie.nom", read_only=True, default=None)
     stock_total = serializers.IntegerField(read_only=True)
+    # Présent seulement si la recherche a filtré par ?depot= (voir get_queryset) ; sinon None.
+    stock_depot = serializers.SerializerMethodField()
     code_barre = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=64)
     code = serializers.CharField(required=False, allow_blank=True, max_length=40)
 
@@ -23,9 +25,13 @@ class MedicamentSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):
         fields = [
             "id", "nom", "nom_generique", "code", "code_barre", "categorie", "categorie_nom",
             "forme", "dosage", "unite", "laboratoire", "emplacement", "prix_achat", "prix_vente",
-            "stock_minimum", "actif", "stock_total", "frequence_vente", "date_creation", "date_modification",
+            "stock_minimum", "actif", "stock_total", "stock_depot", "frequence_vente", "date_creation", "date_modification",
         ]
         read_only_fields = ["frequence_vente", "date_creation", "date_modification"]
+
+    def get_stock_depot(self, instance):
+        valeur = getattr(instance, "stock_depot", None)
+        return valeur
 
     def validate_code_barre(self, valeur):
         valeur = (valeur or "").strip()

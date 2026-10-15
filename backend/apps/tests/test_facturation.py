@@ -126,12 +126,13 @@ class TestAPIFacturation(BaseFacturation):
         caissier = self.client_pour(self.caissier)
         admin = self.client_pour(self.admin)
 
-        # Le caissier ne peut pas créer de devis.
+        # Le caissier peut aussi créer un devis.
         r = caissier.post("/api/documents-vente/", {
             "client": self.client_pro.pk, "depot": self.depot.pk,
-            "lignes": [{"medicament": self.med.pk, "quantite_devis": 10}],
+            "lignes": [{"medicament": self.med.pk, "quantite_devis": 2}],
         }, format="json")
-        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.status_code, 201, r.data)
+        devis_caissier_id = r.data["id"]
 
         # Le magasinier peut créer un devis (prix par défaut = prix_vente du médicament).
         r = magasinier.post("/api/documents-vente/", {
@@ -143,22 +144,36 @@ class TestAPIFacturation(BaseFacturation):
         self.assertEqual(Decimal(str(r.data["total"])), self.med.prix_vente * 10)
         document_id = r.data["id"]
 
-        # Liste visible par les 3 rôles.
+        # Liste visible par les 3 rôles, mais le caissier n'y voit que ses propres documents.
         self.assertEqual(admin.get("/api/documents-vente/").status_code, 200)
-        self.assertEqual(caissier.get("/api/documents-vente/").status_code, 200)
+        reponse_caissier = caissier.get("/api/documents-vente/")
+        self.assertEqual(reponse_caissier.status_code, 200)
+        ids_vus_par_caissier = {d["id"] for d in reponse_caissier.data["resultats"]}
+        self.assertIn(devis_caissier_id, ids_vus_par_caissier)
+        self.assertNotIn(document_id, ids_vus_par_caissier)  # créé par le magasinier
 
         # Le magasinier valide le BL.
         r = magasinier.post(f"/api/documents-vente/{document_id}/valider-bl/", {}, format="json")
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data["etape"], "BON_LIVRAISON")
 
-        # Le magasinier ne peut pas valider la facture (admin seulement).
+        # Le magasinier ne peut jamais valider la facture.
         r = magasinier.post(f"/api/documents-vente/{document_id}/valider-facture/", {}, format="json")
         self.assertEqual(r.status_code, 403)
+        # Le caissier a le droit en général, mais pas sur un document qui n'est pas le sien (erreur métier 400).
+        r = caissier.post(f"/api/documents-vente/{document_id}/valider-facture/", {}, format="json")
+        self.assertEqual(r.status_code, 400, r.data)
         r = admin.post(f"/api/documents-vente/{document_id}/valider-facture/", {}, format="json")
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data["etape"], "FACTURE")
         total = Decimal(str(r.data["total"]))
+
+        # Le caissier peut valider le BL puis la facture de SON PROPRE devis.
+        r = caissier.post(f"/api/documents-vente/{devis_caissier_id}/valider-bl/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        r = caissier.post(f"/api/documents-vente/{devis_caissier_id}/valider-facture/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data["etape"], "FACTURE")
 
         # Le caissier encaisse (nécessite une session ouverte).
         r = caissier.post(f"/api/documents-vente/{document_id}/payer/",

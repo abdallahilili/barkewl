@@ -15,11 +15,11 @@ class DocumentVenteViewSet(viewsets.ModelViewSet):
     d'étape passent par des actions dédiées, chacune déléguée à services.py (tout ou rien)."""
 
     roles_lecture = TOUS_LES_ROLES
-    roles_ecriture = (ADMIN, MAGASINIER)
+    roles_ecriture = (ADMIN, MAGASINIER, CAISSIER)
     roles_par_action = {
-        "annuler": (ADMIN, MAGASINIER),
-        "valider_bl": (ADMIN, MAGASINIER),
-        "valider_facture": (ADMIN,),
+        "annuler": (ADMIN, MAGASINIER, CAISSIER),
+        "valider_bl": (ADMIN, MAGASINIER, CAISSIER),
+        "valider_facture": (ADMIN, CAISSIER),
         "payer": (ADMIN, CAISSIER),
     }
     http_method_names = ["get", "post", "put", "patch", "head", "options"]
@@ -34,6 +34,12 @@ class DocumentVenteViewSet(viewsets.ModelViewSet):
         qs = DocumentVente.objects.select_related("client", "depot", "personnel").prefetch_related(
             "lignes__medicament", "paiements__mode_paiement", "paiements__utilisateur"
         )
+        # Dans la LISTE, le caissier ne voit que les documents qu'il a lui-même créés
+        # (comme l'historique des reçus/sessions de caisse). Non appliqué aux autres actions
+        # (payer, valider-bl, etc.) : un caissier doit pouvoir agir sur un document qu'on lui
+        # a transmis même s'il n'en est pas l'auteur.
+        if self.action == "list" and self.request.user.role == CAISSIER:
+            qs = qs.filter(personnel=self.request.user)
         p = self.request.query_params
         if p.get("etape"):
             qs = qs.filter(etape=p["etape"])

@@ -59,7 +59,7 @@ class DocumentVenteListeSerializer(serializers.ModelSerializer):
         model = DocumentVente
         fields = [
             "id", "reference", "client", "client_nom", "client_telephone", "client_adresse",
-            "depot", "depot_nom", "personnel_nom", "etape", "etape_libelle", "annule",
+            "depot", "depot_nom", "personnel", "personnel_nom", "etape", "etape_libelle", "annule",
             "numero_bl", "numero_facture", "date_devis", "date_bl", "date_facture",
             "total", "montant_paye", "reste_a_payer",
         ]
@@ -73,7 +73,7 @@ class DocumentVenteSerializer(DocumentVenteListeSerializer):
     class Meta(DocumentVenteListeSerializer.Meta):
         fields = DocumentVenteListeSerializer.Meta.fields + ["note", "lignes", "paiements", "pharmacie"]
         read_only_fields = [
-            "reference", "etape", "annule", "numero_bl", "numero_facture",
+            "reference", "personnel", "etape", "annule", "numero_bl", "numero_facture",
             "date_bl", "date_facture", "total", "montant_paye",
         ]
 

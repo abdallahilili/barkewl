@@ -320,3 +320,14 @@ class TestAPI(BaseTest):
         h = c.get(f"/api/medicaments/{r.data['id']}/historique/")
         self.assertEqual(h.status_code, 200)
         self.assertEqual(len(h.data["modifications"]), 2)
+
+    def test_medicament_recherche_stock_depot_exclut_les_perimes(self):
+        c = self.client_pour(self.admin)
+        r = c.get(f"/api/medicaments/?recherche=arac&depot={self.depot.pk}")
+        self.assertEqual(r.status_code, 200)
+        resultat = r.data["resultats"][0]
+        self.assertEqual(resultat["stock_depot"], 30)  # 10 (COURT) + 20 (LONG) ; les 50 périmés ne comptent pas
+        r = c.get(f"/api/medicaments/?recherche=arac&depot={self.magasin.pk}")
+        self.assertEqual(r.data["resultats"][0]["stock_depot"], 0)
+        r = c.get("/api/medicaments/?recherche=arac")
+        self.assertIsNone(r.data["resultats"][0]["stock_depot"])

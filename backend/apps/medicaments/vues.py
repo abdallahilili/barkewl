@@ -42,6 +42,17 @@ class MedicamentViewSet(ViewSetGestion):
             qs = qs.filter(actif=(p["actif"] == "1"))
         if p.get("categorie"):
             qs = qs.filter(categorie_id=p["categorie"])
+        if p.get("depot"):
+            # Stock réellement utilisable dans ce dépôt : lots non périmés uniquement (comme le FEFO).
+            qs = qs.annotate(
+                stock_depot=Coalesce(
+                    Sum(
+                        "lots__stocks__quantite",
+                        filter=Q(lots__stocks__depot_id=p["depot"], lots__date_peremption__gte=timezone.localdate()),
+                    ),
+                    Value(0),
+                )
+            )
         return qs
 
     @action(detail=True, methods=["post"], url_path="basculer-actif")

@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Badge, tonStatut } from '../../composants/Badge'
@@ -22,10 +22,11 @@ interface LigneSaisie {
   prixAchat: number | null
   quantite_devis: string
   prix_unitaire: string
+  margeAppliquee: boolean
 }
 
 let compteur = 0
-const nouvelleLigne = (): LigneSaisie => ({ cle: ++compteur, medicament: null, prixAchat: null, quantite_devis: '1', prix_unitaire: '' })
+const nouvelleLigne = (): LigneSaisie => ({ cle: ++compteur, medicament: null, prixAchat: null, quantite_devis: '1', prix_unitaire: '', margeAppliquee: false })
 
 export default function DocumentVenteDetail() {
   const { id } = useParams()
@@ -64,7 +65,7 @@ export default function DocumentVenteDetail() {
     setLignes((d.lignes ?? []).map((l) => ({
       cle: ++compteur, medicament: l.medicament ? { id: l.medicament, nom: l.medicament_nom ?? l.designation ?? '' } : null,
       prixAchat: l.medicament_prix_achat ?? null,
-      quantite_devis: String(l.quantite_devis), prix_unitaire: String(l.prix_unitaire),
+      quantite_devis: String(l.quantite_devis), prix_unitaire: String(l.prix_unitaire), margeAppliquee: false,
     })))
   }
 
@@ -162,17 +163,24 @@ export default function DocumentVenteDetail() {
 
   if (chargement) return <Chargement />
   const majLigne = (cle: number, partiel: Partial<LigneSaisie>) => setLignes((x) => x.map((l) => (l.cle === cle ? { ...l, ...partiel } : l)))
-  const peutGererDevis = admin || magasinier
+  const peutGererDevis = admin || magasinier || caissier
   const peutPayer = admin || caissier
 
   const appliquerMarge = () => {
     const pourcentage = Number(marge)
     if (!marge || Number.isNaN(pourcentage)) { notifier.erreur('Indiquez un pourcentage valide.'); return }
     setLignes((x) => x.map((l) => (
-      l.prixAchat != null ? { ...l, prix_unitaire: (l.prixAchat * (1 + pourcentage / 100)).toFixed(2) } : l
+      l.prixAchat != null ? { ...l, prix_unitaire: (l.prixAchat * (1 + pourcentage / 100)).toFixed(2), margeAppliquee: true } : l
     )))
     const sansPrixAchat = lignes.filter((l) => l.medicament && l.prixAchat == null).length
     if (sansPrixAchat > 0) notifier.erreur(`${sansPrixAchat} ligne(s) sans prix d'achat connu n'ont pas été modifiées.`)
+  }
+
+  const annulerMarge = () => {
+    setLignes((x) => x.map((l) => (
+      l.prixAchat != null ? { ...l, prix_unitaire: l.prixAchat.toFixed(2), margeAppliquee: false } : l
+    )))
+    setMarge('')
   }
 
   return (
@@ -188,7 +196,7 @@ export default function DocumentVenteDetail() {
           {doc && modifiable && peutGererDevis && <button className="btn-secondaire" onClick={annulerDevis}>Annuler le devis</button>}
           {modifiable && peutGererDevis && <button className="btn-secondaire" disabled={occupe} onClick={() => enregistrerDevis()}>Enregistrer le devis</button>}
           {modifiable && peutGererDevis && <button className="btn-primaire" disabled={occupe} onClick={ouvrirBL}>Valider en bon de livraison</button>}
-          {doc?.etape === 'BON_LIVRAISON' && admin && <button className="btn-primaire" onClick={facturer}>Facturer</button>}
+          {doc?.etape === 'BON_LIVRAISON' && (admin || (caissier && doc.personnel === utilisateur?.id)) && <button className="btn-primaire" onClick={facturer}>Facturer</button>}
           {doc?.etape === 'FACTURE' && Number(doc.reste_a_payer) > 0 && peutPayer && (
             <button className="btn-primaire" onClick={() => { setPaye({ montant: String(doc.reste_a_payer), mode: modes.find((m) => m.type === 'ESPECES')?.id?.toString() ?? '' }); setModalePaiement(true) }}>Enregistrer un paiement</button>
           )}
@@ -199,7 +207,7 @@ export default function DocumentVenteDetail() {
         <Champ libelle="Client" requis>
           <select className="champ" value={client} onChange={(e) => setClient(e.target.value)} disabled={!modifiable}><option value="">— Choisir —</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}</select>
         </Champ>
-        <Champ libelle="Dépôt" requis>
+        <Champ libelle="Dépôt" requis aide="Choisis-le avant d'ajouter des lignes : seuls les médicaments en stock dans ce dépôt seront proposés.">
           <select className="champ" value={depot} onChange={(e) => setDepot(e.target.value)} disabled={!modifiable}><option value="">— Choisir —</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
         </Champ>
         <Champ libelle="Note"><input className="champ" value={note} onChange={(e) => setNote(e.target.value)} disabled={!modifiable} /></Champ>
@@ -211,19 +219,22 @@ export default function DocumentVenteDetail() {
             <input className="champ w-40" type="number" step="0.1" placeholder="ex. 20" value={marge} onChange={(e) => setMarge(e.target.value)} />
           </Champ>
           <button type="button" className="btn-secondaire" onClick={appliquerMarge}>Appliquer à toutes les lignes</button>
+          <button type="button" className="btn-discret" onClick={annulerMarge} title="Remet le prix d'achat brut (sans marge) sur chaque ligne">
+            <RotateCcw size={14} /> Annuler la marge
+          </button>
         </div>
       )}
 
       <div className="carte overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[720px] table-fixed text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
             <tr>
-              <th className="w-72 px-3 py-2.5">Médicament</th>
-              <th className="px-3 py-2.5 text-right">Qté devis</th>
-              {doc && doc.etape !== 'DEVIS' && <th className="px-3 py-2.5 text-right">Qté livrée</th>}
-              <th className="px-3 py-2.5 text-right">Prix unitaire</th>
-              <th className="px-3 py-2.5 text-right">Total</th>
-              <th />
+              <th className="px-3 py-2.5 whitespace-nowrap">Médicament</th>
+              <th className="w-28 px-3 py-2.5 text-right whitespace-nowrap">Qté devis</th>
+              {doc && doc.etape !== 'DEVIS' && <th className="w-28 px-3 py-2.5 text-right whitespace-nowrap">Qté livrée</th>}
+              <th className="w-32 px-3 py-2.5 text-right whitespace-nowrap">Prix unitaire</th>
+              <th className="w-32 px-3 py-2.5 text-right whitespace-nowrap">Total</th>
+              <th className="w-10" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -231,18 +242,26 @@ export default function DocumentVenteDetail() {
               <tr key={l.cle} className="align-top">
                 <td className="px-3 py-2">
                   {modifiable
-                    ? <SelectionMedicament valeur={l.medicament} onChoisir={(m) => {
+                    ? <SelectionMedicament valeur={l.medicament} depot={depot ? Number(depot) : undefined} onChoisir={(m) => {
                         if (m && lignes.some((autre) => autre.cle !== l.cle && autre.medicament?.id === m.id)) {
                           notifier.erreur(`« ${m.nom} » est déjà présent dans ce devis. Modifiez plutôt la quantité de la ligne existante.`)
                           return
                         }
-                        majLigne(l.cle, m ? { medicament: { id: m.id, nom: `${m.nom} ${m.dosage}`.trim() }, prixAchat: m.prix_achat ?? null, prix_unitaire: l.prix_unitaire || String(m.prix_vente ?? '') } : { medicament: null, prixAchat: null })
+                        majLigne(l.cle, m ? { medicament: { id: m.id, nom: `${m.nom} ${m.dosage}`.trim() }, prixAchat: m.prix_achat ?? null, prix_unitaire: l.prix_unitaire || String(m.prix_vente ?? ''), margeAppliquee: false } : { medicament: null, prixAchat: null, margeAppliquee: false })
                       }} placeholder="Rechercher…" />
                     : l.medicament?.nom}
                 </td>
-                <td className="px-3 py-2 text-right">{modifiable ? <input className="champ w-24 text-right" type="number" min={1} value={l.quantite_devis} onChange={(e) => majLigne(l.cle, { quantite_devis: e.target.value })} aria-label="Quantité devis" /> : l.quantite_devis}</td>
+                <td className="px-3 py-2 text-right">{modifiable ? <div className="flex justify-end"><input className="champ w-24 text-right" type="number" min={1} value={l.quantite_devis} onChange={(e) => majLigne(l.cle, { quantite_devis: e.target.value })} aria-label="Quantité devis" /></div> : l.quantite_devis}</td>
                 {doc && doc.etape !== 'DEVIS' && <td className="px-3 py-2 text-right font-medium">{doc.lignes?.[i]?.quantite_livree ?? 0}</td>}
-                <td className="px-3 py-2 text-right">{modifiable ? <input className="champ w-28 text-right" type="number" min={0} step="0.01" value={l.prix_unitaire} onChange={(e) => majLigne(l.cle, { prix_unitaire: e.target.value })} aria-label="Prix unitaire" /> : formaterMontant(Number(l.prix_unitaire))}</td>
+                <td className="px-3 py-2 text-right">
+                  {modifiable ? (
+                    <div className="flex items-center justify-end gap-1">
+                      {l.margeAppliquee && <span title="Prix calculé automatiquement par la marge" className="text-xs text-emerald-600">%</span>}
+                      <input className={`champ w-28 text-right ${l.margeAppliquee ? 'border-emerald-300 bg-emerald-50' : ''}`} type="number" min={0} step="0.01" value={l.prix_unitaire}
+                        onChange={(e) => majLigne(l.cle, { prix_unitaire: e.target.value, margeAppliquee: false })} aria-label="Prix unitaire" />
+                    </div>
+                  ) : formaterMontant(Number(l.prix_unitaire))}
+                </td>
                 <td className="px-3 py-2 pt-4 text-right font-medium">{formaterMontant((Number(l.quantite_devis) || 0) * (Number(l.prix_unitaire) || 0))}</td>
                 <td className="px-3 py-2 pt-3">{modifiable && lignes.length > 1 && <button className="text-slate-400 hover:text-red-600" onClick={() => setLignes((x) => x.filter((y) => y.cle !== l.cle))} aria-label="Retirer la ligne"><Trash2 size={16} /></button>}</td>
               </tr>

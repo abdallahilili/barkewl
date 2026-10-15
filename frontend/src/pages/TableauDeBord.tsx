@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../composants/Badge'
 import { Chargement, EnTetePage, MessageErreur } from '../composants/EnTetePage'
+import { libellePeriode, SelecteurPeriode, usePeriode } from '../composants/SelecteurPeriode'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
 import type { MouvementStock, Vente } from '../types'
@@ -47,25 +48,29 @@ function Panneau({ titre, vers, children }: { titre: string; vers?: string; chil
 
 export default function TableauDeBord() {
   const { utilisateur, peut } = useAuth()
+  const [periode, setPeriode] = usePeriode()
   const [donnees, setDonnees] = useState<Donnees | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
 
   useEffect(() => {
-    api.get<Donnees>('/tableau-de-bord/').then((r) => setDonnees(r.data)).catch((e) => setErreur(extraireErreur(e)))
-  }, [])
+    api.get<Donnees>('/tableau-de-bord/', { params: { date_debut: periode.debut, date_fin: periode.fin } })
+      .then((r) => setDonnees(r.data)).catch((e) => setErreur(extraireErreur(e)))
+  }, [periode])
 
   if (!donnees) return erreur ? <MessageErreur message={erreur} /> : <Chargement />
   const s = donnees.stock
   const a = donnees.alertes
   const vide = <p className="text-slate-500">Rien à signaler.</p>
+  const libellePour = (titre: string) => `${titre} — ${libellePeriode(periode)}`
 
   return (
     <div>
       <EnTetePage titre={`Bonjour ${utilisateur?.prenom || utilisateur?.nom}`} description={`Situation du ${formaterDate(new Date().toISOString().slice(0, 10))}`} />
+      <SelecteurPeriode periode={periode} onChange={setPeriode} />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {donnees.ventes_aujourdhui && <Indicateur titre="Ventes du jour" valeur={formaterMontant(donnees.ventes_aujourdhui.total)} detail={`${donnees.ventes_aujourdhui.nombre} vente(s)`} vers={peut('ventes') ? '/ventes' : undefined} />}
-        {donnees.achats_aujourdhui && <Indicateur titre="Achats du jour" valeur={formaterMontant(donnees.achats_aujourdhui.total)} detail={`${donnees.achats_aujourdhui.nombre} achat(s)`} vers="/achats" />}
+        {donnees.ventes_aujourdhui && <Indicateur titre={libellePour('Ventes')} valeur={formaterMontant(donnees.ventes_aujourdhui.total)} detail={`${donnees.ventes_aujourdhui.nombre} vente(s)`} vers={peut('ventes') ? '/ventes' : undefined} />}
+        {donnees.achats_aujourdhui && <Indicateur titre={libellePour('Achats')} valeur={formaterMontant(donnees.achats_aujourdhui.total)} detail={`${donnees.achats_aujourdhui.nombre} achat(s)`} vers="/achats" />}
         {donnees.dettes_fournisseurs != null && <Indicateur titre="Dettes fournisseurs" valeur={formaterMontant(donnees.dettes_fournisseurs)} ton={donnees.dettes_fournisseurs > 0 ? 'text-red-700' : ''} vers="/achats" />}
         {s?.valeur_totale != null && <Indicateur titre="Valeur du stock" valeur={formaterMontant(s.valeur_totale)} detail={`${formaterNombre(s.nombre_medicaments)} médicaments`} vers="/stock" />}
         {s && <Indicateur titre="Ruptures" valeur={formaterNombre(s.nombre_ruptures)} ton={s.nombre_ruptures ? 'text-red-700' : ''} vers={peut('stock_etat') ? '/stock' : undefined} />}
@@ -113,7 +118,7 @@ export default function TableauDeBord() {
         )}
         {donnees.dernieres_ventes && (
           <Panneau titre="Dernières ventes" vers={peut('ventes') ? '/ventes' : undefined}>
-            {donnees.dernieres_ventes.length === 0 ? <p className="text-slate-500">Aucune vente aujourd'hui.</p> : <ul className="divide-y divide-slate-100">{donnees.dernieres_ventes.map((v) => <li key={v.id} className="flex justify-between gap-2 py-1.5"><span>{v.reference} <span className="text-slate-500">{formaterDateHeure(v.date_vente)}</span></span><span className="font-medium">{formaterMontant(v.total)}</span></li>)}</ul>}
+            {donnees.dernieres_ventes.length === 0 ? <p className="text-slate-500">Aucune vente sur cette période.</p> : <ul className="divide-y divide-slate-100">{donnees.dernieres_ventes.map((v) => <li key={v.id} className="flex justify-between gap-2 py-1.5"><span>{v.reference} <span className="text-slate-500">{formaterDateHeure(v.date_vente)}</span></span><span className="font-medium">{formaterMontant(v.total)}</span></li>)}</ul>}
           </Panneau>
         )}
         {donnees.derniers_mouvements && (
