@@ -17,7 +17,7 @@ export interface EtatLicence {
   fin?: string | null
 }
 
-export const NOM_LOGICIEL = 'Raqim'
+export const NOM_LOGICIEL = 'RAQEEM PHARMA'
 export const EDITEUR_PAR_DEFAUT = 'Rawafid Digital Services'
 
 /** Événement envoyé après une activation, pour que le bandeau se mette à jour sans recharger la page. */

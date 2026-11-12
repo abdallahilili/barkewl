@@ -1,5 +1,5 @@
 """
-Licence Raqim (Rawafid Digital Services).
+Licence RAQEEM PHARMA (Rawafid Digital Services).
 
 Une licence est une clé « RQM1.<contenu>.<signature> » :
 - le contenu (JSON) indique la pharmacie, le code du PC, l'abonnement et la date de fin ;

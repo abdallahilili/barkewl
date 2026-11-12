@@ -3,9 +3,11 @@
 @tailwind utilities;
 
 @layer base {
-  html { @apply text-slate-800; }
-  body { @apply bg-slate-50 antialiased; }
-  h1, h2, h3 { @apply text-slate-900; }
+  html { @apply text-slate-800; font-feature-settings: "cv11", "ss01"; }
+  body { @apply antialiased; background-color: #F3F6F8; }
+  h1, h2, h3 { @apply text-nuit-800; }
+  /* Chiffres alignés dans les tableaux et montants. */
+  table, .chiffres { font-variant-numeric: tabular-nums; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-marque-600; }
 }
 

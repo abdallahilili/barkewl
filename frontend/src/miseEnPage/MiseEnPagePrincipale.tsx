@@ -2,6 +2,7 @@ import { KeyRound, LogOut, Menu, Pill, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { BandeauLicence } from "../composants/BandeauLicence";
+import { SymboleRaqeem } from "../composants/LogoRaqeem";
 import { Champ } from "../composants/Champ";
 import { EDITEUR_PAR_DEFAUT, NOM_LOGICIEL } from "../services/licence";
 import { MessageErreur } from "../composants/EnTetePage";
@@ -152,11 +153,9 @@ export function MiseEnPagePrincipale() {
       {logo ? (
         <img src={logo} alt="Logo" className="h-8 w-10 shrink-0 object-contain" />
       ) : (
-        <span className="flex h-8 w-10 items-center justify-center rounded-md bg-marque-600 text-white">
-          <Pill size={18} />
-        </span>
+        <SymboleRaqeem taille={34} />
       )}
-      <span className="truncate whitespace-nowrap text-xl font-semibold text-slate-900">
+      <span className="truncate whitespace-nowrap text-xl font-semibold text-nuit-800">
         {lireNomPharmacie()}
       </span>
     </div>
@@ -164,9 +163,12 @@ export function MiseEnPagePrincipale() {
 
   // Signature de l'éditeur en bas du menu.
   const signature = (
-    <div className="border-t border-slate-100 px-4 py-3 text-xs leading-tight text-slate-400">
-      <p className="font-medium text-slate-500">{NOM_LOGICIEL}</p>
-      <p>un produit {EDITEUR_PAR_DEFAUT}</p>
+    <div className="flex items-center gap-2.5 border-t border-slate-100 px-4 py-3">
+      <SymboleRaqeem taille={26} />
+      <div className="text-xs leading-tight">
+        <p className="font-semibold tracking-wide text-nuit-800">{NOM_LOGICIEL}</p>
+        <p className="text-slate-500">par {EDITEUR_PAR_DEFAUT}</p>
+      </div>
     </div>
   );
 

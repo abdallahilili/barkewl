@@ -48,4 +48,4 @@ class Command(BaseCommand):
             raise CommandError(str(erreur.detail)) from erreur
         self.stdout.write(self.style.SUCCESS(f"Restauration terminée depuis {chemin.name}."))
         self.stdout.write(f"État précédent conservé dans : {securite['nom']}")
-        self.stdout.write("Redémarrez le serveur (RaqimBackend) pour repartir proprement.")
+        self.stdout.write("Redémarrez le serveur (RaqeemBackend) pour repartir proprement.")

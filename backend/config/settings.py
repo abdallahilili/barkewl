@@ -124,11 +124,11 @@ LOGGING = {
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "simple"},
         "fichier": {
-            "class": "logging.handlers.RotatingFileHandler", "filename": DOSSIER_JOURNAUX / "raqim.log",
+            "class": "logging.handlers.RotatingFileHandler", "filename": DOSSIER_JOURNAUX / "raqeem.log",
             "maxBytes": 2 * 1024 * 1024, "backupCount": 5, "encoding": "utf-8", "formatter": "simple",
         },
     },
-    "loggers": {"raqim": {"handlers": ["console", "fichier"], "level": "INFO"}},
+    "loggers": {"raqeem": {"handlers": ["console", "fichier"], "level": "INFO"}},
 }
 
 CORS_ALLOWED_ORIGINS =[o.strip() for o in env("ORIGINES_CORS", "http://localhost:5173").split(",") if o.strip()]

@@ -3,7 +3,7 @@ REM Alternative a NSSM : enregistre le backend comme tache planifiee Windows,
 REM demarree automatiquement a chaque demarrage du PC, sans telechargement externe.
 REM A executer en Administrateur (clic droit > Executer en tant qu'administrateur).
 
-set TASK_NAME=RaqimBackend
+set TASK_NAME=RaqeemBackend
 set SCRIPT=%~dp0start_waitress_service.bat
 
 schtasks /create /tn "%TASK_NAME%" /tr "\"%SCRIPT%\"" /sc onstart /ru SYSTEM /rl HIGHEST /f

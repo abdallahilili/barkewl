@@ -1,5 +1,5 @@
 @echo off
-REM Sauvegarde immediate de la base Raqim (double-clic).
+REM Sauvegarde immediate de la base RAQEEM PHARMA (double-clic).
 REM Les sauvegardes automatiques sont deja faites par le serveur ; ce script sert
 REM avant une intervention (mise a jour, changement de PC...).
 cd /d "%~dp0..\backend"

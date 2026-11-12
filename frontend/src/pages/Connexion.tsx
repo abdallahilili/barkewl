@@ -1,6 +1,7 @@
 import { ArrowRight, BarChart3, Boxes, Eye, EyeOff, Lock, Pill, ShieldCheck, ShoppingCart, Truck, User } from 'lucide-react'
 import { FormEvent, useEffect, useState } from 'react'
 import { MessageErreur } from '../composants/EnTetePage'
+import { LogoRaqeem, SymboleRaqeem } from '../composants/LogoRaqeem'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
 import { EDITEUR_PAR_DEFAUT, EtatLicence, lireLicence, NOM_LOGICIEL } from '../services/licence'
@@ -35,29 +36,25 @@ export default function Connexion() {
   return (
     <div className="flex min-h-screen items-stretch bg-slate-100">
       {/* Panneau de marque (masqué sur mobile) */}
-      <div className="relative hidden w-1/2 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-marque-600/20 blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-96 w-96 translate-x-1/3 translate-y-1/3 rounded-full bg-marque-500/10 blur-3xl" />
-          <Pill className="absolute -right-6 top-1/3 h-40 w-40 rotate-12 text-white/5" strokeWidth={1} />
+      <div className="relative hidden w-1/2 overflow-hidden bg-nuit-800 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+        <div className="pointer-events-none absolute -bottom-24 -right-24 opacity-[0.07]" aria-hidden="true">
+          <SymboleRaqeem taille={460} fond="sombre" />
         </div>
 
-        <div className="relative flex items-center gap-3">
-          {identite?.logo ? (
-            <img src={identite.logo} alt="Logo" className="h-12 w-12 rounded-xl bg-white/95 object-contain p-1.5" />
-          ) : (
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-marque-600 text-white"><Pill size={26} /></span>
-          )}
-          <span className="text-lg font-semibold text-white">{nomPharmacie}</span>
+        <div className="relative">
+          <LogoRaqeem taille={52} fond="sombre" />
         </div>
 
         <div className="relative max-w-md space-y-7 text-white">
-          <h2 className="text-3xl font-bold leading-tight xl:text-4xl">Gérez votre pharmacie, simplement.</h2>
-          <p className="text-slate-300">Tout ce qu'il faut pour faire tourner votre officine, réuni dans un seul outil.</p>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold leading-tight text-white xl:text-4xl">La gestion intelligente de votre pharmacie.</h2>
+            <p lang="ar" dir="rtl" className="text-xl font-semibold text-marque-300">إدارة صيدليتك بذكاء</p>
+          </div>
+          <p className="text-nuit-100">Ventes, stock, achats et caisse réunis dans un seul système fiable — même sans Internet.</p>
           <ul className="space-y-4 text-sm text-slate-200">
             <li className="flex items-center gap-3">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-marque-500/20 text-marque-300"><ShoppingCart size={16} /></span>
-              Ventes au comptoir et gestion des sessions de caisse
+              Vente à la boîte, à la plaquette ou à l'unité, et caisse sans écart
             </li>
             <li className="flex items-center gap-3">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-marque-500/20 text-marque-300"><Boxes size={16} /></span>
@@ -74,9 +71,13 @@ export default function Connexion() {
           </ul>
         </div>
 
-        <p className="relative text-xs text-slate-400">
-          © {new Date().getFullYear()} {nomPharmacie} · Logiciel {NOM_LOGICIEL}, un produit <span className="font-medium text-slate-300">{licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</span>
-        </p>
+        <div className="relative flex items-center justify-between gap-4 border-t border-white/10 pt-5 text-xs text-nuit-200">
+          <span className="flex items-center gap-2.5">
+            {identite?.logo && <img src={identite.logo} alt="" className="h-8 w-8 rounded-md bg-white object-contain p-1" />}
+            <span className="font-medium text-white">{nomPharmacie}</span>
+          </span>
+          <span>© {new Date().getFullYear()} {NOM_LOGICIEL} · {licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</span>
+        </div>
       </div>
 
       {/* Formulaire */}
@@ -88,12 +89,8 @@ export default function Connexion() {
 
         <div className="relative w-full max-w-sm">
           <div className="mb-6 flex flex-col items-center gap-3 text-center lg:hidden">
-            {identite?.logo ? (
-              <img src={identite.logo} alt="Logo" className="h-14 w-14 rounded-xl object-contain" />
-            ) : (
-              <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-marque-600 text-white"><Pill size={28} /></span>
-            )}
-            <h1 className="text-xl font-semibold text-slate-900">{nomPharmacie}</h1>
+            <LogoRaqeem taille={44} compact />
+            <p className="text-sm font-medium text-slate-600">{nomPharmacie}</p>
           </div>
 
           <div className="relative rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-300/30">
@@ -103,8 +100,8 @@ export default function Connexion() {
               <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-marque-50 text-marque-700 ring-4 ring-marque-50/60">
                 <Lock size={20} />
               </span>
-              <h1 className="text-xl font-bold text-slate-900">Bon retour</h1>
-              <p className="mt-1 text-sm text-slate-500">Connectez-vous pour accéder à votre espace.</p>
+              <h1 className="text-xl font-bold text-nuit-800">Bon retour</h1>
+              <p className="mt-1 text-sm text-slate-500">Connectez-vous à <span className="font-medium text-nuit-800">{nomPharmacie}</span>.</p>
 
               <form onSubmit={soumettre} className="mt-6 w-full space-y-4 text-left">
                 <MessageErreur message={erreur} />
@@ -157,7 +154,7 @@ export default function Connexion() {
           <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
             <ShieldCheck size={14} /> Accès réservé au personnel autorisé de la pharmacie.
           </p>
-          <p className="mt-2 text-center text-xs text-slate-400 lg:hidden">{NOM_LOGICIEL} — un produit {licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</p>
+          <p className="mt-2 text-center text-xs text-slate-500 lg:hidden">{NOM_LOGICIEL} — par {licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</p>
         </div>
       </div>
     </div>

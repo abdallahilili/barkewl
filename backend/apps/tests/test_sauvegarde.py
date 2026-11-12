@@ -92,8 +92,8 @@ class TestSauvegarde(TransactionTestCase):
 
     def test_purge_garde_les_plus_recentes(self):
         for i in range(10):
-            f = self.dossier / f"raqim_2020010{i % 10}_00000{i}.sql.gz"
+            f = self.dossier / f"raqeem_2020010{i % 10}_00000{i}.sql.gz"
             f.write_bytes(b"x")
             os.utime(f, (946684800 + i, 946684800 + i))   # année 2000 : hors conservation
         sauvegarde._purger(self.dossier)
-        self.assertEqual(len(list(self.dossier.glob("raqim_*"))), sauvegarde.MINIMUM_CONSERVE)
+        self.assertEqual(len(list(self.dossier.glob("raqeem_*"))), sauvegarde.MINIMUM_CONSERVE)
