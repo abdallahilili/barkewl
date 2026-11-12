@@ -25,7 +25,7 @@ const motifsSortie = [
 function FormulaireEntree({ ouvert, onFermer, apres }: { ouvert: boolean; onFermer: () => void; apres: () => void }) {
   const notifier = useNotifier()
   const depots = useOptions<Depot>('/depots/', { actif: 1 })
-  const vide = { medicament: null as { id: number; nom: string } | null, numero_lot: '', date_fabrication: '', date_peremption: '', depot: '', quantite: '', prix_achat: '', prix_vente: '', motif: 'RETOUR_CLIENT', note: '' }
+  const vide = { medicament: null as { id: number; nom: string; unites: number; nomUnite: string } | null, enBoites: true, numero_lot: '', date_fabrication: '', date_peremption: '', depot: '', quantite: '', prix_achat: '', prix_vente: '', motif: 'RETOUR_CLIENT', note: '' }
   const [f, setF] = useState(vide)
   const [venteManuelle, setVenteManuelle] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -49,7 +49,7 @@ function FormulaireEntree({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
     try {
       await api.post('/stocks/entree/', {
         medicament: f.medicament?.id, numero_lot: f.numero_lot, date_fabrication: f.date_fabrication || null, date_peremption: f.date_peremption,
-        depot: Number(f.depot), quantite: Number(f.quantite), prix_achat: f.prix_achat === '' ? null : Number(f.prix_achat),
+        depot: Number(f.depot), quantite: Number(f.quantite), en_boites: f.enBoites, prix_achat: f.prix_achat === '' ? null : Number(f.prix_achat),
         prix_vente: f.prix_vente === '' ? null : Number(f.prix_vente), motif: f.motif, note: f.note,
       })
       notifier.succes('Entrée en stock enregistrée.')
@@ -64,19 +64,29 @@ function FormulaireEntree({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
         <p className="text-sm text-slate-500">Pour une réception fournisseur, utilisez plutôt le module Achats. Ici : retours clients, corrections, autres entrées.</p>
         <MessageErreur message={erreur} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Champ libelle="Médicament" requis className="sm:col-span-2" erreur={erreurs.medicament}><SelectionMedicament valeur={f.medicament} onChoisir={(m) => setF({ ...f, medicament: m ? { id: m.id, nom: `${m.nom} ${m.dosage}` } : null })} /></Champ>
+          <Champ libelle="Médicament" requis className="sm:col-span-2" erreur={erreurs.medicament}><SelectionMedicament valeur={f.medicament} onChoisir={(m) => setF({ ...f, medicament: m ? { id: m.id, nom: `${m.nom} ${m.dosage}`, unites: m.unites_par_boite ?? 1, nomUnite: m.nom_unite_detail || 'unités' } : null })} /></Champ>
           <Champ libelle="Numéro de lot" requis erreur={erreurs.numero_lot}><input className="champ" value={f.numero_lot} onChange={(e) => setF({ ...f, numero_lot: e.target.value })} required /></Champ>
           <Champ libelle="Dépôt" requis erreur={erreurs.depot}>
             <select className="champ" value={f.depot} onChange={(e) => setF({ ...f, depot: e.target.value })} required><option value="">— Choisir —</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
           </Champ>
           <Champ libelle="Date de fabrication"><input className="champ" type="date" value={f.date_fabrication} onChange={(e) => setF({ ...f, date_fabrication: e.target.value })} /></Champ>
           <Champ libelle="Date de péremption" requis erreur={erreurs.date_peremption}><input className="champ" type="date" value={f.date_peremption} onChange={(e) => setF({ ...f, date_peremption: e.target.value })} required /></Champ>
-          <Champ libelle="Quantité" requis erreur={erreurs.quantite}><input className="champ" type="number" min={1} value={f.quantite} onChange={(e) => setF({ ...f, quantite: e.target.value })} required /></Champ>
+          <Champ libelle="Quantité" requis erreur={erreurs.quantite}
+            aide={f.medicament && f.medicament.unites > 1 ? `1 boîte = ${f.medicament.unites} ${f.medicament.nomUnite}` : undefined}>
+            <div className="flex gap-2">
+              <input className="champ" type="number" min={1} value={f.quantite} onChange={(e) => setF({ ...f, quantite: e.target.value })} required />
+              {f.medicament && f.medicament.unites > 1 && (
+                <select className="champ w-36" value={f.enBoites ? '1' : '0'} onChange={(e) => setF({ ...f, enBoites: e.target.value === '1' })} aria-label="Unité de la quantité">
+                  <option value="1">boîtes</option><option value="0">{f.medicament.nomUnite}</option>
+                </select>
+              )}
+            </div>
+          </Champ>
           <Champ libelle="Motif" requis>
             <select className="champ" value={f.motif} onChange={(e) => setF({ ...f, motif: e.target.value })}>{motifsEntree.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select>
           </Champ>
-          <Champ libelle="Prix d'achat" aide="Utilisé si le lot est nouveau."><input className="champ" type="number" min={0} step="0.01" value={f.prix_achat} onChange={(e) => prixAchatChange(e.target.value)} /></Champ>
-          <Champ libelle="Prix de vente du lot" aide="Calculé automatiquement (+25% si < 200, +15% sinon) — modifiable.">
+          <Champ libelle="Prix d'achat (boîte)" aide="Utilisé si le lot est nouveau."><input className="champ" type="number" min={0} step="0.01" value={f.prix_achat} onChange={(e) => prixAchatChange(e.target.value)} /></Champ>
+          <Champ libelle="Prix de vente du lot (boîte)" aide="Calculé automatiquement (+25% si < 200, +15% sinon) — modifiable.">
             <input className="champ" type="number" min={0} step="0.01" value={f.prix_vente} onChange={(e) => { setVenteManuelle(true); setF({ ...f, prix_vente: e.target.value }) }} />
           </Champ>
           <Champ libelle="Note" className="sm:col-span-2"><input className="champ" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Champ>
@@ -92,6 +102,7 @@ function FormulaireSortie({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
   const [depot, setDepot] = useState('')
   const [ligne, setLigne] = useState<LigneStock | null>(null)
   const [quantite, setQuantite] = useState('')
+  const [enBoites, setEnBoites] = useState(false)
   const [motif, setMotif] = useState('PEREMPTION')
   const [note, setNote] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
@@ -101,7 +112,7 @@ function FormulaireSortie({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
     if (!ligne) { setErreur('Choisissez le lot concerné.'); return }
     setErreur(null)
     try {
-      await api.post('/stocks/sortie/', { lot: ligne.lot, depot: ligne.depot, quantite: Number(quantite), motif, note })
+      await api.post('/stocks/sortie/', { lot: ligne.lot, depot: ligne.depot, quantite: Number(quantite), en_boites: enBoites && ligne.unites_par_boite > 1, motif, note })
       notifier.succes('Sortie de stock enregistrée.')
       setLigne(null); setQuantite(''); setNote(''); onFermer(); apres()
     } catch (err) { setErreur(extraireErreur(err)) }
@@ -118,11 +129,21 @@ function FormulaireSortie({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
         </Champ>
         <Champ libelle="Médicament et lot" requis>
           {ligne ? (
-            <div className="champ flex items-center justify-between"><span>{ligne.medicament} — lot {ligne.numero_lot} ({ligne.quantite} en stock, péremption {formaterDate(ligne.date_peremption)})</span><button type="button" className="text-slate-400 hover:text-slate-700" onClick={() => setLigne(null)}>Changer</button></div>
+            <div className="champ flex items-center justify-between"><span>{ligne.medicament} — lot {ligne.numero_lot} ({ligne.quantite_texte ?? ligne.quantite} en stock, péremption {formaterDate(ligne.date_peremption)})</span><button type="button" className="text-slate-400 hover:text-slate-700" onClick={() => setLigne(null)}>Changer</button></div>
           ) : <SelectionLotStock depot={depot ? Number(depot) : ''} onChoisir={setLigne} />}
         </Champ>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Champ libelle="Quantité" requis><input className="champ" type="number" min={1} max={ligne?.quantite} value={quantite} onChange={(e) => setQuantite(e.target.value)} required /></Champ>
+          <Champ libelle="Quantité" requis aide={ligne && ligne.unites_par_boite > 1 ? `1 boîte = ${ligne.unites_par_boite} unités` : undefined}>
+            <div className="flex gap-2">
+              <input className="champ" type="number" min={1} max={ligne ? (enBoites && ligne.unites_par_boite > 1 ? Math.floor(ligne.quantite / ligne.unites_par_boite) : ligne.quantite) : undefined}
+                value={quantite} onChange={(e) => setQuantite(e.target.value)} required />
+              {ligne && ligne.unites_par_boite > 1 && (
+                <select className="champ w-32" value={enBoites ? '1' : '0'} onChange={(e) => setEnBoites(e.target.value === '1')} aria-label="Unité de la quantité">
+                  <option value="0">unités</option><option value="1">boîtes</option>
+                </select>
+              )}
+            </div>
+          </Champ>
           <Champ libelle="Motif" requis><select className="champ" value={motif} onChange={(e) => setMotif(e.target.value)}>{motifsSortie.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select></Champ>
         </div>
         <Champ libelle="Note"><input className="champ" value={note} onChange={(e) => setNote(e.target.value)} /></Champ>
@@ -169,7 +190,7 @@ export default function MouvementsStock({ mode }: { mode: Mode }) {
           { cle: 'numero_lot', titre: 'Lot' },
           { cle: 'depot_nom', titre: 'Dépôt' },
           { cle: 'type_libelle', titre: 'Type', rendu: (m) => <Badge ton={m.quantite > 0 ? 'vert' : 'orange'}>{m.type_libelle}</Badge> },
-          { cle: 'quantite', titre: 'Quantité', alignement: 'droite', tri: 'quantite', rendu: (m) => <span className={`font-semibold ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite}</span> },
+          { cle: 'quantite', titre: 'Quantité', alignement: 'droite', tri: 'quantite', rendu: (m) => <span className={`font-semibold ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</span>, exportRendu: (m) => m.quantite_texte },
           { cle: 'stock', titre: 'Stock avant → après', alignement: 'droite', rendu: (m) => `${m.stock_avant} → ${m.stock_apres}`, exportRendu: (m) => `${m.stock_avant} -> ${m.stock_apres}` },
           { cle: 'reference', titre: 'Référence' },
           { cle: 'utilisateur_nom', titre: 'Utilisateur', cacheParDefaut: true },

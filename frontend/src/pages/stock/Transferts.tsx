@@ -55,7 +55,7 @@ function FormulaireTransfert({ ouvert, onFermer, apres }: { ouvert: boolean; onF
         <Champ libelle="Ajouter un lot à transférer"><SelectionLotStock depot={source ? Number(source) : ''} onChoisir={ajouter} exclus={lignes.map((l) => l.lot)} /></Champ>
         <div className="overflow-x-auto rounded-md border border-slate-200">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600"><tr><th className="px-3 py-2">Médicament</th><th className="px-3 py-2">Lot</th><th className="px-3 py-2">Péremption</th><th className="px-3 py-2 text-right">Disponible</th><th className="px-3 py-2 text-right">Quantité</th><th /></tr></thead>
+            <thead className="bg-slate-50 text-left text-slate-600"><tr><th className="px-3 py-2">Médicament</th><th className="px-3 py-2">Lot</th><th className="px-3 py-2">Péremption</th><th className="px-3 py-2 text-right">Disponible (unités)</th><th className="px-3 py-2 text-right">Quantité (unités)</th><th /></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {lignes.length === 0 && <tr><td colSpan={6} className="px-3 py-5 text-center text-slate-500">Aucun lot ajouté.</td></tr>}
               {lignes.map((l, i) => (

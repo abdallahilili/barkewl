@@ -181,7 +181,7 @@ export default function AchatDetail() {
       <div className="carte overflow-x-auto">
         <table className="w-full min-w-[980px] text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-            <tr><th className="w-72 px-3 py-2.5">Médicament</th><th className="px-3 py-2.5">N° de lot</th><th className="px-3 py-2.5">Fabrication</th><th className="px-3 py-2.5">Péremption</th><th className="px-3 py-2.5 text-right">Quantité</th><th className="px-3 py-2.5 text-right">Prix d'achat</th><th className="px-3 py-2.5 text-right">Prix de vente</th><th className="px-3 py-2.5 text-right">Total</th><th /></tr>
+            <tr><th className="w-72 px-3 py-2.5">Médicament</th><th className="px-3 py-2.5">N° de lot</th><th className="px-3 py-2.5">Fabrication</th><th className="px-3 py-2.5">Péremption</th><th className="px-3 py-2.5 text-right">Quantité (boîtes)</th><th className="px-3 py-2.5 text-right">Prix d'achat (boîte)</th><th className="px-3 py-2.5 text-right">Prix de vente (boîte)</th><th className="px-3 py-2.5 text-right">Total</th><th /></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {lignes.map((l) => (

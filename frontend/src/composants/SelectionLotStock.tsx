@@ -57,7 +57,7 @@ export function SelectionLotStock({ depot, onChoisir, exclus = [] }: {
                   <span className="block text-xs text-slate-500">Lot {l.numero_lot} · péremption {formaterDate(l.date_peremption)}</span>
                 </span>
                 <span className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="font-medium">{l.quantite} en stock</span>
+                  <span className="font-medium">{l.quantite_texte ?? l.quantite} en stock</span>
                   {l.etat !== 'DISPONIBLE' && <Badge ton={tonEtatStock(l.etat)}>{libelleEtatStock(l.etat)}</Badge>}
                 </span>
               </button>

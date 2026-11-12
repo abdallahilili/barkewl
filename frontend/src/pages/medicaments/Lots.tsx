@@ -24,7 +24,7 @@ export default function Lots() {
         { cle: 'date_peremption', titre: 'Péremption', tri: 'date_peremption',
           rendu: (l) => <span>{formaterDate(l.date_peremption)} {l.perime ? <Badge ton="rouge">Périmé</Badge> : l.jours_restants <= 90 ? <Badge ton="orange">{l.jours_restants} j</Badge> : null}</span>,
           exportRendu: (l) => formaterDateExport(l.date_peremption) },
-        { cle: 'quantite_actuelle', titre: 'En stock', alignement: 'droite', tri: 'quantite_actuelle' },
+        { cle: 'quantite_actuelle', titre: 'En stock', alignement: 'droite', tri: 'quantite_actuelle', rendu: (l) => l.quantite_texte ?? l.quantite_actuelle },
         ...(voirPrixAchat ? [{ cle: 'prix_achat', titre: "Prix d'achat", alignement: 'droite' as const, rendu: (l: Lot) => formaterMontant(l.prix_achat) }] : []),
         { cle: 'prix_vente', titre: 'Prix de vente du lot', alignement: 'droite', rendu: (l) => (l.prix_vente == null ? <span className="text-slate-400">Prix du médicament</span> : formaterMontant(l.prix_vente)) },
       ]}

@@ -68,7 +68,7 @@ export default function EtatStock() {
           { cle: 'categorie', titre: 'Catégorie', cacheParDefaut: true, rendu: (s) => s.categorie ?? '—' },
           { cle: 'numero_lot', titre: 'Lot' },
           { cle: 'depot_nom', titre: 'Dépôt', tri: 'depot__nom' },
-          { cle: 'quantite', titre: 'Quantité', alignement: 'droite', tri: 'quantite', rendu: (s) => <span className="font-medium">{formaterNombre(s.quantite)}</span> },
+          { cle: 'quantite', titre: 'Quantité', alignement: 'droite', tri: 'quantite', rendu: (s) => <span className="font-medium">{s.unites_par_boite > 1 ? s.quantite_texte : formaterNombre(s.quantite)}</span>, exportRendu: (s) => s.quantite_texte },
           { cle: 'prix_vente', titre: 'Prix de vente', alignement: 'droite', rendu: (s) => formaterMontant(s.prix_vente) },
           ...(voirPrixAchat ? [{ cle: 'valeur_stock', titre: 'Valeur', alignement: 'droite' as const, cacheParDefaut: true, rendu: (s: LigneStock) => formaterMontant(s.valeur_stock) }] : []),
           { cle: 'date_peremption', titre: 'Péremption', tri: 'lot__date_peremption', rendu: (s) => <span>{formaterDate(s.date_peremption)} <span className="text-xs text-slate-400">({s.jours_restants} j)</span></span>, exportRendu: (s) => formaterDateExport(s.date_peremption) },

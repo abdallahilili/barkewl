@@ -38,7 +38,7 @@ export function DetailMedicament({ medicament, onFermer }: { medicament: Medicam
             <div><dt className="text-slate-500">Code</dt><dd className="font-medium">{medicament.code}</dd></div>
             <div><dt className="text-slate-500">Code-barres</dt><dd className="font-medium">{medicament.code_barre ?? '—'}</dd></div>
             <div><dt className="text-slate-500">Prix de vente</dt><dd className="font-medium">{formaterMontant(medicament.prix_vente)}</dd></div>
-            <div><dt className="text-slate-500">Stock total</dt><dd className="font-medium">{formaterNombre(medicament.stock_total)}</dd></div>
+            <div><dt className="text-slate-500">Stock total</dt><dd className="font-medium">{medicament.unites_par_boite > 1 ? medicament.stock_texte : formaterNombre(medicament.stock_total)}</dd></div>
             {gestionRayonnagesActive() && <div><dt className="text-slate-500">Emplacement</dt><dd className="font-medium">{medicament.emplacement || '—'}</dd></div>}
           </dl>
           {chargement && <Chargement />}
@@ -53,7 +53,7 @@ export function DetailMedicament({ medicament, onFermer }: { medicament: Medicam
                     <tr key={l.id}>
                       <td className="px-3 py-2">{l.numero_lot}</td>
                       <td className="px-3 py-2">{formaterDate(l.date_peremption)} {l.perime ? <Badge ton="rouge">Périmé</Badge> : l.jours_restants <= 90 ? <Badge ton="orange">{l.jours_restants} j</Badge> : null}</td>
-                      <td className="px-3 py-2 text-right">{l.quantite_actuelle}</td>
+                      <td className="px-3 py-2 text-right">{l.quantite_texte ?? l.quantite_actuelle}</td>
                       <td className="px-3 py-2 text-right">{formaterMontant(l.prix_vente ?? medicament.prix_vente)}</td>
                     </tr>
                   ))}
@@ -74,7 +74,7 @@ export function DetailMedicament({ medicament, onFermer }: { medicament: Medicam
                         <tr key={m.id}>
                           <td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{m.type_libelle}</td>
                           <td className="px-3 py-2">{m.numero_lot}</td><td className="px-3 py-2">{m.depot_nom}</td>
-                          <td className={`px-3 py-2 text-right font-medium ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite}</td>
+                          <td className={`px-3 py-2 text-right font-medium ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</td>
                           <td className="px-3 py-2 text-right">{m.stock_avant} → {m.stock_apres}</td>
                         </tr>
                       ))}

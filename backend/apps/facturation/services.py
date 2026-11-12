@@ -37,15 +37,19 @@ def valider_bon_livraison(document_id, utilisateur, quantites_livrees=None):
         livree = quantites_livrees.get(ligne.id, ligne.quantite_devis)
         if livree < 0 or livree > ligne.quantite_devis:
             raise ErreurMetier(f"Quantité livrée invalide pour « {ligne.medicament.nom} ».")
+        # Devis, BL et factures sont en boîtes complètes ; le stock est en unités.
+        ligne.unites_par_boite = ligne.medicament.unites_par_boite
         if livree > 0:
-            for lot, quantite in selectionner_lots_fefo(ligne.medicament, document.depot, livree, verrouiller=True):
+            par = ligne.unites_par_boite
+            for lot, unites in selectionner_lots_fefo(ligne.medicament, document.depot, livree * par,
+                                                      verrouiller=True, granularite=par):
                 appliquer_mouvement(
-                    lot=lot, depot=document.depot, quantite=-quantite, type_mouvement=TypeMouvement.VENTE,
+                    lot=lot, depot=document.depot, quantite=-unites, type_mouvement=TypeMouvement.VENTE,
                     utilisateur=utilisateur, motif=f"Bon de livraison {document.reference}", reference=document.reference,
                 )
         ligne.quantite_livree = livree
         ligne.total = (ligne.prix_unitaire * livree).quantize(DEUX_DECIMALES)
-        ligne.save(update_fields=["quantite_livree", "total"])
+        ligne.save(update_fields=["quantite_livree", "total", "unites_par_boite"])
         total += ligne.total
 
     document.numero_bl = prochaine_reference("BL")

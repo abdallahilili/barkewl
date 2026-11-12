@@ -52,12 +52,20 @@ class LigneVente(models.Model):
     vente = models.ForeignKey(Vente, on_delete=models.CASCADE, related_name="lignes")
     medicament = models.ForeignKey("medicaments.Medicament", on_delete=models.PROTECT, related_name="+")
     lot = models.ForeignKey("medicaments.Lot", on_delete=models.PROTECT, related_name="+")
+    # quantite et prix_unitaire sont exprimés dans le conditionnement vendu (ex. 2 plaquettes à 40).
+    conditionnement = models.CharField(max_length=10, default="BOITE")
+    # Unités de stock par conditionnement au moment de la vente (sortie de stock = quantite × ce nombre).
+    unites_par_conditionnement = models.PositiveIntegerField(default=1)
     quantite = models.PositiveIntegerField()
     prix_unitaire = models.DecimalField(max_digits=12, decimal_places=2)
     total = models.DecimalField(max_digits=14, decimal_places=2)
 
     class Meta:
         db_table = "lignes_vente"
+
+    @property
+    def quantite_unites(self):
+        return self.quantite * self.unites_par_conditionnement
 
 
 class PaiementVente(models.Model):

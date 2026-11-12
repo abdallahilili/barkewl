@@ -84,7 +84,7 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-left text-slate-600"><tr><th className="px-3 py-2">Médicament</th><th className="px-3 py-2">Lot</th><th className="px-3 py-2 text-right">Qté</th><th className="px-3 py-2 text-right">Prix</th><th className="px-3 py-2 text-right">Total</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {detail.lignes?.map((l) => <tr key={l.id}><td className="px-3 py-2">{l.medicament_nom}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2 text-right">{l.quantite}</td><td className="px-3 py-2 text-right">{formaterMontant(l.prix_unitaire)}</td><td className="px-3 py-2 text-right">{formaterMontant(l.total)}</td></tr>)}
+                  {detail.lignes?.map((l) => <tr key={l.id}><td className="px-3 py-2">{l.medicament_nom}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2 text-right">{l.quantite}{l.conditionnement !== 'BOITE' && <span className="text-slate-500"> {l.conditionnement_libelle}</span>}</td><td className="px-3 py-2 text-right">{formaterMontant(l.prix_unitaire)}</td><td className="px-3 py-2 text-right">{formaterMontant(l.total)}</td></tr>)}
                 </tbody>
               </table>
             </div>

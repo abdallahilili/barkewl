@@ -78,7 +78,7 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
                         <span className="recu-med-nom">{l.medicament}</span>
                         {l.dosage && <span className="recu-med-dosage"> ({l.dosage})</span>}
                       </td>
-                      <td className="recu-td recu-td-centre">{l.quantite}</td>
+                      <td className="recu-td recu-td-centre">{l.quantite}{l.conditionnement_libelle && <span className="recu-med-dosage"> {l.conditionnement_libelle}</span>}</td>
                       <td className="recu-td recu-td-droite">{formaterNombre(l.prix_unitaire)}</td>
                       <td className="recu-td recu-td-droite recu-td-gras">{formaterNombre(l.total)}</td>
                     </tr>

@@ -7,6 +7,7 @@ from apps.commun.constantes import ADMIN, CAISSIER
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.utilitaires import lire_date
 from apps.commun.vues_base import ViewSetGestion
+from apps.medicaments.conditionnement import libelle
 
 from . import services
 from .models import Client, Vente
@@ -89,6 +90,8 @@ class VenteViewSet(viewsets.ReadOnlyModelViewSet):
             "lignes": [{"medicament": l["medicament"].pk, "medicament_nom": l["medicament"].nom,
                         "lot": l["lot"].pk, "numero_lot": l["lot"].numero_lot,
                         "date_peremption": l["lot"].date_peremption, "quantite": l["quantite"],
+                        "conditionnement": l["conditionnement"],
+                        "conditionnement_libelle": libelle(l["medicament"], l["conditionnement"], l["quantite"]),
                         "prix_unitaire": l["prix_unitaire"], "total": l["total"]} for l in lignes],
         })
 

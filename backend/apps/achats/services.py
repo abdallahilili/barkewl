@@ -30,11 +30,14 @@ def valider_achat(achat_id, utilisateur, montant_paye=Decimal("0"), mode_paiemen
     for ligne in lignes:
         if ligne.date_peremption < aujourdhui:
             raise ErreurMetier(f"« {ligne.medicament.nom} » (lot {ligne.numero_lot}) est déjà périmé : achat refusé.")
+        # L'achat est en boîtes ; le stock est en unités. On fige le conditionnement utilisé.
+        ligne.unites_par_boite = ligne.medicament.unites_par_boite
+        unites = ligne.quantite * ligne.unites_par_boite
         lot, cree = Lot.objects.select_for_update().get_or_create(
             medicament=ligne.medicament, numero_lot=ligne.numero_lot,
             defaults={
                 "date_peremption": ligne.date_peremption, "date_fabrication": ligne.date_fabrication,
-                "prix_achat": ligne.prix_achat, "prix_vente": ligne.prix_vente, "quantite_initiale": ligne.quantite,
+                "prix_achat": ligne.prix_achat, "prix_vente": ligne.prix_vente, "quantite_initiale": unites,
             },
         )
         if not cree:
@@ -43,17 +46,17 @@ def valider_achat(achat_id, utilisateur, montant_paye=Decimal("0"), mode_paiemen
                     f"Le lot {ligne.numero_lot} de « {ligne.medicament.nom} » existe déjà avec une autre "
                     f"date de péremption ({lot.date_peremption:%d/%m/%Y})."
                 )
-            lot.quantite_initiale += ligne.quantite
+            lot.quantite_initiale += unites
             lot.prix_achat = ligne.prix_achat
             if ligne.prix_vente is not None:
                 lot.prix_vente = ligne.prix_vente
             lot.save()
         appliquer_mouvement(
-            lot=lot, depot=achat.depot, quantite=ligne.quantite, type_mouvement=TypeMouvement.ENTREE,
+            lot=lot, depot=achat.depot, quantite=unites, type_mouvement=TypeMouvement.ENTREE,
             utilisateur=utilisateur, motif=f"Achat fournisseur — {achat.fournisseur.nom}", reference=achat.reference,
         )
         ligne.lot = lot
-        ligne.save(update_fields=["lot"])
+        ligne.save(update_fields=["lot", "unites_par_boite"])
         medicament = ligne.medicament
         medicament.prix_achat = ligne.prix_achat  # dernier prix d'achat connu
         medicament.save(update_fields=["prix_achat", "date_modification"])
@@ -101,7 +104,8 @@ def annuler_achat(achat_id, utilisateur):
             raise ErreurMetier("Cet achat a déjà été payé (totalement ou en partie) : annulation impossible.")
         for ligne in achat.lignes.select_related("lot__medicament"):
             appliquer_mouvement(
-                lot=ligne.lot, depot=achat.depot, quantite=-ligne.quantite, type_mouvement=TypeMouvement.SORTIE,
+                lot=ligne.lot, depot=achat.depot, quantite=-ligne.quantite * ligne.unites_par_boite,
+                type_mouvement=TypeMouvement.SORTIE,
                 utilisateur=utilisateur, motif=f"Annulation de l'achat {achat.reference}", reference=achat.reference,
             )
     achat.statut = StatutDocument.ANNULE

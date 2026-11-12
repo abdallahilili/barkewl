@@ -18,10 +18,10 @@ interface Donnees {
   session_caisse?: { id: number; caisse: string; date_ouverture: string; montant_attendu: number } | null
   stock?: { valeur_totale?: number; nombre_ruptures: number; nombre_stock_faible: number; nombre_bientot_perimes: number; nombre_perimes: number; nombre_medicaments?: number }
   alertes?: {
-    stock_faible: { medicament_id: number; medicament: string; stock: number; minimum: number }[]
+    stock_faible: { medicament_id: number; medicament: string; stock: number; minimum: number; stock_texte?: string }[]
     ruptures: { medicament_id: number; medicament: string }[]
-    peremption_proche: { lot_id: number; medicament: string; numero_lot: string; depot: string; quantite: number; date_peremption: string; jours_restants: number }[]
-    perimes: { lot_id: number; medicament: string; numero_lot: string; depot: string; quantite: number; date_peremption: string }[]
+    peremption_proche: { lot_id: number; medicament: string; numero_lot: string; depot: string; quantite: number; quantite_texte?: string; date_peremption: string; jours_restants: number }[]
+    perimes: { lot_id: number; medicament: string; numero_lot: string; depot: string; quantite: number; quantite_texte?: string; date_peremption: string }[]
   }
   derniers_mouvements?: MouvementStock[]
   sauvegarde?: { derniere: { date: string } | null; en_retard: boolean }
@@ -111,7 +111,7 @@ export default function TableauDeBord() {
       <div className="grid gap-4 lg:grid-cols-2">
         {a && (
           <Panneau titre="Bientôt périmés" vers="/stock">
-            {a.peremption_proche.length === 0 ? vide : <ul className="divide-y divide-slate-100">{a.peremption_proche.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">— lot {l.numero_lot}, {l.quantite} u.</span></span><Badge ton="orange">{l.jours_restants} j</Badge></li>)}</ul>}
+            {a.peremption_proche.length === 0 ? vide : <ul className="divide-y divide-slate-100">{a.peremption_proche.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">— lot {l.numero_lot}, {l.quantite_texte ?? `${l.quantite} u.`}</span></span><Badge ton="orange">{l.jours_restants} j</Badge></li>)}</ul>}
           </Panneau>
         )}
         {a && (
@@ -119,14 +119,14 @@ export default function TableauDeBord() {
             {a.stock_faible.length + a.ruptures.length === 0 ? vide : (
               <ul className="divide-y divide-slate-100">
                 {a.ruptures.map((r) => <li key={`r${r.medicament_id}`} className="flex justify-between gap-2 py-1.5"><span>{r.medicament}</span><Badge ton="rouge">Rupture</Badge></li>)}
-                {a.stock_faible.map((r) => <li key={`f${r.medicament_id}`} className="flex justify-between gap-2 py-1.5"><span>{r.medicament}</span><Badge ton="orange">{r.stock} / min. {r.minimum}</Badge></li>)}
+                {a.stock_faible.map((r) => <li key={`f${r.medicament_id}`} className="flex justify-between gap-2 py-1.5"><span>{r.medicament}</span><Badge ton="orange">{r.stock_texte ?? r.stock} / min. {r.minimum}</Badge></li>)}
               </ul>
             )}
           </Panneau>
         )}
         {a && a.perimes.length > 0 && (
           <Panneau titre="Périmés à retirer du stock" vers="/stock/sorties">
-            <ul className="divide-y divide-slate-100">{a.perimes.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">— lot {l.numero_lot}, {l.quantite} u. ({l.depot})</span></span><Badge ton="rouge">{formaterDate(l.date_peremption)}</Badge></li>)}</ul>
+            <ul className="divide-y divide-slate-100">{a.perimes.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">— lot {l.numero_lot}, {l.quantite_texte ?? `${l.quantite} u.`} ({l.depot})</span></span><Badge ton="rouge">{formaterDate(l.date_peremption)}</Badge></li>)}</ul>
           </Panneau>
         )}
         {donnees.dernieres_ventes && (
@@ -136,7 +136,7 @@ export default function TableauDeBord() {
         )}
         {donnees.derniers_mouvements && (
           <Panneau titre="Derniers mouvements de stock" vers="/stock/historique">
-            {donnees.derniers_mouvements.length === 0 ? <p className="text-slate-500">Aucun mouvement.</p> : <ul className="divide-y divide-slate-100">{donnees.derniers_mouvements.map((m) => <li key={m.id} className="flex justify-between gap-2 py-1.5"><span>{m.medicament_nom} <span className="text-slate-500">— {m.type_libelle}</span></span><span className={`font-medium ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite}</span></li>)}</ul>}
+            {donnees.derniers_mouvements.length === 0 ? <p className="text-slate-500">Aucun mouvement.</p> : <ul className="divide-y divide-slate-100">{donnees.derniers_mouvements.map((m) => <li key={m.id} className="flex justify-between gap-2 py-1.5"><span>{m.medicament_nom} <span className="text-slate-500">— {m.type_libelle}</span></span><span className={`font-medium ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</span></li>)}</ul>}
           </Panneau>
         )}
       </div>

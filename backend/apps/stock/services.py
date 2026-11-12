@@ -37,11 +37,20 @@ def appliquer_mouvement(*, lot, depot, quantite, type_mouvement, utilisateur, mo
         )
 
 
-def selectionner_lots_fefo(medicament, depot, quantite, *, verrouiller=False):
+def selectionner_lots_fefo(medicament, depot, quantite, *, verrouiller=False, granularite=1, deja_pris=None):
     """
     FEFO : les lots qui expirent en premier sont consommés en premier.
-    Les lots périmés ne sont jamais proposés. Retourne [(lot, quantité), ...].
+    Les lots périmés ne sont jamais proposés. Retourne [(lot, quantité en unités), ...].
+
+    granularite : chaque lot ne fournit que des multiples de ce nombre d'unités. Pour vendre une boîte
+                  de 30 comprimés, on ne prend que des boîtes complètes (une boîte entamée reste pour le détail).
+    deja_pris   : {lot_id: unités} déjà réservées par d'autres lignes de la même vente (mis à jour ici).
     """
+    from apps.medicaments.conditionnement import decrire_quantite
+
+    if quantite % granularite:
+        raise ErreurMetier("Quantité incompatible avec le conditionnement.")
+    deja_pris = {} if deja_pris is None else deja_pris
     aujourdhui = timezone.localdate()
     stocks = (
         Stock.objects.filter(depot=depot, lot__medicament=medicament, quantite__gt=0,
@@ -54,8 +63,12 @@ def selectionner_lots_fefo(medicament, depot, quantite, *, verrouiller=False):
     restant = quantite
     plan = []
     for stock in stocks:
-        prise = min(stock.quantite, restant)
+        libre = stock.quantite - deja_pris.get(stock.lot_id, 0)
+        prise = min(libre - libre % granularite, restant)
+        if prise <= 0:
+            continue
         plan.append((stock.lot, prise))
+        deja_pris[stock.lot_id] = deja_pris.get(stock.lot_id, 0) + prise
         restant -= prise
         if restant == 0:
             break
@@ -63,11 +76,19 @@ def selectionner_lots_fefo(medicament, depot, quantite, *, verrouiller=False):
         if plan and obtenir_booleen("stock_negatif_autorise"):
             lot, prise = plan[-1]
             plan[-1] = (lot, prise + restant)
+            deja_pris[lot.pk] += restant
             return plan
         disponible = quantite - restant
+        if granularite > 1:
+            raise ErreurMetier(
+                f"Stock insuffisant pour « {medicament.nom} » dans le dépôt « {depot.nom} » : demandé "
+                f"{quantite // granularite}, disponible {disponible // granularite} en conditionnement complet "
+                "(les boîtes entamées ne se vendent qu'au détail ; lots périmés exclus)."
+            )
         raise ErreurMetier(
             f"Stock insuffisant pour « {medicament.nom} » dans le dépôt « {depot.nom} » : "
-            f"demandé {quantite}, disponible {disponible} (lots périmés exclus)."
+            f"demandé {decrire_quantite(medicament, quantite)}, disponible {decrire_quantite(medicament, disponible)} "
+            "(lots périmés exclus)."
         )
     return plan
 

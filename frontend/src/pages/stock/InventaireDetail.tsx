@@ -109,7 +109,7 @@ export default function InventaireDetail() {
               const ecart = compte === '' || compte == null ? null : Number(compte) - l.quantite_theorique
               return (
                 <tr key={l.id}>
-                  <td className="px-3 py-2 font-medium">{l.medicament_nom}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2">{formaterDate(l.date_peremption)}</td>
+                  <td className="px-3 py-2 font-medium">{l.medicament_nom}{l.unites_par_boite > 1 && <span className="block text-xs font-normal text-slate-500">à compter en unités (1 boîte = {l.unites_par_boite})</span>}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2">{formaterDate(l.date_peremption)}</td>
                   <td className="px-3 py-2 text-right">{l.quantite_theorique}</td>
                   <td className="px-3 py-2 text-right">
                     {modifiable ? <input type="number" min={0} className="champ w-24 py-1 text-right" value={compte ?? ''} onChange={(e) => setSaisies((s) => ({ ...s, [l.id]: e.target.value }))} aria-label={`Quantité comptée ${l.medicament_nom}`} /> : (l.quantite_physique ?? '—')}

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -6,6 +8,7 @@ from apps.commun.references import prochaine_reference
 from apps.commun.serializers import MasquerPrixAchatMixin
 from apps.commun.parametres import obtenir_entier
 from apps.depots.models import Depot
+from apps.medicaments.conditionnement import decrire_quantite
 from apps.medicaments.models import Lot, Medicament
 
 from .models import Inventaire, LigneInventaire, LigneTransfert, MouvementStock, Stock, Transfert
@@ -22,6 +25,8 @@ class StockSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):
     prix_achat = serializers.DecimalField(source="lot.prix_achat", max_digits=12, decimal_places=2, read_only=True)
     prix_vente = serializers.SerializerMethodField()
     valeur_stock = serializers.SerializerMethodField()
+    quantite_texte = serializers.SerializerMethodField()
+    unites_par_boite = serializers.IntegerField(source="lot.medicament.unites_par_boite", read_only=True)
     date_peremption = serializers.DateField(source="lot.date_peremption", read_only=True)
     jours_restants = serializers.SerializerMethodField()
     etat = serializers.SerializerMethodField()
@@ -30,15 +35,19 @@ class StockSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):
         model = Stock
         fields = [
             "id", "medicament_id", "medicament", "dosage", "forme", "categorie", "lot", "numero_lot",
-            "depot", "depot_nom", "quantite", "prix_achat", "prix_vente", "valeur_stock",
-            "date_peremption", "jours_restants", "etat",
+            "depot", "depot_nom", "quantite", "quantite_texte", "unites_par_boite", "prix_achat", "prix_vente",
+            "valeur_stock", "date_peremption", "jours_restants", "etat",
         ]
 
     def get_prix_vente(self, obj):
         return obj.lot.prix_vente_effectif
 
     def get_valeur_stock(self, obj):
-        return obj.quantite * obj.lot.prix_achat
+        # Quantité en unités, prix d'achat à la boîte.
+        return (obj.quantite * obj.lot.prix_achat / obj.lot.medicament.unites_par_boite).quantize(Decimal("0.01"))
+
+    def get_quantite_texte(self, obj):
+        return decrire_quantite(obj.lot.medicament, obj.quantite)
 
     def get_jours_restants(self, obj):
         return (obj.lot.date_peremption - timezone.localdate()).days
@@ -52,7 +61,7 @@ class StockSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):
         seuil = self.context.setdefault("_seuil_peremption", obtenir_entier("jours_alerte_peremption"))
         if jours <= seuil:
             return "BIENTOT_PERIME"
-        minimum = obj.lot.medicament.stock_minimum
+        minimum = obj.lot.medicament.stock_minimum * obj.lot.medicament.unites_par_boite
         total = getattr(obj, "total_medicament_depot", obj.quantite)
         if minimum > 0 and total <= minimum:
             return "STOCK_FAIBLE"
@@ -65,14 +74,18 @@ class MouvementStockSerializer(serializers.ModelSerializer):
     numero_lot = serializers.CharField(source="lot.numero_lot", read_only=True)
     depot_nom = serializers.CharField(source="depot.nom", read_only=True)
     type_libelle = serializers.CharField(source="get_type_mouvement_display", read_only=True)
+    quantite_texte = serializers.SerializerMethodField()
 
     class Meta:
         model = MouvementStock
         fields = [
             "id", "date_mouvement", "utilisateur", "utilisateur_nom", "medicament", "medicament_nom",
             "lot", "numero_lot", "depot", "depot_nom", "type_mouvement", "type_libelle", "quantite",
-            "stock_avant", "stock_apres", "motif", "reference",
+            "quantite_texte", "stock_avant", "stock_apres", "motif", "reference",
         ]
+
+    def get_quantite_texte(self, obj):
+        return decrire_quantite(obj.medicament, obj.quantite)
 
 
 class EntreeStockSerializer(serializers.Serializer):
@@ -82,6 +95,8 @@ class EntreeStockSerializer(serializers.Serializer):
     date_peremption = serializers.DateField()
     depot = serializers.PrimaryKeyRelatedField(queryset=Depot.objects.filter(actif=True))
     quantite = serializers.IntegerField(min_value=1)
+    # Vrai : quantite est un nombre de boîtes (converti en unités) ; faux : quantite est en unités.
+    en_boites = serializers.BooleanField(required=False, default=False)
     prix_achat = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True, min_value=0)
     prix_vente = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True, min_value=0)
     motif = serializers.ChoiceField(choices=["RETOUR_CLIENT", "CORRECTION", "AUTRE"])
@@ -97,6 +112,7 @@ class SortieStockSerializer(serializers.Serializer):
     lot = serializers.PrimaryKeyRelatedField(queryset=Lot.objects.select_related("medicament"))
     depot = serializers.PrimaryKeyRelatedField(queryset=Depot.objects.all())
     quantite = serializers.IntegerField(min_value=1)
+    en_boites = serializers.BooleanField(required=False, default=False)
     motif = serializers.ChoiceField(
         choices=["PEREMPTION", "ENDOMMAGE", "PERTE", "CONSOMMATION_INTERNE", "CORRECTION", "AUTRE"]
     )
@@ -109,11 +125,12 @@ class LigneTransfertSerializer(serializers.ModelSerializer):
     medicament_nom = serializers.CharField(source="lot.medicament.nom", read_only=True)
     numero_lot = serializers.CharField(source="lot.numero_lot", read_only=True)
     date_peremption = serializers.DateField(source="lot.date_peremption", read_only=True)
+    unites_par_boite = serializers.IntegerField(source="lot.medicament.unites_par_boite", read_only=True)
     quantite = serializers.IntegerField(min_value=1)
 
     class Meta:
         model = LigneTransfert
-        fields = ["id", "lot", "medicament_nom", "numero_lot", "date_peremption", "quantite"]
+        fields = ["id", "lot", "medicament_nom", "numero_lot", "date_peremption", "unites_par_boite", "quantite"]
 
 
 class TransfertSerializer(serializers.ModelSerializer):
@@ -178,11 +195,12 @@ class LigneInventaireSerializer(serializers.ModelSerializer):
     numero_lot = serializers.CharField(source="lot.numero_lot", read_only=True)
     date_peremption = serializers.DateField(source="lot.date_peremption", read_only=True)
     ecart = serializers.IntegerField(read_only=True)
+    unites_par_boite = serializers.IntegerField(source="lot.medicament.unites_par_boite", read_only=True)
 
     class Meta:
         model = LigneInventaire
         fields = [
-            "id", "lot", "medicament_nom", "numero_lot", "date_peremption",
+            "id", "lot", "medicament_nom", "numero_lot", "date_peremption", "unites_par_boite",
             "quantite_theorique", "quantite_physique", "ecart", "ecart_applique",
         ]
 

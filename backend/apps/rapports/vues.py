@@ -13,6 +13,7 @@ from apps.commun.constantes import ADMIN, CAISSIER, MAGASINIER, TOUS_LES_ROLES
 from apps.commun import sauvegarde
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.utilitaires import plage_dates
+from apps.medicaments.conditionnement import decrire_quantite
 from apps.stock import alertes
 from apps.stock.models import MouvementStock, Stock, TypeMouvement
 from apps.stock.serializers import MouvementStockSerializer
@@ -55,8 +56,9 @@ class RapportVentesView(APIView):
         elif regroupement == "medicament":
             from apps.ventes.models import LigneVente
 
+            # Quantité vendue en unités de stock (boîtes et détail additionnés correctement).
             lv = LigneVente.objects.filter(vente__in=ventes).values("medicament__nom").annotate(
-                nombre=Sum("quantite"), total=_somme("total")).order_by("-total")
+                nombre=Sum(F("quantite") * F("unites_par_conditionnement")), total=_somme("total")).order_by("-total")
             lignes = [{"libelle": l["medicament__nom"], "nombre": l["nombre"], "total": l["total"]} for l in lv]
         else:
             raise ErreurMetier("Regroupement inconnu (jour, caissier, depot, medicament).")
@@ -161,7 +163,7 @@ class RapportStockView(APIView):
         depot = Depot.objects.filter(pk=depot_id).first() if depot_id else None
         alerte = alertes.construire_alertes(depot, limite=1000)
         if type_rapport == "valeur":
-            valeur = ExpressionWrapper(F("quantite") * F("lot__prix_achat"), output_field=MONNAIE)
+            valeur = alertes.VALEUR_STOCK
             base = Stock.objects.filter(quantite__gt=0)
             if depot:
                 base = base.filter(depot=depot)
@@ -187,8 +189,10 @@ class RapportStockView(APIView):
                 base = base.filter(depot=depot)
             return Response({"lignes": [
                 {"medicament": s.lot.medicament.nom, "numero_lot": s.lot.numero_lot, "depot": s.depot.nom,
-                 "quantite": s.quantite, "date_peremption": s.lot.date_peremption,
-                 "valeur": s.quantite * s.lot.prix_achat} for s in base[:5000]]})
+                 "quantite": s.quantite, "quantite_texte": decrire_quantite(s.lot.medicament, s.quantite),
+                 "date_peremption": s.lot.date_peremption,
+                 "valeur": (s.quantite * s.lot.prix_achat / s.lot.medicament.unites_par_boite).quantize(Decimal("0.01"))}
+                for s in base[:5000]]})
         raise ErreurMetier("Type de rapport inconnu (etat, valeur, faible, ruptures, peremption).")
 
 

@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from apps.caisse.models import ModePaiement
 from apps.commun.parametres import identite_documents
+from apps.medicaments.conditionnement import BOITE, CONDITIONNEMENTS, libelle
 from apps.medicaments.models import Medicament
 
 from .models import Client, LigneVente, PaiementVente, Vente
@@ -21,10 +22,15 @@ class LigneVenteSerializer(serializers.ModelSerializer):
     medicament_nom = serializers.CharField(source="medicament.nom", read_only=True)
     numero_lot = serializers.CharField(source="lot.numero_lot", read_only=True)
     date_peremption = serializers.DateField(source="lot.date_peremption", read_only=True)
+    conditionnement_libelle = serializers.SerializerMethodField()
 
     class Meta:
         model = LigneVente
-        fields = ["id", "medicament", "medicament_nom", "lot", "numero_lot", "date_peremption", "quantite", "prix_unitaire", "total"]
+        fields = ["id", "medicament", "medicament_nom", "lot", "numero_lot", "date_peremption", "conditionnement",
+                  "conditionnement_libelle", "quantite", "prix_unitaire", "total"]
+
+    def get_conditionnement_libelle(self, obj):
+        return libelle(obj.medicament, obj.conditionnement, obj.quantite)
 
 
 class PaiementVenteSerializer(serializers.ModelSerializer):
@@ -65,6 +71,7 @@ class VenteSerializer(VenteListeSerializer):
 
 class ArticleVenteSerializer(serializers.Serializer):
     medicament = serializers.PrimaryKeyRelatedField(queryset=Medicament.objects.all())
+    conditionnement = serializers.ChoiceField(choices=CONDITIONNEMENTS, default=BOITE)
     quantite = serializers.IntegerField(min_value=1)
 
 
@@ -93,13 +100,21 @@ class AnnulerVenteSerializer(serializers.Serializer):
 def construire_recu(vente):
     """Données du reçu client (impression navigateur côté frontend)."""
     regroupees = OrderedDict()
+    medicaments = {}
     for ligne in vente.lignes.select_related("medicament"):
-        cle = (ligne.medicament_id, ligne.prix_unitaire)
+        cle = (ligne.medicament_id, ligne.conditionnement, ligne.prix_unitaire)
+        medicaments[ligne.medicament_id] = ligne.medicament
         if cle not in regroupees:
             regroupees[cle] = {"medicament": ligne.medicament.nom, "dosage": ligne.medicament.dosage,
-                               "quantite": 0, "prix_unitaire": ligne.prix_unitaire, "total": Decimal("0")}
+                               "conditionnement": ligne.conditionnement, "quantite": 0,
+                               "prix_unitaire": ligne.prix_unitaire, "total": Decimal("0")}
         regroupees[cle]["quantite"] += ligne.quantite
         regroupees[cle]["total"] += ligne.total
+    for (medicament_id, conditionnement, _), ligne in regroupees.items():
+        # Libellé seulement pour le détail : une vente à la boîte s'affiche comme avant.
+        ligne["conditionnement_libelle"] = (
+            libelle(medicaments[medicament_id], conditionnement, ligne["quantite"]) if conditionnement != BOITE else ""
+        )
     paiements = list(vente.paiements.select_related("mode_paiement"))
     especes = sum((p.montant for p in paiements if p.mode_paiement.type == "ESPECES"), Decimal("0"))
     rendu = (vente.montant_recu - especes) if vente.montant_recu is not None else None
