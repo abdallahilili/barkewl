@@ -80,7 +80,7 @@ export function Licence() {
       <form onSubmit={activer} className="carte space-y-3 p-5">
         <p className="flex items-center gap-2 text-sm font-semibold"><KeyRound size={16} /> Activer ou renouveler</p>
         <MessageErreur message={erreur} />
-        <textarea className="champ min-h-[96px] font-mono text-xs" placeholder="Collez ici la clé reçue (elle commence par BRKW1.)"
+        <textarea className="champ min-h-[96px] font-mono text-xs" placeholder="Collez ici la clé reçue (elle commence par RQM1.)"
           value={cle} onChange={(e) => setCle(e.target.value)} required aria-label="Clé de licence" />
         <button className="btn-primaire" disabled={envoi || !cle.trim()}><BadgeCheck size={16} /> {envoi ? 'Vérification…' : 'Activer la licence'}</button>
       </form>

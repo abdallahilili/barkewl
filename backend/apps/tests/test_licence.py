@@ -16,7 +16,7 @@ from apps.utilisateurs.models import Utilisateur
 
 SECRET_TEST = bytes(range(32))
 PUBLIQUE_TEST = ed25519.cle_publique(SECRET_TEST).hex()
-PC = "BRK-AAAA-BBBB-CCCC"
+PC = "RQM-AAAA-BBBB-CCCC"
 
 
 def b64(octets):
@@ -28,7 +28,7 @@ def fabriquer_cle(fin_dans_jours=30, machine=PC, secret=SECRET_TEST, plan="MENSU
     contenu = {"v": 1, "id": "test", "client": "Pharmacie Test", "machine": machine, "plan": plan,
                "debut": aujourdhui.isoformat(), "fin": (aujourdhui + timedelta(days=fin_dans_jours)).isoformat()}
     charge = json.dumps(contenu).encode()
-    return f"BRKW1.{b64(charge)}.{b64(ed25519.signer(secret, charge))}"
+    return f"RQM1.{b64(charge)}.{b64(ed25519.signer(secret, charge))}"
 
 
 @override_settings(LICENCE_OBLIGATOIRE=True)
@@ -91,8 +91,8 @@ class TestLicence(TestCase):
 
     def test_licence_d_un_autre_pc(self):
         with self.assertRaisesMessage(ErreurMetier, "autre ordinateur"):
-            services.activer_licence(fabriquer_cle(machine="BRK-1111-2222-3333"), self.admin)
-        self.installer(fabriquer_cle(machine="BRK-1111-2222-3333"))   # copiée à la main dans la base
+            services.activer_licence(fabriquer_cle(machine="RQM-1111-2222-3333"), self.admin)
+        self.installer(fabriquer_cle(machine="RQM-1111-2222-3333"))   # copiée à la main dans la base
         self.assertEqual(services.etat_licence()["statut"], "INVALIDE")
 
     def test_cycle_d_expiration(self):
@@ -131,6 +131,6 @@ class TestLicence(TestCase):
     def test_empreinte_stable(self):
         mock.patch.stopall()
         services.vider_cache()
-        self.assertRegex(services.empreinte_machine(), r"^BRK-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$")
+        self.assertRegex(services.empreinte_machine(), r"^RQM-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$")
         self.assertEqual(services.empreinte_machine(), services.empreinte_machine())
         self.patchs = []

@@ -10,7 +10,7 @@ Une copie peut être déposée dans un second dossier (clé USB, autre disque, d
 
 Configuration (.env) :
   DOSSIER_SAUVEGARDES             dossier principal (défaut : backend/sauvegardes)
-  DOSSIER_SAUVEGARDES_COPIE       second dossier facultatif (ex. E:\\Barkewl ou un dossier OneDrive / Google Drive)
+  DOSSIER_SAUVEGARDES_COPIE       second dossier facultatif (ex. E:\\Raqim ou un dossier OneDrive / Google Drive)
   SAUVEGARDES_JOURS_CONSERVATION  durée de conservation en jours (défaut : 30)
   SAUVEGARDE_INTERVALLE_HEURES    sauvegarde automatique si la dernière date de plus de N heures (défaut : 6, 0 = désactivée)
   CHEMIN_MYSQL_BIN                dossier contenant mysqldump.exe et mysql.exe (détecté automatiquement sinon)
@@ -34,11 +34,12 @@ from django.db import connection
 
 from .exceptions import ErreurMetier
 
-journal = logging.getLogger("barkewl.sauvegarde")
+journal = logging.getLogger("raqim.sauvegarde")
 
-PREFIXE = "barkewl_"
+PREFIXE = "raqim_"
 EXTENSIONS = (".sql.gz", ".sqlite3.gz")
-MOTIF_NOM = re.compile(r"^barkewl_\d{8}_\d{6}(_[a-z]+)?\.(sql|sqlite3)\.gz$")
+# Les sauvegardes faites sous l'ancien nom (barkewl_…) restent reconnues.
+MOTIF_NOM = re.compile(r"^(raqim|barkewl)_\d{8}_\d{6}(_[a-z]+)?\.(sql|sqlite3)\.gz$")
 MINIMUM_CONSERVE = 7          # on garde toujours au moins les 7 dernières, même anciennes
 FIN_DUMP_MYSQL = b"-- Dump completed"
 _verrou = threading.Lock()
@@ -113,7 +114,7 @@ def trouver_outil_mysql(nom):
 
 def _fichier_identifiants(db):
     """Fichier d'options temporaire : le mot de passe n'apparaît jamais sur la ligne de commande."""
-    descripteur, chemin = tempfile.mkstemp(suffix=".cnf", prefix="barkewl_")
+    descripteur, chemin = tempfile.mkstemp(suffix=".cnf", prefix="raqim_")
     mot_de_passe = (db["PASSWORD"] or "").replace("\\", "\\\\").replace('"', '\\"')
     with os.fdopen(descripteur, "w", encoding="utf-8") as f:
         f.write("[client]\n")
@@ -332,7 +333,7 @@ def _restaurer_mysql(chemin):
 
 
 def _restaurer_sqlite(chemin):
-    descripteur, temporaire = tempfile.mkstemp(suffix=".sqlite3", prefix="barkewl_")
+    descripteur, temporaire = tempfile.mkstemp(suffix=".sqlite3", prefix="raqim_")
     with os.fdopen(descripteur, "wb") as sortie, gzip.open(chemin, "rb") as entree:
         shutil.copyfileobj(entree, sortie)
     source = sqlite3.connect(temporaire)

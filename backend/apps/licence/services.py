@@ -1,7 +1,7 @@
 """
-Licence Barkewl (Rawafid Digital Services).
+Licence Raqim (Rawafid Digital Services).
 
-Une licence est une clé « BRKW1.<contenu>.<signature> » :
+Une licence est une clé « RQM1.<contenu>.<signature> » :
 - le contenu (JSON) indique la pharmacie, le code du PC, l'abonnement et la date de fin ;
 - la signature Ed25519 est faite par l'éditeur avec sa clé PRIVÉE (qui ne quitte jamais l'éditeur).
 Le logiciel ne contient que la clé PUBLIQUE : il peut vérifier une licence, pas en fabriquer.
@@ -29,7 +29,7 @@ from . import ed25519, editeur
 from .models import EtatLicence
 
 CLE_PUBLIQUE_HEX = "68e7777777eb5b42556168a7c5519b2f69317929f6da336763a5bbdabc3dc588"
-PREFIXE = "BRKW1"
+PREFIXE = "RQM1"
 JOURS_GRACE = 5
 JOURS_AVERTISSEMENT = 7
 TOLERANCE_HORLOGE_JOURS = 2      # un PC peut avoir quelques heures d'avance un jour, puis être corrigé
@@ -68,9 +68,11 @@ def _identifiant_brut():
 
 
 def empreinte_machine():
-    """Code du PC, ex. BRK-7F3A-91C2-04BD : identique à chaque démarrage, différent sur un autre PC."""
+    """Code du PC, ex. RQM-7F3A-91C2-04BD : identique à chaque démarrage, différent sur un autre PC."""
+    # Le préfixe « barkewl: » du calcul est interne (ancien nom du projet) : le changer modifierait
+    # le code de tous les PC déjà licenciés.
     empreinte = hashlib.sha256(f"barkewl:{_identifiant_brut()}".encode()).hexdigest()[:12].upper()
-    return f"BRK-{empreinte[:4]}-{empreinte[4:8]}-{empreinte[8:]}"
+    return f"RQM-{empreinte[:4]}-{empreinte[4:8]}-{empreinte[8:]}"
 
 
 # --------------------------------------------------------------------------- lecture d'une clé
@@ -84,7 +86,7 @@ def decoder_cle(cle):
     cle = "".join((cle or "").split())   # tolère les retours à la ligne ajoutés par WhatsApp
     morceaux = cle.split(".")
     if len(morceaux) != 3 or morceaux[0] != PREFIXE:
-        raise ErreurMetier("Clé de licence illisible : copiez-la en entier, elle commence par BRKW1.")
+        raise ErreurMetier("Clé de licence illisible : copiez-la en entier, elle commence par RQM1.")
     try:
         charge, signature = _b64(morceaux[1]), _b64(morceaux[2])
     except (ValueError, TypeError):
