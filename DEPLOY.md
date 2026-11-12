@@ -1,4 +1,22 @@
-# Déploiement de RAQEEM PHARMA sur Windows (sans Docker, avec WampServer)
+# Déploiement de RAQEEM PHARMA sur Windows
+
+> ## ★ Méthode recommandée : le paquet d'installation (depuis la version 1.0.0)
+>
+> 1. **Chez Rawafid** : `powershell -ExecutionPolicy Bypass -File deploy\installation\construire_paquet.ps1`
+>    → `dist-installation\RaqeemPharma-<version>.zip` (serveur, interface déjà construite, composants Python,
+>    installateur Python officiel). Aucune connexion Internet n'est nécessaire chez le client.
+> 2. **Chez le client** (MySQL/WampServer démarré) : dézipper, clic droit sur **`Installer.bat`** > Exécuter en
+>    tant qu'administrateur. Option plusieurs postes : `Installer.bat -Reseau`.
+> 3. **Mises à jour** : nouveau paquet, **`Mettre_a_jour.bat`** (sauvegarde, puis retour automatique à
+>    l'ancienne version et aux données d'avant si une étape échoue).
+>
+> Détails : `deploy/installation/LISEZMOI.txt`. Le serveur sert lui-même l'interface : plus besoin d'Apache.
+> Le serveur est lancé par `python -m waitress` (le lanceur `waitress-serve.exe`, non signé, est bloqué
+> par Smart App Control sur certains PC).
+>
+> La suite de ce document décrit l'ancienne installation manuelle (WampServer + Apache), conservée pour référence.
+
+---
 
 Architecture retenue : usage **local uniquement** (ce PC), backend démarré
 **automatiquement avec Windows** via un service.

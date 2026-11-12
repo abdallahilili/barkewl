@@ -34,8 +34,11 @@ function Read-Secret($question) {
     $s = Read-Host -AsSecureString $question
     return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 }
+# Programmes externes (python, robocopy…) : seul leur code de sortie compte. Sous PowerShell 5.1, avec
+# « Stop », un simple message d'information écrit sur la sortie d'erreur interromprait le script.
+function Natif([scriptblock]$bloc) { $ErrorActionPreference = "Continue"; & $bloc }
 function Executer($exe, [string[]]$arguments, $message) {
-    & $exe @arguments
+    Natif { & $exe @arguments }
     if ($LASTEXITCODE -ne 0) { Echec $message }
 }
 
@@ -70,7 +73,7 @@ if (-not $Python) {
     }
 }
 if (-not (Test-Path $Python)) { Echec "Python introuvable : $Python" }
-Ok (& $Python --version)
+Ok (Natif { & $Python --version })
 
 # ---------------------------------------------------------------- 2. Copie du logiciel
 Titre "2/8  Copie du logiciel"
@@ -96,10 +99,10 @@ Titre "4/8  Base de données MySQL"
 Write-Host "    Le serveur MySQL (WampServer, MySQL ou MariaDB) doit être démarré sur ${MysqlHote}:${MysqlPort}."
 if ($NonInteractif) { $mdpAdminMysql = $env:RAQEEM_MYSQL_ADMIN_MDP }
 else { $mdpAdminMysql = Read-Secret "    Mot de passe MySQL de « $MysqlAdmin » (vide sous WampServer par défaut)" }
-$mdpBd = (& $py (Join-Path $Paquet "outils_installation.py") mot_de_passe).Trim()
+$mdpBd = (Natif { & $py (Join-Path $Paquet "outils_installation.py") mot_de_passe }).Trim()
 $env:RAQEEM_MYSQL_HOTE = $MysqlHote; $env:RAQEEM_MYSQL_PORT = "$MysqlPort"; $env:RAQEEM_MYSQL_ADMIN = $MysqlAdmin
 $env:RAQEEM_MYSQL_ADMIN_MDP = $mdpAdminMysql; $env:RAQEEM_BD_NOM = $BdNom; $env:RAQEEM_BD_UTILISATEUR = $BdUtilisateur; $env:RAQEEM_BD_MDP = $mdpBd
-& $py (Join-Path $Paquet "outils_installation.py") base
+Natif { & $py (Join-Path $Paquet "outils_installation.py") base }
 $codeBase = $LASTEXITCODE
 Remove-Item Env:RAQEEM_MYSQL_ADMIN_MDP, Env:RAQEEM_BD_MDP -ErrorAction SilentlyContinue
 if ($codeBase -ne 0) { Echec "Vérifiez que MySQL est démarré et que le mot de passe est correct." }
@@ -107,7 +110,7 @@ Ok "Base « $BdNom » prête (compte dédié « $BdUtilisateur »)"
 
 # ---------------------------------------------------------------- 5. Configuration
 Titre "5/8  Configuration"
-$cle = (& $py (Join-Path $Paquet "outils_installation.py") cle).Trim()
+$cle = (Natif { & $py (Join-Path $Paquet "outils_installation.py") cle }).Trim()
 $fichierEnv = Join-Path $Dossier "app\backend\.env"
 $lignesEnv = @(
     "# RAQEEM PHARMA - configuration de ce poste (générée par l'installation le $(Get-Date -Format 'yyyy-MM-dd HH:mm'))",
@@ -161,7 +164,8 @@ $demarrer = Join-Path $Dossier "demarrer_serveur.bat"
     "@echo off",
     "REM RAQEEM PHARMA - serveur (lancé au démarrage de Windows par la tâche $NomTache)",
     "cd /d `"$(Join-Path $Dossier 'app\backend')`"",
-    "`"$(Join-Path $venv 'Scripts\waitress-serve.exe')`" --host=$hote --port=$Port --threads=8 config.wsgi:application >> `"$(Join-Path $Dossier 'journaux\serveur.log')`" 2>&1"
+    "REM python.exe -m waitress (et non waitress-serve.exe, non signé et bloqué par Smart App Control sur certains PC)",
+    "`"$(Join-Path $venv 'Scripts\python.exe')`" -m waitress --host=$hote --port=$Port --threads=8 config.wsgi:application >> `"$(Join-Path $Dossier 'journaux\serveur.log')`" 2>&1"
 ) | Set-Content -Path $demarrer -Encoding ASCII
 if ($SansTache) {
     Ok "Mode test : pas de tâche planifiée"
@@ -193,7 +197,7 @@ if (-not $SansTache) {
     Ok "Le logiciel répond sur http://localhost:$Port"
 }
 Push-Location (Join-Path $Dossier "app\backend")
-$ligneCode = & $py manage.py licence 2>$null | Select-String "Code du PC" | Select-Object -First 1
+$ligneCode = Natif { & $py manage.py licence 2>$null } | Select-String "Code du PC" | Select-Object -First 1
 $codePc = "(voir Paramètres > Licence)"
 if ($ligneCode) { $codePc = $ligneCode.ToString().Split(":")[-1].Trim() }
 Pop-Location

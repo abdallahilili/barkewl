@@ -7,7 +7,9 @@ param(
     [string]$Dossier = "C:\RaqeemPharma",
     [switch]$SansTache          # tests : pas d'arrêt/démarrage de la tâche planifiée
 )
-$ErrorActionPreference = "Stop"
+# « Continue » : chaque étape vérifie explicitement le code de sortie des programmes (python, robocopy).
+# Sous PowerShell 5.1, « Stop » interromprait le script au premier message d'information de Python.
+$ErrorActionPreference = "Continue"
 $Paquet = Split-Path -Parent $MyInvocation.MyCommand.Path
 $NomTache = "RaqeemPharma"
 $app = Join-Path $Dossier "app"
@@ -20,7 +22,8 @@ function Ok($texte) { Write-Host "    OK  $texte" -ForegroundColor Green }
 function Arreter-Serveur {
     if ($SansTache) { return }
     schtasks /end /tn $NomTache 2>$null | Out-Null
-    Get-CimInstance Win32_Process -Filter "Name='waitress-serve.exe'" | Where-Object { $_.ExecutablePath -like "$Dossier*" } |
+    Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object { $_.ExecutablePath -like "$Dossier*" -and $_.CommandLine -like "*waitress*" } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     Start-Sleep -Seconds 2
 }
@@ -107,7 +110,7 @@ catch {
 
 # ---------------------------------------------------------------- 5. Redémarrage et vérification
 Titre "5/5  Redémarrage"
-Copy-Item (Join-Path $Paquet "VERSION.txt") (Join-Path $Dossier "VERSION.txt") -Force
+Copy-Item (Join-Path $Paquet "VERSION.txt") (Join-Path $Dossier "VERSION.txt") -Force -ErrorAction Stop
 Demarrer-Serveur
 if (-not $SansTache) {
     $info = Get-Content (Join-Path $Dossier "installation.json") -Raw | ConvertFrom-Json
