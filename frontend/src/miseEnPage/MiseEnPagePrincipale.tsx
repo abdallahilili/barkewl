@@ -1,8 +1,8 @@
-import { KeyRound, LogOut, Menu, Pill, X } from "lucide-react";
+import { KeyRound, LogOut, Menu, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { BandeauLicence } from "../composants/BandeauLicence";
-import { SymboleRaqeem } from "../composants/LogoRaqeem";
+import { LogoRaqeem } from "../composants/LogoRaqeem";
 import { Champ } from "../composants/Champ";
 import { EDITEUR_PAR_DEFAUT, NOM_LOGICIEL } from "../services/licence";
 import { MessageErreur } from "../composants/EnTetePage";
@@ -147,28 +147,29 @@ export function MiseEnPagePrincipale() {
     </nav>
   );
 
-  const logo = lireLogoPharmacie();
+  // En haut du menu : la marque du logiciel, RAQEEM PHARMA, sur bandeau bleu nuit.
   const marque = (
-    <div className="flex h-14 items-center gap-2 border-b border-slate-200 px-4">
-      {logo ? (
-        <img src={logo} alt="Logo" className="h-8 w-10 shrink-0 object-contain" />
-      ) : (
-        <SymboleRaqeem taille={34} />
-      )}
-      <span className="truncate whitespace-nowrap text-xl font-semibold text-nuit-800">
-        {lireNomPharmacie()}
-      </span>
+    <div className="flex h-16 shrink-0 items-center bg-nuit-800 px-4">
+      <LogoRaqeem taille={36} fond="sombre" compact />
+    </div>
+  );
+
+  // En haut de page : la pharmacie du client (son logo et son nom).
+  const logo = lireLogoPharmacie();
+  const pharmacie = (
+    <div className="flex min-w-0 items-center gap-2.5">
+      {logo && <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-md object-contain" />}
+      <div className="min-w-0 leading-tight">
+        <p className="hidden text-[11px] font-medium uppercase tracking-wider text-slate-500 sm:block">Pharmacie</p>
+        <p className="truncate text-base font-semibold text-nuit-800">{lireNomPharmacie()}</p>
+      </div>
     </div>
   );
 
   // Signature de l'éditeur en bas du menu.
   const signature = (
-    <div className="flex items-center gap-2.5 border-t border-slate-100 px-4 py-3">
-      <SymboleRaqeem taille={26} />
-      <div className="text-xs leading-tight">
-        <p className="font-semibold tracking-wide text-nuit-800">{NOM_LOGICIEL}</p>
-        <p className="text-slate-500">par {EDITEUR_PAR_DEFAUT}</p>
-      </div>
+    <div className="shrink-0 border-t border-slate-100 px-4 py-3 text-xs leading-tight text-slate-500">
+      {NOM_LOGICIEL} · par <span className="font-medium text-nuit-800">{EDITEUR_PAR_DEFAUT}</span>
     </div>
   );
 
@@ -194,17 +195,19 @@ export function MiseEnPagePrincipale() {
         </div>
       )}
 
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 sans-impression">
-        <button
-          className="btn-discret lg:hidden"
-          onClick={() => setMenuOuvert(!menuOuvert)}
-          aria-label="Ouvrir le menu"
-        >
-          {menuOuvert ? <X size={20} /> : <Menu size={20} />}
-        </button>
-        <div className="hidden lg:block" />
-        <div className="flex items-center gap-3">
-          <div className="text-right leading-tight">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sans-impression">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            className="btn-discret lg:hidden"
+            onClick={() => setMenuOuvert(!menuOuvert)}
+            aria-label="Ouvrir le menu"
+          >
+            {menuOuvert ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          {pharmacie}
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="hidden text-right leading-tight sm:block">
             <p className="text-sm font-medium">{utilisateur?.nom_complet}</p>
             <p className="text-xs text-slate-500">
               {utilisateur ? libelleRole(utilisateur.role) : ""}
