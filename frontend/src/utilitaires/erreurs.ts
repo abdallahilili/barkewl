@@ -1,4 +1,5 @@
 import { isAxiosError } from 'axios'
+import { t } from '../i18n'
 
 /** Transforme une erreur de l'API (format Django REST) en message lisible en français. */
 export function extraireErreur(erreur: unknown): string {
@@ -15,7 +16,7 @@ export function extraireErreur(erreur: unknown): string {
     if (erreur.response.status === 404) return 'Élément introuvable.'
     if (erreur.response.status >= 500) return 'Erreur du serveur. Réessayez plus tard.'
   }
-  return 'Une erreur est survenue.'
+  return t('Une erreur est survenue.')
 }
 
 function aplatir(valeur: unknown, prefixe = ''): string[] {

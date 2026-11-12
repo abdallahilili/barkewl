@@ -14,6 +14,7 @@ import type { Depot, LigneStock, Transfert } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { formaterDate, formaterDateHeure, formaterDateHeureExport, libelleStatut } from '../../utilitaires/formatage'
 
+import { t } from '../../i18n'
 interface LigneSaisie { lot: number; medicament: string; numero_lot: string; date_peremption: string; disponible: number; quantite: string }
 
 function FormulaireTransfert({ ouvert, onFermer, apres }: { ouvert: boolean; onFermer: () => void; apres: () => void }) {
@@ -31,45 +32,45 @@ function FormulaireTransfert({ ouvert, onFermer, apres }: { ouvert: boolean; onF
   const enregistrer = async (e: FormEvent) => {
     e.preventDefault()
     setErreur(null)
-    if (lignes.length === 0) { setErreur('Ajoutez au moins un lot à transférer.'); return }
+    if (lignes.length === 0) { setErreur(t('Ajoutez au moins un lot à transférer.')); return }
     try {
       await api.post('/transferts/', { depot_source: Number(source), depot_destination: Number(destination), note, lignes: lignes.map((l) => ({ lot: l.lot, quantite: Number(l.quantite) })) })
-      notifier.succes('Transfert enregistré en brouillon. Validez-le pour déplacer le stock.')
+      notifier.succes(t('Transfert enregistré en brouillon. Validez-le pour déplacer le stock.'))
       setLignes([]); setNote(''); setSource(''); setDestination(''); onFermer(); apres()
     } catch (err) { setErreur(extraireErreur(err)) }
   }
 
   return (
-    <Modale ouverte={ouvert} titre="Nouveau transfert entre dépôts" onFermer={onFermer} largeur="grande"
-      pied={<><button className="btn-secondaire" onClick={onFermer}>Annuler</button><button className="btn-primaire" type="submit" form="formulaire-transfert">Enregistrer le brouillon</button></>}>
+    <Modale ouverte={ouvert} titre={t('Nouveau transfert entre dépôts')} onFermer={onFermer} largeur="grande"
+      pied={<><button className="btn-secondaire" onClick={onFermer}>{t('Annuler')}</button><button className="btn-primaire" type="submit" form="formulaire-transfert">{t('Enregistrer le brouillon')}</button></>}>
       <form id="formulaire-transfert" onSubmit={enregistrer} className="space-y-4">
         <MessageErreur message={erreur} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Champ libelle="Dépôt source" requis>
-            <select className="champ" value={source} onChange={(e) => { setSource(e.target.value); setLignes([]) }} required><option value="">— Choisir —</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
+          <Champ libelle={t('Dépôt source')} requis>
+            <select className="champ" value={source} onChange={(e) => { setSource(e.target.value); setLignes([]) }} required><option value="">{t('— Choisir —')}</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
           </Champ>
-          <Champ libelle="Dépôt destination" requis>
-            <select className="champ" value={destination} onChange={(e) => setDestination(e.target.value)} required><option value="">— Choisir —</option>{depots.filter((d) => String(d.id) !== source).map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
+          <Champ libelle={t('Dépôt destination')} requis>
+            <select className="champ" value={destination} onChange={(e) => setDestination(e.target.value)} required><option value="">{t('— Choisir —')}</option>{depots.filter((d) => String(d.id) !== source).map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
           </Champ>
         </div>
-        <Champ libelle="Ajouter un lot à transférer"><SelectionLotStock depot={source ? Number(source) : ''} onChoisir={ajouter} exclus={lignes.map((l) => l.lot)} /></Champ>
+        <Champ libelle={t('Ajouter un lot à transférer')}><SelectionLotStock depot={source ? Number(source) : ''} onChoisir={ajouter} exclus={lignes.map((l) => l.lot)} /></Champ>
         <div className="overflow-x-auto rounded-md border border-slate-200">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600"><tr><th className="px-3 py-2">Médicament</th><th className="px-3 py-2">Lot</th><th className="px-3 py-2">Péremption</th><th className="px-3 py-2 text-right">Disponible (unités)</th><th className="px-3 py-2 text-right">Quantité (unités)</th><th /></tr></thead>
+            <thead className="bg-slate-50 text-start text-slate-600"><tr><th className="px-3 py-2">{t('Médicament')}</th><th className="px-3 py-2">{t('Lot')}</th><th className="px-3 py-2">{t('Péremption')}</th><th className="px-3 py-2 text-end">{t('Disponible (unités)')}</th><th className="px-3 py-2 text-end">{t('Quantité (unités)')}</th><th /></tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {lignes.length === 0 && <tr><td colSpan={6} className="px-3 py-5 text-center text-slate-500">Aucun lot ajouté.</td></tr>}
+              {lignes.length === 0 && <tr><td colSpan={6} className="px-3 py-5 text-center text-slate-500">{t('Aucun lot ajouté.')}</td></tr>}
               {lignes.map((l, i) => (
                 <tr key={l.lot}>
                   <td className="px-3 py-2">{l.medicament}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2">{formaterDate(l.date_peremption)}</td>
-                  <td className="px-3 py-2 text-right">{l.disponible}</td>
-                  <td className="px-3 py-2 text-right"><input type="number" min={1} max={l.disponible} className="champ w-24 py-1 text-right" value={l.quantite} onChange={(e) => setLignes((x) => x.map((y, j) => (j === i ? { ...y, quantite: e.target.value } : y)))} /></td>
-                  <td className="px-3 py-2"><button type="button" className="text-slate-400 hover:text-red-600" onClick={() => setLignes((x) => x.filter((_, j) => j !== i))} aria-label="Retirer"><Trash2 size={16} /></button></td>
+                  <td className="px-3 py-2 text-end">{l.disponible}</td>
+                  <td className="px-3 py-2 text-end"><input type="number" min={1} max={l.disponible} className="champ w-24 py-1 text-end" value={l.quantite} onChange={(e) => setLignes((x) => x.map((y, j) => (j === i ? { ...y, quantite: e.target.value } : y)))} /></td>
+                  <td className="px-3 py-2"><button type="button" className="text-slate-400 hover:text-red-600" onClick={() => setLignes((x) => x.filter((_, j) => j !== i))} aria-label={t('Retirer')}><Trash2 size={16} /></button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <Champ libelle="Note"><input className="champ" value={note} onChange={(e) => setNote(e.target.value)} /></Champ>
+        <Champ libelle={t('Note')}><input className="champ" value={note} onChange={(e) => setNote(e.target.value)} /></Champ>
       </form>
     </Modale>
   )
@@ -87,52 +88,52 @@ export default function Transferts() {
   const agir = async (action: 'valider' | 'annuler') => {
     if (!detail) return
     const ok = await confirmer(action === 'valider'
-      ? { titre: 'Valider le transfert', message: `Le stock de ${detail.depot_source_nom} sera déplacé vers ${detail.depot_destination_nom}. Continuer ?`, libelle: 'Valider' }
-      : { titre: 'Annuler le transfert', message: detail.statut === 'VALIDE' ? 'Le stock sera remis dans le dépôt source (mouvements inverses tracés). Continuer ?' : 'Ce brouillon sera annulé. Continuer ?', libelle: 'Annuler le transfert', danger: true })
+      ? { titre: t('Valider le transfert'), message: t('Le stock de {source} sera déplacé vers {destination}. Continuer ?', { source: detail.depot_source_nom, destination: detail.depot_destination_nom }), libelle: t('Valider') }
+      : { titre: t('Annuler le transfert'), message: detail.statut === 'VALIDE' ? t('Le stock sera remis dans le dépôt source (mouvements inverses tracés). Continuer ?') : t('Ce brouillon sera annulé. Continuer ?'), libelle: t('Annuler le transfert'), danger: true })
     if (!ok) return
     try {
       await api.post(`/transferts/${detail.id}/${action}/`)
-      notifier.succes(action === 'valider' ? 'Transfert validé : le stock a été déplacé.' : 'Transfert annulé.')
+      notifier.succes(action === 'valider' ? t('Transfert validé : le stock a été déplacé.') : t('Transfert annulé.'))
       setDetail(null); liste.recharger()
     } catch (e) { setErreur(extraireErreur(e)) }
   }
 
   return (
     <div>
-      <EnTetePage titre="Transferts entre dépôts" description="Déplacez du stock d'un dépôt à l'autre en conservant les lots et les dates de péremption."
-        actions={<button className="btn-primaire" onClick={() => setModale(true)}>Nouveau transfert</button>} />
+      <EnTetePage titre={t('Transferts entre dépôts')} description={t('Déplacez du stock d\'un dépôt à l\'autre en conservant les lots et les dates de péremption.')}
+        actions={<button className="btn-primaire" onClick={() => setModale(true)}>{t('Nouveau transfert')}</button>} />
       <div className="mb-3 flex gap-2">
-        <select className="champ w-auto" value={statut} onChange={(e) => setStatut(e.target.value)} aria-label="État"><option value="">Tous les états</option><option value="BROUILLON">Brouillons</option><option value="VALIDE">Validés</option><option value="ANNULE">Annulés</option></select>
+        <select className="champ w-auto" value={statut} onChange={(e) => setStatut(e.target.value)} aria-label={t('État')}><option value="">{t('Tous les états')}</option><option value="BROUILLON">{t('Brouillons')}</option><option value="VALIDE">{t('Validés')}</option><option value="ANNULE">{t('Annulés')}</option></select>
       </div>
       <TableauDonnees<Transfert>
         colonnes={[
-          { cle: 'reference', titre: 'Référence', tri: 'reference', rendu: (t) => <span className="font-medium">{t.reference}</span> },
-          { cle: 'date_transfert', titre: 'Date', tri: 'date_transfert', rendu: (t) => formaterDateHeure(t.date_transfert), exportRendu: (t) => formaterDateHeureExport(t.date_transfert) },
-          { cle: 'trajet', titre: 'Trajet', rendu: (t) => `${t.depot_source_nom} → ${t.depot_destination_nom}`, exportRendu: (t) => `${t.depot_source_nom} -> ${t.depot_destination_nom}` },
-          { cle: 'lignes', titre: 'Lots', alignement: 'droite', rendu: (t) => t.lignes.length, exportRendu: (t) => t.lignes.length },
-          { cle: 'utilisateur_nom', titre: 'Utilisateur' },
-          { cle: 'statut', titre: 'État', rendu: (t) => <Badge ton={tonStatut(t.statut)}>{libelleStatut(t.statut)}</Badge> },
+          { cle: 'reference', titre: t('Référence'), tri: 'reference', rendu: (t) => <span className="font-medium">{t.reference}</span> },
+          { cle: 'date_transfert', titre: t('Date'), tri: 'date_transfert', rendu: (t) => formaterDateHeure(t.date_transfert), exportRendu: (t) => formaterDateHeureExport(t.date_transfert) },
+          { cle: 'trajet', titre: t('Trajet'), rendu: (t) => `${t.depot_source_nom} → ${t.depot_destination_nom}`, exportRendu: (t) => `${t.depot_source_nom} -> ${t.depot_destination_nom}` },
+          { cle: 'lignes', titre: t('Lots'), alignement: 'droite', rendu: (t) => t.lignes.length, exportRendu: (t) => t.lignes.length },
+          { cle: 'utilisateur_nom', titre: t('Utilisateur') },
+          { cle: 'statut', titre: t('État'), rendu: (t) => <Badge ton={tonStatut(t.statut)}>{libelleStatut(t.statut)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(t) => t.id}
-        onClicLigne={(t) => { setDetail(t); setErreur(null) }} messageVide="Aucun transfert." titre="Transferts" />
+        onClicLigne={(t) => { setDetail(t); setErreur(null) }} messageVide={t('Aucun transfert.')} titre={t('Transferts')} />
       <FormulaireTransfert ouvert={modale} onFermer={() => setModale(false)} apres={liste.recharger} />
-      <Modale ouverte={!!detail} titre={detail ? `Transfert ${detail.reference}` : ''} onFermer={() => setDetail(null)} largeur="grande"
+      <Modale ouverte={!!detail} titre={detail ? t('Transfert {reference}', { reference: detail.reference }) : ''} onFermer={() => setDetail(null)} largeur="grande"
         pied={<>
-          <button className="btn-secondaire" onClick={() => setDetail(null)}>Fermer</button>
-          {detail && detail.statut !== 'ANNULE' && <button className="btn-secondaire" onClick={() => agir('annuler')}>Annuler le transfert</button>}
-          {detail?.statut === 'BROUILLON' && <button className="btn-primaire" onClick={() => agir('valider')}>Valider le transfert</button>}
+          <button className="btn-secondaire" onClick={() => setDetail(null)}>{t('Fermer')}</button>
+          {detail && detail.statut !== 'ANNULE' && <button className="btn-secondaire" onClick={() => agir('annuler')}>{t('Annuler le transfert')}</button>}
+          {detail?.statut === 'BROUILLON' && <button className="btn-primaire" onClick={() => agir('valider')}>{t('Valider le transfert')}</button>}
         </>}>
         {detail && (
           <div className="space-y-3">
             <MessageErreur message={erreur} />
             <p className="text-sm text-slate-600">{detail.depot_source_nom} → {detail.depot_destination_nom} · {formaterDateHeure(detail.date_transfert)} · {detail.utilisateur_nom} · <Badge ton={tonStatut(detail.statut)}>{libelleStatut(detail.statut)}</Badge></p>
-            {detail.note && <p className="text-sm">Note : {detail.note}</p>}
+            {detail.note && <p className="text-sm">{t('Note :')}{' '}{detail.note}</p>}
             <div className="overflow-x-auto rounded-md border border-slate-200">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-slate-600"><tr><th className="px-3 py-2">Médicament</th><th className="px-3 py-2">Lot</th><th className="px-3 py-2">Péremption</th><th className="px-3 py-2 text-right">Quantité</th></tr></thead>
+                <thead className="bg-slate-50 text-start text-slate-600"><tr><th className="px-3 py-2">{t('Médicament')}</th><th className="px-3 py-2">{t('Lot')}</th><th className="px-3 py-2">{t('Péremption')}</th><th className="px-3 py-2 text-end">{t('Quantité')}</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {detail.lignes.map((l) => <tr key={l.id}><td className="px-3 py-2">{l.medicament_nom}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2">{formaterDate(l.date_peremption)}</td><td className="px-3 py-2 text-right">{l.quantite}</td></tr>)}
+                  {detail.lignes.map((l) => <tr key={l.id}><td className="px-3 py-2">{l.medicament_nom}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2">{formaterDate(l.date_peremption)}</td><td className="px-3 py-2 text-end">{l.quantite}</td></tr>)}
                 </tbody>
               </table>
             </div>

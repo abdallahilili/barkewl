@@ -1,3 +1,5 @@
+
+import { t } from '../i18n'
 const TAILLE_MAX_LOGO = 220 // px : le logo est réduit avant enregistrement
 const LARGEUR_MAX_ENTETE = 1400 // px : l'en-tête est réduit avant enregistrement
 
@@ -7,7 +9,7 @@ function chargerImage(fichier: File): Promise<{ img: HTMLImageElement; liberer: 
     const img = new Image()
     const liberer = () => URL.revokeObjectURL(url)
     img.onload = () => resolve({ img, liberer })
-    img.onerror = () => { liberer(); reject(new Error('Image illisible.')) }
+    img.onerror = () => { liberer(); reject(new Error(t('Image illisible.'))) }
     img.src = url
   })
 }

@@ -5,9 +5,10 @@ import { MiseEnPagePrincipale } from './miseEnPage/MiseEnPagePrincipale'
 import Connexion from './pages/Connexion'
 import { routesProtegees } from './routes'
 
+import { t } from './i18n'
 export default function App() {
   const { utilisateur, chargement, peut } = useAuth()
-  if (chargement) return <Chargement texte="Ouverture de la session…" />
+  if (chargement) return <Chargement texte={t('Ouverture de la session…')} />
 
   if (!utilisateur) {
     return (

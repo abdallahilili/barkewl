@@ -13,6 +13,7 @@ import type { MouvementCaisse, SessionCaisse } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { formaterDateHeure, formaterDateHeureExport, formaterMontant, libelleStatut } from '../../utilitaires/formatage'
 
+import { t } from '../../i18n'
 function ClotureAdmin({ session, onCloturee }: { session: SessionCaisse; onCloturee: (s: SessionCaisse) => void }) {
   const notifier = useNotifier()
   const [ouverte, setOuverte] = useState(false)
@@ -27,7 +28,7 @@ function ClotureAdmin({ session, onCloturee }: { session: SessionCaisse; onClotu
     setEnvoi(true); setErreur(null)
     try {
       const { data } = await api.post<SessionCaisse>(`/sessions-caisse/${session.id}/fermer/`, { montant_reel: Number(montantReel), note })
-      notifier.succes('Session clôturée.')
+      notifier.succes(t('Session clôturée.'))
       setOuverte(false); onCloturee(data)
     } catch (err) { setErreur(extraireErreur(err)) }
     finally { setEnvoi(false) }
@@ -36,24 +37,26 @@ function ClotureAdmin({ session, onCloturee }: { session: SessionCaisse; onClotu
   if (!ouverte) {
     return (
       <button className="btn-primaire" onClick={() => { setMontantReel(''); setNote(''); setErreur(null); setOuverte(true) }}>
-        Clôturer cette session (à la place du caissier)
+        
+        {t('Clôturer cette session (à la place du caissier)')}
       </button>
     )
   }
   return (
     <form onSubmit={cloturer} className="carte space-y-3 p-4">
       <MessageErreur message={erreur} />
-      <p className="text-sm text-slate-600">Espèces attendues en caisse : <strong>{formaterMontant(session.resume.montant_attendu)}</strong></p>
-      <Champ libelle="Espèces comptées" requis><input className="champ" type="number" min={0} step="0.01" value={montantReel} onChange={(e) => setMontantReel(e.target.value)} required autoFocus /></Champ>
+      <p className="text-sm text-slate-600">{t('Espèces attendues en caisse :')}{' '}<strong>{formaterMontant(session.resume.montant_attendu)}</strong></p>
+      <Champ libelle={t('Espèces comptées')} requis><input className="champ" type="number" min={0} step="0.01" value={montantReel} onChange={(e) => setMontantReel(e.target.value)} required autoFocus /></Champ>
       {ecartPrevu != null && (
         <p className={`rounded-md px-3 py-2 text-sm ${ecartPrevu === 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
-          Écart : <strong>{ecartPrevu > 0 ? '+' : ''}{formaterMontant(ecartPrevu)}</strong> {ecartPrevu === 0 ? '— la caisse est juste.' : ecartPrevu > 0 ? '(excédent)' : '(manquant)'}
+          
+          {t('Écart :')}{' '}<strong>{ecartPrevu > 0 ? '+' : ''}{formaterMontant(ecartPrevu)}</strong> {ecartPrevu === 0 ? t('— la caisse est juste.') : ecartPrevu > 0 ? t('(excédent)') : t('(manquant)')}
         </p>
       )}
-      <Champ libelle="Note (facultatif)"><input className="champ" value={note} onChange={(e) => setNote(e.target.value)} /></Champ>
+      <Champ libelle={t('Note (facultatif)')}><input className="champ" value={note} onChange={(e) => setNote(e.target.value)} /></Champ>
       <div className="flex gap-2">
-        <button type="button" className="btn-secondaire" onClick={() => setOuverte(false)}>Annuler</button>
-        <button className="btn-primaire" disabled={envoi}>{envoi ? 'Clôture…' : 'Clôturer la session'}</button>
+        <button type="button" className="btn-secondaire" onClick={() => setOuverte(false)}>{t('Annuler')}</button>
+        <button className="btn-primaire" disabled={envoi}>{envoi ? t('Clôture…') : t('Clôturer la session')}</button>
       </div>
     </form>
   )
@@ -67,19 +70,19 @@ function DetailSession({ session, admin, onFermer, onCloturee }: {
     if (session) api.get<MouvementCaisse[]>(`/sessions-caisse/${session.id}/mouvements/`).then((r) => setMouvements(r.data)).catch(() => setMouvements([]))
   }, [session])
   return (
-    <Modale ouverte={!!session} titre={session ? `Session n° ${session.id} — ${session.caisse_nom}` : ''} onFermer={onFermer} largeur="grande"
-      pied={<button className="btn-secondaire" onClick={onFermer}>Fermer</button>}>
+    <Modale ouverte={!!session} titre={session ? t('Session n° {numero} — {caisse}', { numero: session.id, caisse: session.caisse_nom }) : ''} onFermer={onFermer} largeur="grande"
+      pied={<button className="btn-secondaire" onClick={onFermer}>{t('Fermer')}</button>}>
       {session && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">Caissier : {session.caissier_nom} · Ouverte le {formaterDateHeure(session.date_ouverture)}{session.date_fermeture && ` · Clôturée le ${formaterDateHeure(session.date_fermeture)}`}</p>
+          <p className="text-sm text-slate-600">{t('Caissier :')}{' '}{session.caissier_nom} {' '}{t('· Ouverte le')}{' '}{formaterDateHeure(session.date_ouverture)}{session.date_fermeture && t(' · Clôturée le {date}', { date: formaterDateHeure(session.date_fermeture) })}</p>
           <ResumeSession session={session} />
-          {session.note && <p className="text-sm text-slate-600">Note : {session.note}</p>}
+          {session.note && <p className="text-sm text-slate-600">{t('Note :')}{' '}{session.note}</p>}
           <div className="overflow-x-auto rounded-md border border-slate-200">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-slate-600"><tr><th className="px-3 py-2">Heure</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Paiement</th><th className="px-3 py-2">Motif</th><th className="px-3 py-2 text-right">Montant</th></tr></thead>
+              <thead className="bg-slate-50 text-start text-slate-600"><tr><th className="px-3 py-2">{t('Heure')}</th><th className="px-3 py-2">{t('Type')}</th><th className="px-3 py-2">{t('Paiement')}</th><th className="px-3 py-2">{t('Motif')}</th><th className="px-3 py-2 text-end">{t('Montant')}</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {mouvements.map((m) => (
-                  <tr key={m.id}><td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{m.type_libelle}</td><td className="px-3 py-2">{m.mode_paiement_nom}</td><td className="px-3 py-2">{m.motif}</td><td className="px-3 py-2 text-right">{formaterMontant(m.montant)}</td></tr>
+                  <tr key={m.id}><td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{m.type_libelle}</td><td className="px-3 py-2">{m.mode_paiement_nom}</td><td className="px-3 py-2">{m.motif}</td><td className="px-3 py-2 text-end">{formaterMontant(m.montant)}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -101,30 +104,30 @@ export default function HistoriqueSessions() {
 
   return (
     <div>
-      <EnTetePage titre="Historique des sessions" description={utilisateur?.role === 'CAISSIER' ? 'Vos sessions de caisse.' : 'Toutes les sessions de caisse, avec les écarts constatés.'} />
+      <EnTetePage titre={t('Historique des sessions')} description={utilisateur?.role === 'CAISSIER' ? t('Vos sessions de caisse.') : t('Toutes les sessions de caisse, avec les écarts constatés.')} />
       <div className="mb-3 flex flex-wrap items-end gap-2">
-        <div><label className="etiquette">Du</label><input type="date" className="champ" value={debut} onChange={(e) => setDebut(e.target.value)} /></div>
-        <div><label className="etiquette">Au</label><input type="date" className="champ" value={fin} onChange={(e) => setFin(e.target.value)} /></div>
-        <div><label className="etiquette">État</label>
-          <select className="champ" value={statut} onChange={(e) => setStatut(e.target.value)}><option value="">Toutes</option><option value="OUVERTE">Ouvertes</option><option value="FERMEE">Clôturées</option></select>
+        <div><label className="etiquette">{t('Du')}</label><input type="date" className="champ" value={debut} onChange={(e) => setDebut(e.target.value)} /></div>
+        <div><label className="etiquette">{t('Au')}</label><input type="date" className="champ" value={fin} onChange={(e) => setFin(e.target.value)} /></div>
+        <div><label className="etiquette">{t('État')}</label>
+          <select className="champ" value={statut} onChange={(e) => setStatut(e.target.value)}><option value="">{t('Toutes')}</option><option value="OUVERTE">{t('Ouvertes')}</option><option value="FERMEE">{t('Clôturées')}</option></select>
         </div>
       </div>
       <TableauDonnees<SessionCaisse>
         colonnes={[
           { cle: 'id', titre: 'N°' },
-          { cle: 'date_ouverture', titre: 'Ouverture', tri: 'date_ouverture', rendu: (s) => formaterDateHeure(s.date_ouverture), exportRendu: (s) => formaterDateHeureExport(s.date_ouverture) },
-          { cle: 'date_fermeture', titre: 'Clôture', tri: 'date_fermeture', rendu: (s) => formaterDateHeure(s.date_fermeture), exportRendu: (s) => formaterDateHeureExport(s.date_fermeture) },
-          { cle: 'caissier_nom', titre: 'Caissier' },
-          { cle: 'caisse_nom', titre: 'Caisse' },
-          { cle: 'total_ventes', titre: 'Ventes', alignement: 'droite', rendu: (s) => formaterMontant(s.resume.total_ventes), exportRendu: (s) => s.resume.total_ventes },
-          { cle: 'montant_attendu', titre: 'Attendu', alignement: 'droite', rendu: (s) => formaterMontant(s.resume.montant_attendu), exportRendu: (s) => s.resume.montant_attendu },
-          { cle: 'montant_reel', titre: 'Compté', alignement: 'droite', rendu: (s) => formaterMontant(s.montant_reel) },
-          { cle: 'ecart', titre: 'Écart', alignement: 'droite', tri: 'ecart', rendu: (s) => s.ecart == null ? '—' : <span className={s.ecart === 0 ? 'text-emerald-700' : 'font-semibold text-red-700'}>{s.ecart > 0 ? '+' : ''}{formaterMontant(s.ecart)}</span> },
-          { cle: 'statut', titre: 'État', rendu: (s) => <Badge ton={tonStatut(s.statut)}>{libelleStatut(s.statut)}</Badge> },
+          { cle: 'date_ouverture', titre: t('Ouverture'), tri: 'date_ouverture', rendu: (s) => formaterDateHeure(s.date_ouverture), exportRendu: (s) => formaterDateHeureExport(s.date_ouverture) },
+          { cle: 'date_fermeture', titre: t('Clôture'), tri: 'date_fermeture', rendu: (s) => formaterDateHeure(s.date_fermeture), exportRendu: (s) => formaterDateHeureExport(s.date_fermeture) },
+          { cle: 'caissier_nom', titre: t('Caissier') },
+          { cle: 'caisse_nom', titre: t('Caisse') },
+          { cle: 'total_ventes', titre: t('Ventes'), alignement: 'droite', rendu: (s) => formaterMontant(s.resume.total_ventes), exportRendu: (s) => s.resume.total_ventes },
+          { cle: 'montant_attendu', titre: t('Attendu'), alignement: 'droite', rendu: (s) => formaterMontant(s.resume.montant_attendu), exportRendu: (s) => s.resume.montant_attendu },
+          { cle: 'montant_reel', titre: t('Compté'), alignement: 'droite', rendu: (s) => formaterMontant(s.montant_reel) },
+          { cle: 'ecart', titre: t('Écart'), alignement: 'droite', tri: 'ecart', rendu: (s) => s.ecart == null ? '—' : <span className={s.ecart === 0 ? 'text-emerald-700' : 'font-semibold text-red-700'}>{s.ecart > 0 ? '+' : ''}{formaterMontant(s.ecart)}</span> },
+          { cle: 'statut', titre: t('État'), rendu: (s) => <Badge ton={tonStatut(s.statut)}>{libelleStatut(s.statut)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(s) => s.id}
-        onClicLigne={setDetail} messageVide="Aucune session de caisse." titre="Historique des sessions" />
+        onClicLigne={setDetail} messageVide={t('Aucune session de caisse.')} titre={t('Historique des sessions')} />
       <DetailSession session={detail} admin={utilisateur?.role === 'ADMIN'} onFermer={() => setDetail(null)}
         onCloturee={(s) => { setDetail(s); liste.recharger() }} />
     </div>

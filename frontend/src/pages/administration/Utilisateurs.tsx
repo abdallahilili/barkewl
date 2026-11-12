@@ -11,6 +11,7 @@ import type { Utilisateur } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { libelleRole } from '../../utilitaires/formatage'
 
+import { t } from '../../i18n'
 export default function Utilisateurs() {
   const notifier = useNotifier()
   const [cible, setCible] = useState<Utilisateur | null>(null)
@@ -22,7 +23,7 @@ export default function Utilisateurs() {
     if (!cible) return
     try {
       await api.post(`/utilisateurs/${cible.id}/reinitialiser-mot-de-passe/`, { mot_de_passe: motDePasse })
-      notifier.succes(`Mot de passe de ${cible.nom_complet} réinitialisé.`)
+      notifier.succes(t('Mot de passe de {nom} réinitialisé.', { nom: cible.nom_complet }))
       setCible(null); setMotDePasse(''); setErreur(null)
     } catch (err) { setErreur(extraireErreur(err)) }
   }
@@ -30,33 +31,33 @@ export default function Utilisateurs() {
   return (
     <>
       <PageCrud<Utilisateur>
-        titre="Utilisateurs" description="Comptes et rôles : administrateur, caissier, magasinier."
-        endpoint="/utilisateurs/" nomElement="Utilisateur" libelleNouveau="Nouvel utilisateur" placeholderRecherche="Nom ou identifiant…"
+        titre={t('Utilisateurs')} description={t('Comptes et rôles : administrateur, caissier, magasinier.')}
+        endpoint="/utilisateurs/" nomElement={t('Utilisateur')} libelleNouveau={t('Nouvel utilisateur')} placeholderRecherche={t('Nom ou identifiant…')}
         colonnes={[
-          { cle: 'nom_complet', titre: 'Nom', tri: 'nom', rendu: (u) => <span className="font-medium">{u.nom_complet}</span> },
-          { cle: 'identifiant', titre: 'Identifiant', tri: 'identifiant' },
-          { cle: 'role', titre: 'Rôle', tri: 'role', rendu: (u) => <Badge ton="bleu">{libelleRole(u.role)}</Badge> },
-          { cle: 'telephone', titre: 'Téléphone', cacheParDefaut: true },
-          { cle: 'actif', titre: 'État', rendu: (u) => <Badge ton={u.actif ? 'vert' : 'gris'}>{u.actif ? 'Actif' : 'Désactivé'}</Badge> },
+          { cle: 'nom_complet', titre: t('Nom'), tri: 'nom', rendu: (u) => <span className="font-medium">{u.nom_complet}</span> },
+          { cle: 'identifiant', titre: t('Identifiant'), tri: 'identifiant' },
+          { cle: 'role', titre: t('Rôle'), tri: 'role', rendu: (u) => <Badge ton="bleu">{libelleRole(u.role)}</Badge> },
+          { cle: 'telephone', titre: t('Téléphone'), cacheParDefaut: true },
+          { cle: 'actif', titre: t('État'), rendu: (u) => <Badge ton={u.actif ? 'vert' : 'gris'}>{u.actif ? t('Actif') : t('Désactivé')}</Badge> },
         ]}
         champs={[
-          { nom: 'identifiant', libelle: 'Identifiant', type: 'texte', requis: true, desactiveEnEdition: true },
-          { nom: 'prenom', libelle: 'Prénom', type: 'texte' },
-          { nom: 'nom', libelle: 'Nom', type: 'texte', requis: true },
-          { nom: 'role', libelle: 'Rôle', type: 'select', requis: true, defaut: 'CAISSIER',
-            options: [{ valeur: 'ADMIN', libelle: 'Administrateur' }, { valeur: 'CAISSIER', libelle: 'Caissier' }, { valeur: 'MAGASINIER', libelle: 'Magasinier' }] },
-          { nom: 'email', libelle: 'E-mail', type: 'email' },
-          { nom: 'telephone', libelle: 'Téléphone', type: 'texte' },
-          { nom: 'mot_de_passe', libelle: 'Mot de passe', type: 'motdepasse', requis: true, aide: '8 caractères minimum.', masque: (_f, enEdition) => !enEdition },
-          { nom: 'actif', libelle: 'État', type: 'case', aide: 'Compte actif', defaut: true },
+          { nom: 'identifiant', libelle: t('Identifiant'), type: 'texte', requis: true, desactiveEnEdition: true },
+          { nom: 'prenom', libelle: t('Prénom'), type: 'texte' },
+          { nom: 'nom', libelle: t('Nom'), type: 'texte', requis: true },
+          { nom: 'role', libelle: t('Rôle'), type: 'select', requis: true, defaut: 'CAISSIER',
+            options: [{ valeur: 'ADMIN', libelle: t('Administrateur') }, { valeur: 'CAISSIER', libelle: t('Caissier') }, { valeur: 'MAGASINIER', libelle: t('Magasinier') }] },
+          { nom: 'email', libelle: t('E-mail'), type: 'email' },
+          { nom: 'telephone', libelle: t('Téléphone'), type: 'texte' },
+          { nom: 'mot_de_passe', libelle: t('Mot de passe'), type: 'motdepasse', requis: true, aide: t('8 caractères minimum.'), masque: (_f, enEdition) => !enEdition },
+          { nom: 'actif', libelle: t('État'), type: 'case', aide: t('Compte actif'), defaut: true },
         ]}
-        actionsLigne={(u) => <button className="btn-discret btn-petit" onClick={() => setCible(u)}><KeyRound size={14} /> Mot de passe</button>}
+        actionsLigne={(u) => <button className="btn-discret btn-petit" onClick={() => setCible(u)}><KeyRound size={14} /> {' '}{t('Mot de passe')}</button>}
       />
-      <Modale ouverte={!!cible} titre={`Réinitialiser le mot de passe — ${cible?.nom_complet ?? ''}`} onFermer={() => setCible(null)} largeur="petite"
-        pied={<><button className="btn-secondaire" onClick={() => setCible(null)}>Annuler</button><button className="btn-primaire" type="submit" form="formulaire-reinit">Réinitialiser</button></>}>
+      <Modale ouverte={!!cible} titre={t('Réinitialiser le mot de passe — {nom}', { nom: cible?.nom_complet ?? '' })} onFermer={() => setCible(null)} largeur="petite"
+        pied={<><button className="btn-secondaire" onClick={() => setCible(null)}>{t('Annuler')}</button><button className="btn-primaire" type="submit" form="formulaire-reinit">{t('Réinitialiser')}</button></>}>
         <form id="formulaire-reinit" onSubmit={reinitialiser} className="space-y-3">
           <MessageErreur message={erreur} />
-          <Champ libelle="Nouveau mot de passe" aide="8 caractères minimum. Communiquez-le à l'utilisateur de manière sûre.">
+          <Champ libelle={t('Nouveau mot de passe')} aide={t('8 caractères minimum. Communiquez-le à l\'utilisateur de manière sûre.')}>
             <input className="champ" type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} minLength={8} autoComplete="new-password" required />
           </Champ>
         </form>

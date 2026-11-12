@@ -1,3 +1,5 @@
+
+import { t } from '../i18n'
 let devise = 'MRU'
 export const definirDevise = (valeur: string) => { devise = valeur || 'MRU' }
 export const lireDevise = () => devise
@@ -58,16 +60,22 @@ export const premierJourMois = () => { const d = new Date(); d.setDate(1); retur
 export const premierJourAnnee = () => { const d = new Date(); d.setMonth(0, 1); return d.toISOString().slice(0, 10) }
 
 export const libelleRole = (role: string) =>
-  ({ ADMIN: 'Administrateur', CAISSIER: 'Caissier', MAGASINIER: 'Magasinier' } as Record<string, string>)[role] ?? role
+  t(({ ADMIN: 'Administrateur', CAISSIER: 'Caissier', MAGASINIER: 'Magasinier' } as Record<string, string>)[role] ?? role)
 
 export const libelleStatut = (statut: string) =>
   ({
     BROUILLON: 'Brouillon', VALIDE: 'Validé', ANNULE: 'Annulé', VALIDEE: 'Validée', ANNULEE: 'Annulée',
     OUVERTE: 'Ouverte', FERMEE: 'Clôturée',
-  } as Record<string, string>)[statut] ?? statut
+  } as Record<string, string>)[statut] ? t(({
+    BROUILLON: 'Brouillon', VALIDE: 'Validé', ANNULE: 'Annulé', VALIDEE: 'Validée', ANNULEE: 'Annulée',
+    OUVERTE: 'Ouverte', FERMEE: 'Clôturée',
+  } as Record<string, string>)[statut]) : statut
 
 export const libelleEtatStock = (etat: string) =>
   ({
     DISPONIBLE: 'Disponible', STOCK_FAIBLE: 'Stock faible', RUPTURE: 'Rupture', EPUISE: 'Lot épuisé',
     BIENTOT_PERIME: 'Bientôt périmé', PERIME: 'Périmé',
-  } as Record<string, string>)[etat] ?? etat
+  } as Record<string, string>)[etat] ? t(({
+    DISPONIBLE: 'Disponible', STOCK_FAIBLE: 'Stock faible', RUPTURE: 'Rupture', EPUISE: 'Lot épuisé',
+    BIENTOT_PERIME: 'Bientôt périmé', PERIME: 'Périmé',
+  } as Record<string, string>)[etat]) : etat

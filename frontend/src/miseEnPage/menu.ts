@@ -3,71 +3,72 @@ import {
   LucideIcon, Package, Pill, Receipt, Settings, ShoppingCart, Store, Tags, Truck, Users, UserCog, Wallet, PackagePlus, PackageMinus, Layers,
 } from 'lucide-react'
 
+import { t } from '../i18n'
 export interface ElementMenu { libelle: string; chemin: string; module: string; icone: LucideIcon }
 export interface GroupeMenu { titre?: string; elements: ElementMenu[] }
 
 export const menu: GroupeMenu[] = [
-  { elements: [{ libelle: 'Tableau de bord', chemin: '/', module: 'tableau_de_bord', icone: LayoutDashboard }] },
+  { elements: [{ libelle: t('Tableau de bord'), chemin: '/', module: 'tableau_de_bord', icone: LayoutDashboard }] },
   {
-    titre: 'Ventes',
+    titre: t('Ventes'),
     elements: [
-      { libelle: 'Nouvelle vente', chemin: '/ventes/nouvelle', module: 'ventes', icone: ShoppingCart },
-      { libelle: 'Historique des ventes', chemin: '/ventes', module: 'ventes', icone: History },
-      { libelle: 'Reçus', chemin: '/recus', module: 'ventes', icone: Receipt },
-      { libelle: 'Clients', chemin: '/clients', module: 'ventes', icone: Users },
+      { libelle: t('Nouvelle vente'), chemin: '/ventes/nouvelle', module: 'ventes', icone: ShoppingCart },
+      { libelle: t('Historique des ventes'), chemin: '/ventes', module: 'ventes', icone: History },
+      { libelle: t('Reçus'), chemin: '/recus', module: 'ventes', icone: Receipt },
+      { libelle: t('Clients'), chemin: '/clients', module: 'ventes', icone: Users },
     ],
   },
   {
-    titre: 'Stock',
+    titre: t('Stock'),
     elements: [
-      { libelle: 'État du stock', chemin: '/stock', module: 'stock_etat', icone: Boxes },
-      { libelle: 'Entrées', chemin: '/stock/entrees', module: 'stock_gestion', icone: PackagePlus },
-      { libelle: 'Sorties', chemin: '/stock/sorties', module: 'stock_gestion', icone: PackageMinus },
-      { libelle: 'Transferts', chemin: '/stock/transferts', module: 'stock_gestion', icone: ArrowLeftRight },
-      { libelle: 'Historique du stock', chemin: '/stock/historique', module: 'stock_gestion', icone: ClipboardList },
-      { libelle: 'Inventaires', chemin: '/stock/inventaires', module: 'stock_gestion', icone: ClipboardCheck },
+      { libelle: t('État du stock'), chemin: '/stock', module: 'stock_etat', icone: Boxes },
+      { libelle: t('Entrées'), chemin: '/stock/entrees', module: 'stock_gestion', icone: PackagePlus },
+      { libelle: t('Sorties'), chemin: '/stock/sorties', module: 'stock_gestion', icone: PackageMinus },
+      { libelle: t('Transferts'), chemin: '/stock/transferts', module: 'stock_gestion', icone: ArrowLeftRight },
+      { libelle: t('Historique du stock'), chemin: '/stock/historique', module: 'stock_gestion', icone: ClipboardList },
+      { libelle: t('Inventaires'), chemin: '/stock/inventaires', module: 'stock_gestion', icone: ClipboardCheck },
     ],
   },
   {
-    titre: 'Médicaments',
+    titre: t('Médicaments'),
     elements: [
-      { libelle: 'Médicaments', chemin: '/medicaments', module: 'medicaments', icone: Pill },
-      { libelle: 'Catégories', chemin: '/categories', module: 'medicaments', icone: Tags },
-      { libelle: 'Lots', chemin: '/lots', module: 'lots', icone: Layers },
+      { libelle: t('Médicaments'), chemin: '/medicaments', module: 'medicaments', icone: Pill },
+      { libelle: t('Catégories'), chemin: '/categories', module: 'medicaments', icone: Tags },
+      { libelle: t('Lots'), chemin: '/lots', module: 'lots', icone: Layers },
     ],
   },
   {
-    titre: 'Achats',
+    titre: t('Achats'),
     elements: [
-      { libelle: 'Achats', chemin: '/achats', module: 'achats', icone: Package },
-      { libelle: 'Fournisseurs', chemin: '/fournisseurs', module: 'achats', icone: Truck },
+      { libelle: t('Achats'), chemin: '/achats', module: 'achats', icone: Package },
+      { libelle: t('Fournisseurs'), chemin: '/fournisseurs', module: 'achats', icone: Truck },
     ],
   },
   {
-    titre: 'Facturation',
+    titre: t('Facturation'),
     elements: [
-      { libelle: 'Devis / BL / Factures', chemin: '/facturation', module: 'facturation', icone: FileText },
+      { libelle: t('Devis / BL / Factures'), chemin: '/facturation', module: 'facturation', icone: FileText },
     ],
   },
   {
-    titre: 'Caisse',
+    titre: t('Caisse'),
     elements: [
-      { libelle: 'Session actuelle', chemin: '/caisse', module: 'caisse', icone: Wallet },
-      { libelle: 'Historique des sessions', chemin: '/caisse/historique', module: 'caisse', icone: Archive },
+      { libelle: t('Session actuelle'), chemin: '/caisse', module: 'caisse', icone: Wallet },
+      { libelle: t('Historique des sessions'), chemin: '/caisse/historique', module: 'caisse', icone: Archive },
     ],
   },
   {
-    titre: 'Gestion',
+    titre: t('Gestion'),
     elements: [
-      { libelle: 'Dépôts', chemin: '/depots', module: 'depots', icone: Store },
-      { libelle: 'Rapports', chemin: '/rapports', module: 'rapports', icone: BarChart3 },
+      { libelle: t('Dépôts'), chemin: '/depots', module: 'depots', icone: Store },
+      { libelle: t('Rapports'), chemin: '/rapports', module: 'rapports', icone: BarChart3 },
     ],
   },
   {
-    titre: 'Administration',
+    titre: t('Administration'),
     elements: [
-      { libelle: 'Utilisateurs', chemin: '/administration/utilisateurs', module: 'administration', icone: UserCog },
-      { libelle: 'Paramètres', chemin: '/administration/parametres', module: 'administration', icone: Settings },
+      { libelle: t('Utilisateurs'), chemin: '/administration/utilisateurs', module: 'administration', icone: UserCog },
+      { libelle: t('Paramètres'), chemin: '/administration/parametres', module: 'administration', icone: Settings },
     ],
   },
 ]

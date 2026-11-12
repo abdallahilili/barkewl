@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { aujourdhui, premierJourAnnee, premierJourMois } from '../utilitaires/formatage'
 
+import { t } from '../i18n'
 export type ClePeriode = 'jour' | 'mois' | 'annee' | 'personnalise'
 
 export interface Periode { cle: ClePeriode; debut: string; fin: string }
 
 const PRESETS: { cle: Exclude<ClePeriode, 'personnalise'>; libelle: string; debut: () => string }[] = [
-  { cle: 'jour', libelle: "Aujourd'hui", debut: aujourdhui },
-  { cle: 'mois', libelle: 'Ce mois-ci', debut: premierJourMois },
-  { cle: 'annee', libelle: 'Cette année', debut: premierJourAnnee },
+  { cle: 'jour', libelle: t('Aujourd\'hui'), debut: aujourdhui },
+  { cle: 'mois', libelle: t('Ce mois-ci'), debut: premierJourMois },
+  { cle: 'annee', libelle: t('Cette année'), debut: premierJourAnnee },
 ]
 
 export function usePeriode() {
@@ -29,14 +30,15 @@ export function SelecteurPeriode({ periode, onChange }: { periode: Periode; onCh
         <button type="button"
           className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${periode.cle === 'personnalise' ? 'bg-marque-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
           onClick={() => onChange({ cle: 'personnalise', debut: periode.debut, fin: periode.fin })}>
-          Personnalisé
+          
+          {t('Personnalisé')}
         </button>
       </div>
       {periode.cle === 'personnalise' && (
         <>
-          <div><label className="etiquette">Du</label><input type="date" className="champ" value={periode.debut} max={periode.fin}
+          <div><label className="etiquette">{t('Du')}</label><input type="date" className="champ" value={periode.debut} max={periode.fin}
             onChange={(e) => onChange({ ...periode, debut: e.target.value })} /></div>
-          <div><label className="etiquette">Au</label><input type="date" className="champ" value={periode.fin} min={periode.debut} max={aujourdhui()}
+          <div><label className="etiquette">{t('Au')}</label><input type="date" className="champ" value={periode.fin} min={periode.debut} max={aujourdhui()}
             onChange={(e) => onChange({ ...periode, fin: e.target.value })} /></div>
         </>
       )}
@@ -47,5 +49,5 @@ export function SelecteurPeriode({ periode, onChange }: { periode: Periode; onCh
 export const libellePeriode = (periode: Periode): string => {
   const preset = PRESETS.find((p) => p.cle === periode.cle)
   if (preset) return preset.libelle
-  return periode.debut === periode.fin ? periode.debut : `Du ${periode.debut} au ${periode.fin}`
+  return periode.debut === periode.fin ? periode.debut : t('Du {debut} au {date}', { debut: periode.debut, date: periode.fin })
 }

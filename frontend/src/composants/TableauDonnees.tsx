@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { exporterCsv, exporterPdf } from '../utilitaires/exports'
 import { Chargement, EtatVide, MessageErreur } from './EnTetePage'
 
+import { t } from '../i18n'
 export interface Colonne<T> {
   cle: string
   titre: string
@@ -68,24 +69,24 @@ export function TableauDonnees<T>({
             <>
               <button type="button" className="btn-discret btn-petit"
                 onClick={() => exporterCsv(`${nomFichier}.csv`, colonnesExport.map((c) => c.titre), lignes.map((l) => colonnesExport.map((c) => valeurExport(c, l))))}>
-                <Download size={14} /> Exporter en CSV
+                <Download size={14} /> {' '}{t('Exporter en CSV')}
               </button>
               <button type="button" className="btn-discret btn-petit"
                 onClick={() => exporterPdf({
                   titre, nomFichier, imprimePar: utilisateur?.nom_complet ?? '—',
                   entetes: colonnesExport.map((c) => c.titre), lignes: lignes.map((l) => colonnesExport.map((c) => valeurExport(c, l))),
                 })}>
-                <FileText size={14} /> Exporter en PDF
+                <FileText size={14} /> {' '}{t('Exporter en PDF')}
               </button>
             </>
           )}
           {choixColonnes && colonnes.length > 5 && (
             <div className="relative">
               <button type="button" className="btn-discret btn-petit" onClick={() => setMenuOuvert(!menuOuvert)}>
-                <Columns3 size={14} /> Colonnes
+                <Columns3 size={14} /> {' '}{t('Colonnes')}
               </button>
               {menuOuvert && (
-                <div className="absolute right-0 top-10 z-10 w-52 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                <div className="absolute end-0 top-10 z-10 w-52 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
                   {colonnes.map((c) => (
                     <label key={c.cle} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
                       <input type="checkbox" checked={!cachees.includes(c.cle)}
@@ -134,12 +135,12 @@ export function TableauDonnees<T>({
       {chargement && lignes.length === 0 && <Chargement />}
       {!chargement && lignes.length === 0 && !erreur && <EtatVide titre={messageVide} />}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-3 py-2 text-xs text-slate-500 sans-impression">
-        <span>{total} résultat{total > 1 ? 's' : ''}{chargement && lignes.length > 0 ? ' — mise à jour…' : ''}</span>
+        <span>{total} {' '}{t('résultat')}{total > 1 ? 's' : ''}{chargement && lignes.length > 0 ? t(' — mise à jour…') : ''}</span>
         {nombrePages > 1 && (
           <div className="flex items-center gap-1">
-            <button className="btn-discret btn-petit" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Page précédente"><ChevronLeft size={14} /></button>
-            <span>Page {page} / {nombrePages}</span>
-            <button className="btn-discret btn-petit" disabled={page >= nombrePages} onClick={() => onPage(page + 1)} aria-label="Page suivante"><ChevronRight size={14} /></button>
+            <button className="btn-discret btn-petit" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label={t('Page précédente')}><ChevronLeft size={14} className="rtl:-scale-x-100" /></button>
+            <span>{t('Page')}{' '}{page} / {nombrePages}</span>
+            <button className="btn-discret btn-petit" disabled={page >= nombrePages} onClick={() => onPage(page + 1)} aria-label={t('Page suivante')}><ChevronRight size={14} className="rtl:-scale-x-100" /></button>
           </div>
         )}
       </div>

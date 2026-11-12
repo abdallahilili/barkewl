@@ -14,6 +14,10 @@ import '@fontsource/ibm-plex-sans-arabic/400.css'
 import '@fontsource/ibm-plex-sans-arabic/600.css'
 import '@fontsource/ibm-plex-sans-arabic/700.css'
 import './index.css'
+import { appliquerLangueAuDocument } from './i18n'
+
+// Sens de lecture et langue du document fixés avant le premier rendu (arabe = de droite à gauche).
+appliquerLangueAuDocument()
 
 ReactDOM.createRoot(document.getElementById('racine')!).render(
   <React.StrictMode>

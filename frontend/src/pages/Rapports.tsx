@@ -9,6 +9,7 @@ import { extraireErreur } from '../utilitaires/erreurs'
 import { exporterCsv, exporterPdf } from '../utilitaires/exports'
 import { aujourdhui, formaterDate, formaterDateExport, formaterDateHeure, formaterMontant, formaterNombre, ilYaJours } from '../utilitaires/formatage'
 
+import { t } from '../i18n'
 type Onglet = 'ventes' | 'achats' | 'caisse' | 'stock' | 'mouvements'
 type Ligne = Record<string, string | number | null>
 
@@ -34,22 +35,22 @@ function TableauRapport({ colonnes, lignes, nomFichier }: { colonnes: ColonneRap
   return (
     <div className="carte">
       <div className="flex justify-end gap-2 border-b border-slate-100 px-3 py-2 sans-impression">
-        <button className="btn-secondaire btn-petit" onClick={() => exporterCsv(`${nomFichier}.csv`, colonnes.map((c) => c.titre), lignes.map((l) => colonnes.map((c) => formaterExport(l[c.cle], c.format))))}><Download size={14} /> Exporter en CSV</button>
+        <button className="btn-secondaire btn-petit" onClick={() => exporterCsv(`${nomFichier}.csv`, colonnes.map((c) => c.titre), lignes.map((l) => colonnes.map((c) => formaterExport(l[c.cle], c.format))))}><Download size={14} /> {' '}{t('Exporter en CSV')}</button>
         <button className="btn-secondaire btn-petit" onClick={() => exporterPdf({
           titre, nomFichier, imprimePar: utilisateur?.nom_complet ?? '—',
           entetes: colonnes.map((c) => c.titre), lignes: lignes.map((l) => colonnes.map((c) => formaterExport(l[c.cle], c.format))),
-        })}><FileText size={14} /> Exporter en PDF</button>
-        <button className="btn-secondaire btn-petit" onClick={() => window.print()}><Printer size={14} /> Imprimer</button>
+        })}><FileText size={14} /> {' '}{t('Exporter en PDF')}</button>
+        <button className="btn-secondaire btn-petit" onClick={() => window.print()}><Printer size={14} /> {' '}{t('Imprimer')}</button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
-            <tr>{colonnes.map((c) => <th key={c.cle} className={`whitespace-nowrap px-3 py-2.5 font-medium ${c.alignement === 'droite' ? 'text-right' : 'text-left'}`}>{c.titre}</th>)}</tr>
+            <tr>{colonnes.map((c) => <th key={c.cle} className={`whitespace-nowrap px-3 py-2.5 font-medium ${c.alignement === 'droite' ? 'text-end' : 'text-start'}`}>{c.titre}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {lignes.length === 0 && <tr><td colSpan={colonnes.length} className="px-3 py-8 text-center text-slate-500">Aucune donnée pour cette période.</td></tr>}
+            {lignes.length === 0 && <tr><td colSpan={colonnes.length} className="px-3 py-8 text-center text-slate-500">{t('Aucune donnée pour cette période.')}</td></tr>}
             {lignes.map((l, i) => (
-              <tr key={i}>{colonnes.map((c) => <td key={c.cle} className={`px-3 py-2 ${c.alignement === 'droite' ? 'text-right' : ''}`}>{formater(l[c.cle], c.format)}</td>)}</tr>
+              <tr key={i}>{colonnes.map((c) => <td key={c.cle} className={`px-3 py-2 ${c.alignement === 'droite' ? 'text-end' : ''}`}>{formater(l[c.cle], c.format)}</td>)}</tr>
             ))}
           </tbody>
         </table>
@@ -83,8 +84,8 @@ function useRapport<T>(chemin: string, params: Record<string, string>) {
 function Periode({ debut, fin, setDebut, setFin, children }: { debut: string; fin: string; setDebut: (v: string) => void; setFin: (v: string) => void; children?: ReactNode }) {
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3 sans-impression">
-      <div><label className="etiquette">Du</label><input type="date" className="champ" value={debut} onChange={(e) => setDebut(e.target.value)} /></div>
-      <div><label className="etiquette">Au</label><input type="date" className="champ" value={fin} onChange={(e) => setFin(e.target.value)} /></div>
+      <div><label className="etiquette">{t('Du')}</label><input type="date" className="champ" value={debut} onChange={(e) => setDebut(e.target.value)} /></div>
+      <div><label className="etiquette">{t('Au')}</label><input type="date" className="champ" value={fin} onChange={(e) => setFin(e.target.value)} /></div>
       {children}
     </div>
   )
@@ -103,13 +104,13 @@ function RapportVentes() {
   const titres: Record<string, string> = { jour: 'Jour', caissier: 'Caissier', depot: 'Dépôt', medicament: 'Médicament' }
   return (
     <div>
-      <Periode {...p}><div><label className="etiquette">Regrouper par</label><select className="champ" value={regroupement} onChange={(e) => setRegroupement(e.target.value)}>{Object.entries(titres).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div></Periode>
+      <Periode {...p}><div><label className="etiquette">{t('Regrouper par')}</label><select className="champ" value={regroupement} onChange={(e) => setRegroupement(e.target.value)}>{Object.entries(titres).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div></Periode>
       <MessageErreur message={erreur} />
       {chargement && !donnees ? <Chargement /> : donnees && (
         <>
-          <Totaux elements={[{ titre: "Chiffre d'affaires", valeur: formaterMontant(donnees.chiffre_affaires) }, { titre: 'Nombre de ventes', valeur: formaterNombre(donnees.nombre_ventes) }]} />
+          <Totaux elements={[{ titre: t('Chiffre d\'affaires'), valeur: formaterMontant(donnees.chiffre_affaires) }, { titre: t('Nombre de ventes'), valeur: formaterNombre(donnees.nombre_ventes) }]} />
           <TableauRapport nomFichier={`ventes-par-${regroupement}`} lignes={donnees.lignes}
-            colonnes={[{ cle: 'libelle', titre: titres[regroupement] }, { cle: 'nombre', titre: regroupement === 'medicament' ? 'Quantité vendue' : 'Ventes', format: 'nombre', alignement: 'droite' }, { cle: 'total', titre: 'Total', format: 'montant', alignement: 'droite' }]} />
+            colonnes={[{ cle: 'libelle', titre: titres[regroupement] }, { cle: 'nombre', titre: regroupement === 'medicament' ? t('Quantité vendue') : t('Ventes'), format: 'nombre', alignement: 'droite' }, { cle: 'total', titre: t('Total'), format: 'montant', alignement: 'droite' }]} />
         </>
       )}
     </div>
@@ -122,13 +123,13 @@ function RapportAchats() {
   const { donnees, chargement, erreur } = useRapport<{ lignes: Ligne[]; nombre_achats: number; total_achats: number; total_paye: number; reste_a_payer: number }>('achats', { date_debut: p.debut, date_fin: p.fin, regroupement })
   return (
     <div>
-      <Periode {...p}><div><label className="etiquette">Regrouper par</label><select className="champ" value={regroupement} onChange={(e) => setRegroupement(e.target.value)}><option value="jour">Jour</option><option value="fournisseur">Fournisseur</option></select></div></Periode>
+      <Periode {...p}><div><label className="etiquette">{t('Regrouper par')}</label><select className="champ" value={regroupement} onChange={(e) => setRegroupement(e.target.value)}><option value="jour">{t('Jour')}</option><option value="fournisseur">{t('Fournisseur')}</option></select></div></Periode>
       <MessageErreur message={erreur} />
       {chargement && !donnees ? <Chargement /> : donnees && (
         <>
-          <Totaux elements={[{ titre: 'Total des achats', valeur: formaterMontant(donnees.total_achats) }, { titre: 'Payé', valeur: formaterMontant(donnees.total_paye) }, { titre: 'Reste à payer', valeur: formaterMontant(donnees.reste_a_payer) }, { titre: "Nombre d'achats", valeur: formaterNombre(donnees.nombre_achats) }]} />
+          <Totaux elements={[{ titre: t('Total des achats'), valeur: formaterMontant(donnees.total_achats) }, { titre: t('Payé'), valeur: formaterMontant(donnees.total_paye) }, { titre: t('Reste à payer'), valeur: formaterMontant(donnees.reste_a_payer) }, { titre: t('Nombre d\'achats'), valeur: formaterNombre(donnees.nombre_achats) }]} />
           <TableauRapport nomFichier={`achats-par-${regroupement}`} lignes={donnees.lignes}
-            colonnes={[{ cle: 'libelle', titre: regroupement === 'jour' ? 'Jour' : 'Fournisseur' }, { cle: 'nombre', titre: 'Achats', format: 'nombre', alignement: 'droite' }, { cle: 'total', titre: 'Total', format: 'montant', alignement: 'droite' }, { cle: 'paye', titre: 'Payé', format: 'montant', alignement: 'droite' }, { cle: 'reste', titre: 'Reste', format: 'montant', alignement: 'droite' }]} />
+            colonnes={[{ cle: 'libelle', titre: regroupement === 'jour' ? t('Jour') : t('Fournisseur') }, { cle: 'nombre', titre: t('Achats'), format: 'nombre', alignement: 'droite' }, { cle: 'total', titre: t('Total'), format: 'montant', alignement: 'droite' }, { cle: 'paye', titre: t('Payé'), format: 'montant', alignement: 'droite' }, { cle: 'reste', titre: t('Reste'), format: 'montant', alignement: 'droite' }]} />
         </>
       )}
     </div>
@@ -145,10 +146,10 @@ function RapportCaisse() {
       <MessageErreur message={erreur} />
       {chargement && !donnees ? <Chargement /> : donnees && (
         <>
-          <Totaux elements={[{ titre: 'Ventes (sessions clôturées)', valeur: formaterMontant(donnees.total_ventes) }, { titre: 'Encaissé en espèces', valeur: formaterMontant(donnees.total_especes) }, { titre: 'Autres paiements', valeur: formaterMontant(donnees.total_autres_paiements) }, { titre: 'Écarts cumulés (manquants)', valeur: `${formaterMontant(donnees.total_ecarts)} (${formaterMontant(donnees.total_manquants)})` }]} />
+          <Totaux elements={[{ titre: t('Ventes (sessions clôturées)'), valeur: formaterMontant(donnees.total_ventes) }, { titre: t('Encaissé en espèces'), valeur: formaterMontant(donnees.total_especes) }, { titre: t('Autres paiements'), valeur: formaterMontant(donnees.total_autres_paiements) }, { titre: t('Écarts cumulés (manquants)'), valeur: `${formaterMontant(donnees.total_ecarts)} (${formaterMontant(donnees.total_manquants)})` }]} />
           <TableauRapport nomFichier="sessions-de-caisse"
             lignes={donnees.sessions.map((s) => ({ id: s.id, date: s.date_ouverture, caissier: s.caissier_nom, caisse: s.caisse_nom, statut: s.statut === 'OUVERTE' ? 'Ouverte' : 'Clôturée', ventes: s.resume.total_ventes, especes: s.resume.total_especes, autres: s.resume.total_autres_paiements, attendu: s.montant_attendu ?? s.resume.total_especes, compte: s.montant_reel, ecart: s.ecart }))}
-            colonnes={[{ cle: 'date', titre: 'Ouverture' }, { cle: 'caissier', titre: 'Caissier' }, { cle: 'caisse', titre: 'Caisse' }, { cle: 'statut', titre: 'État' }, { cle: 'ventes', titre: 'Ventes', format: 'montant', alignement: 'droite' }, { cle: 'especes', titre: 'Espèces', format: 'montant', alignement: 'droite' }, { cle: 'autres', titre: 'Autres', format: 'montant', alignement: 'droite' }, { cle: 'attendu', titre: 'Attendu', format: 'montant', alignement: 'droite' }, { cle: 'compte', titre: 'Compté', format: 'montant', alignement: 'droite' }, { cle: 'ecart', titre: 'Écart', format: 'montant', alignement: 'droite' }]} />
+            colonnes={[{ cle: 'date', titre: t('Ouverture') }, { cle: 'caissier', titre: t('Caissier') }, { cle: 'caisse', titre: t('Caisse') }, { cle: 'statut', titre: t('État') }, { cle: 'ventes', titre: t('Ventes'), format: 'montant', alignement: 'droite' }, { cle: 'especes', titre: t('Espèces'), format: 'montant', alignement: 'droite' }, { cle: 'autres', titre: t('Autres'), format: 'montant', alignement: 'droite' }, { cle: 'attendu', titre: t('Attendu'), format: 'montant', alignement: 'droite' }, { cle: 'compte', titre: t('Compté'), format: 'montant', alignement: 'droite' }, { cle: 'ecart', titre: t('Écart'), format: 'montant', alignement: 'droite' }]} />
         </>
       )}
     </div>
@@ -160,32 +161,32 @@ function RapportStock() {
   const [type, setType] = useState('etat')
   const [depot, setDepot] = useState('')
   const { donnees, chargement, erreur } = useRapport<Record<string, any>>('stock', { type, depot }) // eslint-disable-line @typescript-eslint/no-explicit-any
-  const types = { etat: 'État du stock', valeur: 'Valeur du stock', faible: 'Stock faible', ruptures: 'Ruptures', peremption: 'Péremptions' }
+  const types = { etat: t('État du stock'), valeur: t('Valeur du stock'), faible: t('Stock faible'), ruptures: t('Ruptures'), peremption: t('Péremptions') }
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-end gap-3 sans-impression">
-        <div><label className="etiquette">Rapport</label><select className="champ" value={type} onChange={(e) => setType(e.target.value)}>{Object.entries(types).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
-        <div><label className="etiquette">Dépôt</label><select className="champ" value={depot} onChange={(e) => setDepot(e.target.value)}><option value="">Tous</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select></div>
+        <div><label className="etiquette">{t('Rapport')}</label><select className="champ" value={type} onChange={(e) => setType(e.target.value)}>{Object.entries(types).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+        <div><label className="etiquette">{t('Dépôt')}</label><select className="champ" value={depot} onChange={(e) => setDepot(e.target.value)}><option value="">{t('Tous')}</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select></div>
       </div>
       <MessageErreur message={erreur} />
       {chargement && !donnees ? <Chargement /> : donnees && (
         <>
-          {type === 'etat' && <TableauRapport nomFichier="etat-du-stock" lignes={donnees.lignes} colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'numero_lot', titre: 'Lot' }, { cle: 'depot', titre: 'Dépôt' }, { cle: 'quantite', titre: 'Quantité', format: 'nombre', alignement: 'droite' }, { cle: 'date_peremption', titre: 'Péremption', format: 'date' }, { cle: 'valeur', titre: 'Valeur', format: 'montant', alignement: 'droite' }]} />}
+          {type === 'etat' && <TableauRapport nomFichier="etat-du-stock" lignes={donnees.lignes} colonnes={[{ cle: 'medicament', titre: t('Médicament') }, { cle: 'numero_lot', titre: t('Lot') }, { cle: 'depot', titre: t('Dépôt') }, { cle: 'quantite', titre: t('Quantité'), format: 'nombre', alignement: 'droite' }, { cle: 'date_peremption', titre: t('Péremption'), format: 'date' }, { cle: 'valeur', titre: t('Valeur'), format: 'montant', alignement: 'droite' }]} />}
           {type === 'valeur' && (
             <div className="space-y-4">
-              <Totaux elements={[{ titre: "Valeur totale (prix d'achat)", valeur: formaterMontant(donnees.synthese.valeur_totale) }, { titre: 'Médicaments en stock', valeur: formaterNombre(donnees.synthese.nombre_medicaments) }, { titre: 'Lots en stock', valeur: formaterNombre(donnees.synthese.nombre_lots) }]} />
-              <TableauRapport nomFichier="valeur-par-depot" lignes={donnees.par_depot} colonnes={[{ cle: 'libelle', titre: 'Dépôt' }, { cle: 'quantite', titre: 'Quantité', format: 'nombre', alignement: 'droite' }, { cle: 'valeur', titre: 'Valeur', format: 'montant', alignement: 'droite' }]} />
-              <TableauRapport nomFichier="valeur-par-categorie" lignes={donnees.par_categorie} colonnes={[{ cle: 'libelle', titre: 'Catégorie' }, { cle: 'quantite', titre: 'Quantité', format: 'nombre', alignement: 'droite' }, { cle: 'valeur', titre: 'Valeur', format: 'montant', alignement: 'droite' }]} />
+              <Totaux elements={[{ titre: t('Valeur totale (prix d\'achat)'), valeur: formaterMontant(donnees.synthese.valeur_totale) }, { titre: t('Médicaments en stock'), valeur: formaterNombre(donnees.synthese.nombre_medicaments) }, { titre: t('Lots en stock'), valeur: formaterNombre(donnees.synthese.nombre_lots) }]} />
+              <TableauRapport nomFichier="valeur-par-depot" lignes={donnees.par_depot} colonnes={[{ cle: 'libelle', titre: t('Dépôt') }, { cle: 'quantite', titre: t('Quantité'), format: 'nombre', alignement: 'droite' }, { cle: 'valeur', titre: t('Valeur'), format: 'montant', alignement: 'droite' }]} />
+              <TableauRapport nomFichier="valeur-par-categorie" lignes={donnees.par_categorie} colonnes={[{ cle: 'libelle', titre: t('Catégorie') }, { cle: 'quantite', titre: t('Quantité'), format: 'nombre', alignement: 'droite' }, { cle: 'valeur', titre: t('Valeur'), format: 'montant', alignement: 'droite' }]} />
             </div>
           )}
-          {type === 'faible' && <TableauRapport nomFichier="stock-faible" lignes={donnees.lignes} colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'stock', titre: 'Stock', format: 'nombre', alignement: 'droite' }, { cle: 'minimum', titre: 'Minimum', format: 'nombre', alignement: 'droite' }]} />}
-          {type === 'ruptures' && <TableauRapport nomFichier="ruptures" lignes={donnees.lignes} colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'stock', titre: 'Stock', format: 'nombre', alignement: 'droite' }]} />}
+          {type === 'faible' && <TableauRapport nomFichier="stock-faible" lignes={donnees.lignes} colonnes={[{ cle: 'medicament', titre: t('Médicament') }, { cle: 'stock', titre: t('Stock'), format: 'nombre', alignement: 'droite' }, { cle: 'minimum', titre: t('Minimum'), format: 'nombre', alignement: 'droite' }]} />}
+          {type === 'ruptures' && <TableauRapport nomFichier="ruptures" lignes={donnees.lignes} colonnes={[{ cle: 'medicament', titre: t('Médicament') }, { cle: 'stock', titre: t('Stock'), format: 'nombre', alignement: 'droite' }]} />}
           {type === 'peremption' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Périmés</h3>
-              <TableauRapport nomFichier="perimes" lignes={donnees.perimes} colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'numero_lot', titre: 'Lot' }, { cle: 'depot', titre: 'Dépôt' }, { cle: 'quantite', titre: 'Quantité', format: 'nombre', alignement: 'droite' }, { cle: 'date_peremption', titre: 'Péremption', format: 'date' }]} />
-              <h3 className="text-sm font-semibold">Bientôt périmés (dans {donnees.seuil_jours} jours)</h3>
-              <TableauRapport nomFichier="bientot-perimes" lignes={donnees.bientot_perimes} colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'numero_lot', titre: 'Lot' }, { cle: 'depot', titre: 'Dépôt' }, { cle: 'quantite', titre: 'Quantité', format: 'nombre', alignement: 'droite' }, { cle: 'date_peremption', titre: 'Péremption', format: 'date' }, { cle: 'jours_restants', titre: 'Jours restants', format: 'nombre', alignement: 'droite' }]} />
+              <h3 className="text-sm font-semibold">{t('Périmés')}</h3>
+              <TableauRapport nomFichier="perimes" lignes={donnees.perimes} colonnes={[{ cle: 'medicament', titre: t('Médicament') }, { cle: 'numero_lot', titre: t('Lot') }, { cle: 'depot', titre: t('Dépôt') }, { cle: 'quantite', titre: t('Quantité'), format: 'nombre', alignement: 'droite' }, { cle: 'date_peremption', titre: t('Péremption'), format: 'date' }]} />
+              <h3 className="text-sm font-semibold">{t('Bientôt périmés (dans')}{' '}{donnees.seuil_jours} {' '}{t('jours)')}</h3>
+              <TableauRapport nomFichier="bientot-perimes" lignes={donnees.bientot_perimes} colonnes={[{ cle: 'medicament', titre: t('Médicament') }, { cle: 'numero_lot', titre: t('Lot') }, { cle: 'depot', titre: t('Dépôt') }, { cle: 'quantite', titre: t('Quantité'), format: 'nombre', alignement: 'droite' }, { cle: 'date_peremption', titre: t('Péremption'), format: 'date' }, { cle: 'jours_restants', titre: t('Jours restants'), format: 'nombre', alignement: 'droite' }]} />
             </div>
           )}
         </>
@@ -201,14 +202,14 @@ function RapportMouvements() {
   const { donnees, chargement, erreur } = useRapport<Reponse>('mouvements', { date_debut: p.debut, date_fin: p.fin, categorie })
   return (
     <div>
-      <Periode {...p}><div><label className="etiquette">Catégorie</label><select className="champ" value={categorie} onChange={(e) => setCategorie(e.target.value)}><option value="">Tous les mouvements</option><option value="entrees">Entrées</option><option value="sorties">Sorties</option><option value="transferts">Transferts</option><option value="ajustements">Ajustements</option></select></div></Periode>
+      <Periode {...p}><div><label className="etiquette">{t('Catégorie')}</label><select className="champ" value={categorie} onChange={(e) => setCategorie(e.target.value)}><option value="">{t('Tous les mouvements')}</option><option value="entrees">{t('Entrées')}</option><option value="sorties">{t('Sorties')}</option><option value="transferts">{t('Transferts')}</option><option value="ajustements">{t('Ajustements')}</option></select></div></Periode>
       <MessageErreur message={erreur} />
       {chargement && !donnees ? <Chargement /> : donnees && (
         <div className="space-y-4">
-          <TableauRapport nomFichier="mouvements-synthese" lignes={donnees.synthese} colonnes={[{ cle: 'libelle', titre: 'Type de mouvement' }, { cle: 'nombre', titre: 'Mouvements', format: 'nombre', alignement: 'droite' }, { cle: 'quantite', titre: 'Quantité nette', format: 'nombre', alignement: 'droite' }]} />
-          <h3 className="text-sm font-semibold">Derniers mouvements (200 maximum)</h3>
+          <TableauRapport nomFichier="mouvements-synthese" lignes={donnees.synthese} colonnes={[{ cle: 'libelle', titre: t('Type de mouvement') }, { cle: 'nombre', titre: t('Mouvements'), format: 'nombre', alignement: 'droite' }, { cle: 'quantite', titre: t('Quantité nette'), format: 'nombre', alignement: 'droite' }]} />
+          <h3 className="text-sm font-semibold">{t('Derniers mouvements (200 maximum)')}</h3>
           <TableauRapport nomFichier="mouvements-detail" lignes={donnees.mouvements.map((m) => ({ ...m, date: formaterDateHeure(m.date_mouvement) }))}
-            colonnes={[{ cle: 'date', titre: 'Date' }, { cle: 'medicament_nom', titre: 'Médicament' }, { cle: 'numero_lot', titre: 'Lot' }, { cle: 'depot_nom', titre: 'Dépôt' }, { cle: 'type_libelle', titre: 'Type' }, { cle: 'quantite', titre: 'Quantité', format: 'nombre', alignement: 'droite' }, { cle: 'reference', titre: 'Référence' }, { cle: 'utilisateur_nom', titre: 'Utilisateur' }]} />
+            colonnes={[{ cle: 'date', titre: t('Date') }, { cle: 'medicament_nom', titre: t('Médicament') }, { cle: 'numero_lot', titre: t('Lot') }, { cle: 'depot_nom', titre: t('Dépôt') }, { cle: 'type_libelle', titre: t('Type') }, { cle: 'quantite', titre: t('Quantité'), format: 'nombre', alignement: 'droite' }, { cle: 'reference', titre: t('Référence') }, { cle: 'utilisateur_nom', titre: t('Utilisateur') }]} />
         </div>
       )}
     </div>
@@ -218,12 +219,12 @@ function RapportMouvements() {
 export default function Rapports() {
   const [onglet, setOnglet] = useState<Onglet>('ventes')
   const onglets: { cle: Onglet; libelle: string }[] = [
-    { cle: 'ventes', libelle: 'Ventes' }, { cle: 'achats', libelle: 'Achats' }, { cle: 'caisse', libelle: 'Caisse' },
-    { cle: 'stock', libelle: 'Stock' }, { cle: 'mouvements', libelle: 'Mouvements' },
+    { cle: 'ventes', libelle: t('Ventes') }, { cle: 'achats', libelle: t('Achats') }, { cle: 'caisse', libelle: t('Caisse') },
+    { cle: 'stock', libelle: t('Stock') }, { cle: 'mouvements', libelle: t('Mouvements') },
   ]
   return (
     <div>
-      <EnTetePage titre="Rapports" description="Chiffres essentiels, exportables en CSV ou imprimables." />
+      <EnTetePage titre={t('Rapports')} description={t('Chiffres essentiels, exportables en CSV ou imprimables.')} />
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200 sans-impression">
         {onglets.map((o) => (
           <button key={o.cle} onClick={() => setOnglet(o.cle)}

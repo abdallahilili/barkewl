@@ -2,14 +2,15 @@ import { Bold, Eraser, Italic, Underline } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { htmlSur } from '../utilitaires/texteRiche'
 
+import { t } from '../i18n'
 const TAILLES = [10, 12, 14, 16, 18, 22, 28]
 const POLICES = [
-  { libelle: 'Police', valeur: '' },
-  { libelle: 'Arial', valeur: 'Arial, sans-serif' },
-  { libelle: 'Times', valeur: "'Times New Roman', serif" },
-  { libelle: 'Courier', valeur: "'Courier New', monospace" },
-  { libelle: 'Georgia', valeur: 'Georgia, serif' },
-  { libelle: 'Verdana', valeur: 'Verdana, sans-serif' },
+  { libelle: t('Police'), valeur: '' },
+  { libelle: t('Arial'), valeur: 'Arial, sans-serif' },
+  { libelle: t('Times'), valeur: "'Times New Roman', serif" },
+  { libelle: t('Courier'), valeur: "'Courier New', monospace" },
+  { libelle: t('Georgia'), valeur: 'Georgia, serif' },
+  { libelle: t('Verdana'), valeur: 'Verdana, sans-serif' },
 ]
 
 interface Props {
@@ -67,19 +68,19 @@ export function EditeurTexteRiche({ valeur, onChange, minHeight = 70 }: Props) {
       {/* onMouseDown + preventDefault : garde la sélection dans l'éditeur quand on clique la barre. */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 p-1.5"
         onMouseDown={(e) => { if ((e.target as HTMLElement).tagName !== 'SELECT') e.preventDefault() }}>
-        <button type="button" className={bouton} title="Gras" onClick={() => commande('bold')}><Bold size={14} /></button>
-        <button type="button" className={bouton} title="Italique" onClick={() => commande('italic')}><Italic size={14} /></button>
-        <button type="button" className={bouton} title="Souligné" onClick={() => commande('underline')}><Underline size={14} /></button>
-        <select defaultValue="" title="Taille du texte sélectionné" className={liste}
+        <button type="button" className={bouton} title={t('Gras')} onClick={() => commande('bold')}><Bold size={14} /></button>
+        <button type="button" className={bouton} title={t('Italique')} onClick={() => commande('italic')}><Italic size={14} /></button>
+        <button type="button" className={bouton} title={t('Souligné')} onClick={() => commande('underline')}><Underline size={14} /></button>
+        <select defaultValue="" title={t('Taille du texte sélectionné')} className={liste}
           onChange={(e) => { if (e.target.value) appliquerTaille(Number(e.target.value)); e.target.value = '' }}>
-          <option value="">Taille</option>
-          {TAILLES.map((t) => <option key={t} value={t}>{t} px</option>)}
+          <option value="">{t('Taille')}</option>
+          {TAILLES.map((taille) => <option key={taille} value={taille}>{taille} px</option>)}
         </select>
-        <select defaultValue="" title="Police du texte sélectionné" className={liste}
+        <select defaultValue="" title={t('Police du texte sélectionné')} className={liste}
           onChange={(e) => { if (e.target.value) commande('fontName', e.target.value); e.target.value = '' }}>
           {POLICES.map((p) => <option key={p.libelle} value={p.valeur}>{p.libelle}</option>)}
         </select>
-        <button type="button" className={bouton} title="Effacer la mise en forme" onClick={() => commande('removeFormat')}><Eraser size={14} /></button>
+        <button type="button" className={bouton} title={t('Effacer la mise en forme')} onClick={() => commande('removeFormat')}><Eraser size={14} /></button>
       </div>
       <div ref={zone} contentEditable suppressContentEditableWarning onInput={emettre} onBlur={emettre}
         className="px-3 py-2 text-sm text-slate-900 outline-none" style={{ minHeight, whiteSpace: 'pre-wrap' }} />

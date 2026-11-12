@@ -8,6 +8,7 @@ import { MessageErreur } from './EnTetePage'
 import { Modale } from './Modale'
 import { useNotifier } from './Notifications'
 
+import { t } from '../i18n'
 export function ModaleNouveauMedicament({ ouverte, nomInitial = '', onFermer, onCree }: {
   ouverte: boolean
   nomInitial?: string
@@ -18,15 +19,15 @@ export function ModaleNouveauMedicament({ ouverte, nomInitial = '', onFermer, on
   const rayonnages = gestionRayonnagesActive()
 
   const champs: ChampDef[] = [
-    { nom: 'nom', libelle: 'Nom commercial', type: 'texte', requis: true },
-    { nom: 'nom_generique', libelle: 'Nom générique (DCI)', type: 'texte' },
-    { nom: 'dosage', libelle: 'Dosage', type: 'texte', aide: 'Ex. 500 mg' },
-    { nom: 'forme', libelle: 'Forme', type: 'texte', aide: 'Ex. Comprimé, sirop, gélule' },
-    { nom: 'laboratoire', libelle: 'Laboratoire', type: 'texte' },
-    { nom: 'categorie', libelle: 'Catégorie', type: 'select', source: { endpoint: '/categories/', libelle: (c: Categorie) => c.nom, vide: '— Sans catégorie —' } },
-    ...(rayonnages ? [{ nom: 'emplacement', libelle: 'Emplacement (rayon)', type: 'texte' as const, aide: 'Ex. Rayon A3, Étagère 2' }] : []),
-    { nom: 'prix_achat', libelle: "Prix d'achat", type: 'decimal', requis: true, defaut: 0 },
-    { nom: 'prix_vente', libelle: 'Prix de vente', type: 'decimal', requis: true, defaut: 0 },
+    { nom: 'nom', libelle: t('Nom commercial'), type: 'texte', requis: true },
+    { nom: 'nom_generique', libelle: t('Nom générique (DCI)'), type: 'texte' },
+    { nom: 'dosage', libelle: t('Dosage'), type: 'texte', aide: t('Ex. 500 mg') },
+    { nom: 'forme', libelle: t('Forme'), type: 'texte', aide: t('Ex. Comprimé, sirop, gélule') },
+    { nom: 'laboratoire', libelle: t('Laboratoire'), type: 'texte' },
+    { nom: 'categorie', libelle: t('Catégorie'), type: 'select', source: { endpoint: '/categories/', libelle: (c: Categorie) => c.nom, vide: t('— Sans catégorie —') } },
+    ...(rayonnages ? [{ nom: 'emplacement', libelle: t('Emplacement (rayon)'), type: 'texte' as const, aide: t('Ex. Rayon A3, Étagère 2') }] : []),
+    { nom: 'prix_achat', libelle: t('Prix d\'achat'), type: 'decimal', requis: true, defaut: 0 },
+    { nom: 'prix_vente', libelle: t('Prix de vente'), type: 'decimal', requis: true, defaut: 0 },
   ]
 
   const [formulaire, setFormulaire] = useState<Formulaire>({})
@@ -47,7 +48,7 @@ export function ModaleNouveauMedicament({ ouverte, nomInitial = '', onFermer, on
     const charge = construireCharge(champs, formulaire, false)
     try {
       const { data } = await api.post<Medicament>('/medicaments/', charge)
-      notifier.succes(`« ${data.nom} » ajouté.`)
+      notifier.succes(t('« {nom} » ajouté.', { nom: data.nom }))
       onCree(data)
     } catch (err) {
       setErreurs(erreursParChamp(err))
@@ -56,10 +57,10 @@ export function ModaleNouveauMedicament({ ouverte, nomInitial = '', onFermer, on
   }
 
   return (
-    <Modale ouverte={ouverte} onFermer={onFermer} largeur="grande" titre="Ajouter un médicament"
+    <Modale ouverte={ouverte} onFermer={onFermer} largeur="grande" titre={t('Ajouter un médicament')}
       pied={<>
-        <button type="button" className="btn-secondaire" onClick={onFermer}>Annuler</button>
-        <button type="button" onClick={soumettre} className="btn-primaire" disabled={envoi}>{envoi ? 'Enregistrement…' : 'Enregistrer'}</button>
+        <button type="button" className="btn-secondaire" onClick={onFermer}>{t('Annuler')}</button>
+        <button type="button" onClick={soumettre} className="btn-primaire" disabled={envoi}>{envoi ? t('Enregistrement…') : t('Enregistrer')}</button>
       </>}>
       <div>
         <MessageErreur message={erreurGlobale} />
