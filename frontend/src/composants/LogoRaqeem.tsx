@@ -41,11 +41,11 @@ export function LogoRaqeem({ taille = 44, fond = 'clair', compact = false }: { t
     <span className="inline-flex items-center gap-3" dir="ltr">
       <SymboleRaqeem taille={taille} fond={fond} titre="RAQEEM PHARMA" />
       <span className="flex flex-col items-center leading-none">
-        <span lang="ar" dir="rtl" className={`font-bold ${compact ? 'text-xl' : 'text-3xl'} ${sombre ? 'text-white' : 'text-nuit-800'}`}
+        <span lang="ar" dir="rtl" className={`font-bold ${compact ? 'text-2xl' : 'text-3xl'} ${sombre ? 'text-white' : 'text-nuit-800'}`}
           style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", lineHeight: 1.25 }}>
           رَقِيم <span className={sombre ? 'text-marque-300' : 'text-marque-600'}>فارما</span>
         </span>
-        <span className={`mt-0.5 font-semibold tracking-[0.28em] ${compact ? 'text-[9px]' : 'text-[11px]'} ${sombre ? 'text-nuit-200' : 'text-slate-500'}`}>
+        <span className={`mt-0.5 font-semibold tracking-[0.28em] ${compact ? 'text-[10px]' : 'text-[11px]'} ${sombre ? 'text-nuit-200' : 'text-slate-500'}`}>
           RAQEEM PHARMA
         </span>
       </span>

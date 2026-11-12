@@ -150,7 +150,7 @@ export function MiseEnPagePrincipale() {
   // En haut du menu : la marque du logiciel, RAQEEM PHARMA, sur bandeau bleu nuit.
   const marque = (
     <div className="flex h-16 shrink-0 items-center bg-nuit-800 px-4">
-      <LogoRaqeem taille={36} fond="sombre" compact />
+      <LogoRaqeem taille={42} fond="sombre" compact />
     </div>
   );
 
@@ -169,7 +169,7 @@ export function MiseEnPagePrincipale() {
   // Signature de l'éditeur en bas du menu.
   const signature = (
     <div className="shrink-0 border-t border-slate-100 px-4 py-3 text-xs leading-tight text-slate-500">
-      {NOM_LOGICIEL} · par <span className="font-medium text-nuit-800">{EDITEUR_PAR_DEFAUT}</span>
+      par <span className="font-medium text-nuit-800">{EDITEUR_PAR_DEFAUT}</span>
     </div>
   );
 
