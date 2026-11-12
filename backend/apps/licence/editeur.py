@@ -2,8 +2,8 @@
 
 NOM = "Rawafid Digital Services"
 SLOGAN = "Services numériques"
-TELEPHONE = ""      # ex. "+222 XX XX XX XX"
-WHATSAPP = ""       # ex. "22200000000" (format international sans + ni espaces, pour le lien wa.me)
+TELEPHONE = "+222 46 63 59 96 / 31 17 70 08"
+WHATSAPP = "22246635996"   # format international sans + ni espaces, pour le lien wa.me
 EMAIL = ""
 SITE = ""
 
