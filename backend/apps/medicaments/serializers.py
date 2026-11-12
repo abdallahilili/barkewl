@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.commun.constantes import ROLES_SANS_PRIX_ACHAT
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.serializers import MasquerPrixAchatMixin
 
@@ -132,4 +133,9 @@ class LotSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):
         fab, per = donnees.get("date_fabrication"), donnees.get("date_peremption")
         if fab and per and fab >= per:
             raise serializers.ValidationError({"date_peremption": "La péremption doit suivre la fabrication."})
+        requete = self.context.get("request")
+        if requete and requete.user.role in ROLES_SANS_PRIX_ACHAT:
+            # Le pharmacien corrige les dates d'un lot, jamais ses prix (réservés au propriétaire).
+            for champ in ("prix_achat", "prix_vente"):
+                donnees.pop(champ, None)
         return donnees

@@ -28,6 +28,10 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
   const [motif, setMotif] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
   const [annulation, setAnnulation] = useState(false)
+  const [approbateur, setApprobateur] = useState('')
+  const [pin, setPin] = useState('')
+  // Le vendeur doit faire approuver l'annulation par le propriétaire ou le pharmacien (code PIN).
+  const besoinApprobation = utilisateur?.role === 'CAISSIER'
 
   const voirRecu = async (v: Vente) => {
     try { setRecu((await api.get<Recu>(`/recus/${v.id}/`)).data) } catch (e) { notifier.erreur(extraireErreur(e)) }
@@ -40,7 +44,10 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
     e.preventDefault()
     if (!detail) return
     try {
-      await api.post(`/ventes/${detail.id}/annuler/`, { motif })
+      await api.post(`/ventes/${detail.id}/annuler/`, besoinApprobation
+        ? { motif, approbateur_identifiant: approbateur, approbateur_pin: pin }
+        : { motif })
+      setApprobateur(''); setPin('')
       notifier.succes(t('Vente {reference} annulée : stock remis en place et remboursement enregistré.', { reference: detail.reference }))
       setDetail(null); liste.recharger()
     } catch (err) { setErreur(extraireErreur(err)) }
@@ -75,12 +82,12 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
         pied={<>
           <button className="btn-secondaire" onClick={() => setDetail(null)}>{t('Fermer')}</button>
           {detail && <button className="btn-secondaire" onClick={() => voirRecu(detail)}><Printer size={16} /> {' '}{t('Reçu')}</button>}
-          {detail?.statut === 'VALIDEE' && utilisateur?.role === 'ADMIN' && !annulation && <button className="btn-danger" onClick={() => setAnnulation(true)}>{t('Annuler cette vente')}</button>}
+          {detail?.statut === 'VALIDEE' && ['ADMIN', 'PHARMACIEN', 'CAISSIER'].includes(utilisateur?.role ?? '') && !annulation && <button className="btn-danger" onClick={() => setAnnulation(true)}>{t('Annuler cette vente')}</button>}
         </>}>
         {detail && (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">{formaterDateHeure(detail.date_vente)} {' '}{t('· Caissier :')}{' '}{detail.caissier_nom} {' '}{t('· Dépôt :')}{' '}{detail.depot_nom}{detail.client_nom ? t(' · Client : {nom}', { nom: detail.client_nom }) : ''}</p>
-            {detail.statut === 'ANNULEE' && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{t('Vente annulée. Motif :')}{' '}{detail.motif_annulation}</p>}
+            {detail.statut === 'ANNULEE' && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{t('Vente annulée. Motif :')}{' '}{detail.motif_annulation}{detail.annulation_approuvee_par_nom && <>{' · '}{t('Approuvée par {nom}', { nom: detail.annulation_approuvee_par_nom })}</>}</p>}
             <div className="overflow-x-auto rounded-md border border-slate-200">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-start text-slate-600"><tr><th className="px-3 py-2">{t('Médicament')}</th><th className="px-3 py-2">{t('Lot')}</th><th className="px-3 py-2 text-end">{t('Qté')}</th><th className="px-3 py-2 text-end">{t('Prix')}</th><th className="px-3 py-2 text-end">{t('Total')}</th></tr></thead>
@@ -98,6 +105,17 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
                 <p className="text-sm text-red-900">{t('L\'annulation remet les quantités en stock et enregistre un remboursement dans votre session de caisse. Cette action est tracée.')}</p>
                 <MessageErreur message={erreur} />
                 <Champ libelle={t('Motif de l\'annulation')} requis><input className="champ" value={motif} onChange={(e) => setMotif(e.target.value)} required /></Champ>
+                {besoinApprobation && (
+                  <div className="space-y-2 rounded-md border border-red-200 bg-white p-3">
+                    <p className="text-sm font-medium text-nuit-800">{t('Approbation du propriétaire ou du pharmacien')}</p>
+                    <p className="text-xs text-slate-500">{t('Il saisit lui-même son identifiant et son code PIN sur cet écran.')}</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Champ libelle={t('Identifiant')} requis><input className="champ" value={approbateur} onChange={(e) => setApprobateur(e.target.value)} autoComplete="off" required /></Champ>
+                      <Champ libelle={t('Code PIN')} requis><input className="champ text-center tracking-[0.4em]" type="password" inputMode="numeric" maxLength={6} dir="ltr"
+                        value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} autoComplete="off" required /></Champ>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2"><button type="button" className="btn-secondaire" onClick={() => setAnnulation(false)}>{t('Ne pas annuler')}</button><button className="btn-danger">{t('Confirmer l\'annulation')}</button></div>
               </form>
             )}

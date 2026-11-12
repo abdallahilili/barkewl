@@ -103,7 +103,7 @@ def creer_vente(*, utilisateur, articles, paiements, client=None, montant_recu=N
 
 
 @transaction.atomic
-def annuler_vente(vente_id, utilisateur, motif):
+def annuler_vente(vente_id, utilisateur, motif, approbateur=None):
     """Annulation (jamais de suppression) : stock remis en place + remboursement en caisse."""
     if not motif or not motif.strip():
         raise ErreurMetier("Un motif d'annulation est obligatoire.")
@@ -132,7 +132,12 @@ def annuler_vente(vente_id, utilisateur, motif):
     vente.date_annulation = timezone.now()
     vente.annule_par = utilisateur
     vente.motif_annulation = motif.strip()[:255]
-    vente.save(update_fields=["statut", "date_annulation", "annule_par", "motif_annulation"])
+    vente.annulation_approuvee_par = approbateur
+    vente.save(update_fields=["statut", "date_annulation", "annule_par", "motif_annulation", "annulation_approuvee_par"])
+    nouvelle = {"statut": "ANNULEE", "motif": vente.motif_annulation}
+    if approbateur:
+        nouvelle["approuve_par"] = approbateur.nom_complet or approbateur.identifiant
     enregistrer_audit(utilisateur, "ANNULATION", "Vente", vente.pk, reference=vente.reference,
-                      ancienne={"statut": "VALIDEE"}, nouvelle={"statut": "ANNULEE", "motif": vente.motif_annulation})
+                      ancienne={"statut": "VALIDEE"}, nouvelle=nouvelle,
+                      description=f"Approuvée par {nouvelle['approuve_par']}" if approbateur else "")
     return vente

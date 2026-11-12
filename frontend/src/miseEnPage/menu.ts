@@ -24,7 +24,7 @@ export const menu: GroupeMenu[] = [
       { libelle: t('État du stock'), chemin: '/stock', module: 'stock_etat', icone: Boxes },
       { libelle: t('Entrées'), chemin: '/stock/entrees', module: 'stock_gestion', icone: PackagePlus },
       { libelle: t('Sorties'), chemin: '/stock/sorties', module: 'stock_gestion', icone: PackageMinus },
-      { libelle: t('Transferts'), chemin: '/stock/transferts', module: 'stock_gestion', icone: ArrowLeftRight },
+      { libelle: t('Transferts'), chemin: '/stock/transferts', module: 'transferts', icone: ArrowLeftRight },
       { libelle: t('Historique du stock'), chemin: '/stock/historique', module: 'stock_gestion', icone: ClipboardList },
       { libelle: t('Inventaires'), chemin: '/stock/inventaires', module: 'stock_gestion', icone: ClipboardCheck },
     ],

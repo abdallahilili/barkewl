@@ -3,10 +3,12 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.commun.constantes import ADMIN, CAISSIER
+from apps.commun.constantes import ADMIN, CAISSIER, ROLES_APPROBATEURS
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.utilitaires import lire_date
 from apps.commun.vues_base import ViewSetGestion
+from apps.licence import offres
+from apps.utilisateurs.approbation import verifier_approbation
 from apps.medicaments.conditionnement import libelle
 
 from . import services
@@ -36,7 +38,7 @@ class ClientViewSet(ViewSetGestion):
 class VenteViewSet(viewsets.ReadOnlyModelViewSet):
     roles_lecture = (CAISSIER,)
     roles_ecriture = (CAISSIER,)
-    roles_par_action = {"apercu": (CAISSIER,), "annuler": ()}
+    roles_par_action = {"apercu": (CAISSIER,), "annuler": (CAISSIER,)}
     search_fields = ["reference", "client__nom", "client__telephone"]
     ordering_fields = ["date_vente", "reference", "total", "statut"]
     ordering = ["-date_vente", "-id"]
@@ -97,12 +99,18 @@ class VenteViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="annuler")
     def annuler(self, request, pk=None):
-        if request.user.role != ADMIN:
-            raise ErreurMetier("Seul un administrateur peut annuler une vente.")
+        """Propriétaire et pharmacien : annulation directe. Vendeur : approbation sur place (PIN) obligatoire."""
         self.get_object()
         serializer = AnnulerVenteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        services.annuler_vente(pk, request.user, serializer.validated_data["motif"])
+        d = serializer.validated_data
+        approbateur = None
+        if request.user.role not in ROLES_APPROBATEURS:
+            offres.exiger_fonction("approbation")      # offre Essentiel : seul le propriétaire annule
+            if not d.get("approbateur_identifiant") or not d.get("approbateur_pin"):
+                raise ErreurMetier("L'annulation doit être approuvée par le propriétaire ou le pharmacien (identifiant et code PIN).")
+            approbateur = verifier_approbation(d["approbateur_identifiant"], d["approbateur_pin"])
+        services.annuler_vente(pk, request.user, d["motif"], approbateur=approbateur)
         return Response(VenteSerializer(self.get_queryset().get(pk=pk)).data)
 
 

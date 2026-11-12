@@ -1,6 +1,6 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from .constantes import ADMIN
+from .constantes import ADMIN, roles_effectifs
 
 
 class PermissionParRole(BasePermission):
@@ -20,14 +20,16 @@ class PermissionParRole(BasePermission):
             return False
         if utilisateur.role == ADMIN:
             return True
+        # Un pharmacien a aussi les droits du vendeur et du magasinier.
+        mes_roles = roles_effectifs(utilisateur.role)
         action = getattr(view, "action", None)
         par_action = getattr(view, "roles_par_action", {})
         if action in par_action:
-            return utilisateur.role in par_action[action]
+            return bool(mes_roles & set(par_action[action]))
         if request.method in SAFE_METHODS:
             roles = getattr(view, "roles_lecture", None)
             if roles is None:
                 roles = getattr(view, "roles_ecriture", ())
         else:
             roles = getattr(view, "roles_ecriture", ())
-        return utilisateur.role in roles
+        return bool(mes_roles & set(roles))

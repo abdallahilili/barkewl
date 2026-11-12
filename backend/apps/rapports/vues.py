@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from apps.achats.models import Achat
 from apps.caisse.models import SessionCaisse
 from apps.caisse.serializers import SessionCaisseSerializer
-from apps.commun.constantes import ADMIN, CAISSIER, MAGASINIER, TOUS_LES_ROLES
+from apps.commun.constantes import ADMIN, CAISSIER, MAGASINIER, PHARMACIEN, ROLES_SANS_PRIX_ACHAT, TOUS_LES_ROLES
 from apps.commun import sauvegarde
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.utilitaires import plage_dates
@@ -162,7 +162,10 @@ class RapportStockView(APIView):
 
         depot = Depot.objects.filter(pk=depot_id).first() if depot_id else None
         alerte = alertes.construire_alertes(depot, limite=1000)
+        sans_prix = request.user.role in ROLES_SANS_PRIX_ACHAT
         if type_rapport == "valeur":
+            if sans_prix:
+                raise ErreurMetier("La valeur du stock (prix d'achat) est réservée au propriétaire.")
             valeur = alertes.VALEUR_STOCK
             base = Stock.objects.filter(quantite__gt=0)
             if depot:
@@ -191,7 +194,8 @@ class RapportStockView(APIView):
                 {"medicament": s.lot.medicament.nom, "numero_lot": s.lot.numero_lot, "depot": s.depot.nom,
                  "quantite": s.quantite, "quantite_texte": decrire_quantite(s.lot.medicament, s.quantite),
                  "date_peremption": s.lot.date_peremption,
-                 "valeur": (s.quantite * s.lot.prix_achat / s.lot.medicament.unites_par_boite).quantize(Decimal("0.01"))}
+                 **({} if sans_prix else {
+                     "valeur": (s.quantite * s.lot.prix_achat / s.lot.medicament.unites_par_boite).quantize(Decimal("0.01"))})}
                 for s in base[:5000]]})
         raise ErreurMetier("Type de rapport inconnu (etat, valeur, faible, ruptures, peremption).")
 
@@ -207,7 +211,7 @@ class TableauDeBordView(APIView):
         debut, fin = plage_dates(request.query_params, jours_par_defaut=0)
         donnees = {"date": aujourdhui, "role": role, "periode": {"date_debut": debut, "date_fin": fin}}
 
-        if role in (ADMIN, CAISSIER):
+        if role in (ADMIN, CAISSIER, PHARMACIEN):
             ventes = Vente.objects.filter(statut="VALIDEE", date_vente__date__range=(debut, fin))
             if role == CAISSIER:
                 ventes = ventes.filter(caissier=request.user)
@@ -234,8 +238,10 @@ class TableauDeBordView(APIView):
             etat = sauvegarde.etat_sauvegardes()
             donnees["sauvegarde"] = {"derniere": etat["derniere"], "en_retard": etat["en_retard"]}
 
-        if role in (ADMIN, MAGASINIER):
+        if role in (ADMIN, MAGASINIER, PHARMACIEN):
             donnees["stock"] = alertes.calculer_synthese()
+            if role in ROLES_SANS_PRIX_ACHAT:
+                donnees["stock"].pop("valeur_totale", None)
             alerte = alertes.construire_alertes(limite=8)
             donnees["alertes"] = {k: alerte[k] for k in ("stock_faible", "ruptures", "peremption_proche", "perimes")}
             recents = MouvementStock.objects.select_related("utilisateur", "medicament", "lot", "depot")[:8]

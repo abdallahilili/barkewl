@@ -62,10 +62,11 @@ class VenteSerializer(VenteListeSerializer):
     lignes = LigneVenteSerializer(many=True, read_only=True)
     paiements = PaiementVenteSerializer(many=True, read_only=True)
     annule_par_nom = serializers.CharField(source="annule_par.nom_complet", read_only=True, default=None)
+    annulation_approuvee_par_nom = serializers.CharField(source="annulation_approuvee_par.nom_complet", read_only=True, default=None)
 
     class Meta(VenteListeSerializer.Meta):
         fields = VenteListeSerializer.Meta.fields + [
-            "montant_recu", "note", "date_annulation", "annule_par_nom", "motif_annulation", "lignes", "paiements",
+            "montant_recu", "note", "date_annulation", "annule_par_nom", "annulation_approuvee_par_nom", "motif_annulation", "lignes", "paiements",
         ]
 
 
@@ -95,6 +96,9 @@ class ApercuVenteSerializer(serializers.Serializer):
 
 class AnnulerVenteSerializer(serializers.Serializer):
     motif = serializers.CharField(max_length=255)
+    # Approbation sur place (vendeur) : identifiant et code PIN du propriétaire ou du pharmacien.
+    approbateur_identifiant = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    approbateur_pin = serializers.CharField(required=False, allow_blank=True, max_length=6)
 
 
 def construire_recu(vente):

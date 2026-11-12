@@ -6,6 +6,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.commun.audit import enregistrer_audit
+from apps.commun.constantes import ROLES_APPROBATEURS
 from apps.commun.exceptions import ErreurMetier
 
 from .models import (
@@ -73,7 +74,7 @@ def fermer_session(session_id, utilisateur, montant_reel, note=""):
     session = SessionCaisse.objects.select_for_update().get(pk=session_id)
     if session.statut != StatutSession.OUVERTE:
         raise ErreurMetier("Cette session est déjà clôturée.")
-    if session.caissier_id != utilisateur.pk and getattr(utilisateur, "role", None) != "ADMIN":
+    if session.caissier_id != utilisateur.pk and getattr(utilisateur, "role", None) not in ROLES_APPROBATEURS:
         raise ErreurMetier("Seul le caissier de la session (ou un administrateur) peut la clôturer.")
     if montant_reel < 0:
         raise ErreurMetier("Le montant compté ne peut pas être négatif.")

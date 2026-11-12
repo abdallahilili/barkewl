@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'CAISSIER' | 'MAGASINIER'
+export type Role = 'ADMIN' | 'PHARMACIEN' | 'CAISSIER' | 'MAGASINIER'
 
 export interface Utilisateur {
   id: number
@@ -11,6 +11,7 @@ export interface Utilisateur {
   role: Role
   actif: boolean
   modules: string[]
+  pin_defini?: boolean
 }
 
 export interface ReponsePaginee<T> {
@@ -304,6 +305,7 @@ export interface Vente {
   modes_paiement: string
   montant_recu?: number | null
   motif_annulation?: string
+  annulation_approuvee_par_nom?: string | null
   lignes?: { id: number; medicament_nom: string; numero_lot: string; conditionnement: Conditionnement; conditionnement_libelle: string; quantite: number; prix_unitaire: number; total: number }[]
   paiements?: { id: number; mode_paiement_nom: string; montant: number }[]
 }

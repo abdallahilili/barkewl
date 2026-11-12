@@ -12,7 +12,9 @@ from apps.commun.exceptions import ErreurMetier, NonAuthentifie
 from apps.commun.vues_base import ViewSetGestion
 
 from .models import Utilisateur
-from .serializers import ChangerMotDePasseSerializer, ConnexionSerializer, UtilisateurSerializer
+from apps.commun.constantes import ROLES_APPROBATEURS
+
+from .serializers import ChangerMotDePasseSerializer, CodePinSerializer, ConnexionSerializer, UtilisateurSerializer
 
 
 class ConnexionView(APIView):
@@ -102,3 +104,19 @@ class UtilisateurViewSet(ViewSetGestion):
         enregistrer_audit(request.user, "MODIFICATION", "Utilisateur", utilisateur.pk, reference=str(utilisateur),
                           description="Réinitialisation du mot de passe")
         return Response({"detail": "Mot de passe réinitialisé."})
+
+    @action(detail=True, methods=["post"], url_path="definir-pin")
+    def definir_pin(self, request, pk=None):
+        """Code PIN d'approbation d'un propriétaire ou d'un pharmacien (vide = supprimer)."""
+        utilisateur = self.get_object()
+        if utilisateur.role not in ROLES_APPROBATEURS:
+            raise ErreurMetier("Seuls le propriétaire et le pharmacien ont un code PIN d'approbation.")
+        code = (request.data.get("code_pin") or "").strip()
+        if code:
+            serializer = CodePinSerializer(data={"code_pin": code})
+            serializer.is_valid(raise_exception=True)
+        utilisateur.definir_code_pin(code)
+        utilisateur.save(update_fields=["code_pin"])
+        enregistrer_audit(request.user, "MODIFICATION", "Utilisateur", utilisateur.pk, reference=str(utilisateur),
+                          description="Code PIN d'approbation " + ("défini" if code else "supprimé"))
+        return Response(UtilisateurSerializer(utilisateur, context={"request": request}).data)

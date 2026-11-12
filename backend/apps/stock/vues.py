@@ -8,11 +8,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.commun.constantes import ADMIN, MAGASINIER, TOUS_LES_ROLES, StatutDocument
+from apps.commun.constantes import ADMIN, MAGASINIER, ROLES_SANS_PRIX_ACHAT, TOUS_LES_ROLES, StatutDocument
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.parametres import obtenir_entier
 from apps.commun.utilitaires import lire_date
 from apps.commun.vues_base import ViewSetLecture
+from apps.licence import offres
 
 from . import alertes, services
 from .models import Inventaire, MouvementStock, Stock, Transfert
@@ -72,7 +73,10 @@ class StockViewSet(ViewSetLecture):
         depot = request.query_params.get("depot") or None
         from apps.depots.models import Depot
 
-        return Response(alertes.calculer_synthese(Depot.objects.filter(pk=depot).first() if depot else None))
+        synthese = alertes.calculer_synthese(Depot.objects.filter(pk=depot).first() if depot else None)
+        if request.user.role in ROLES_SANS_PRIX_ACHAT:
+            synthese.pop("valeur_totale", None)   # valeur au prix d'achat : réservée au propriétaire
+        return Response(synthese)
 
     @action(detail=False, methods=["post"], url_path="entree")
     def entree(self, request):
@@ -132,6 +136,10 @@ class MouvementStockViewSet(ViewSetLecture):
 
 
 class TransfertViewSet(viewsets.ModelViewSet):
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        offres.exiger_fonction("transferts")   # inclus dans les offres Professionnel et Réseau
+
     serializer_class = TransfertSerializer
     roles_lecture = (MAGASINIER,)
     roles_ecriture = (MAGASINIER,)

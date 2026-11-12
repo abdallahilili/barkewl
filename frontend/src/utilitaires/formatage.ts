@@ -60,7 +60,7 @@ export const premierJourMois = () => { const d = new Date(); d.setDate(1); retur
 export const premierJourAnnee = () => { const d = new Date(); d.setMonth(0, 1); return d.toISOString().slice(0, 10) }
 
 export const libelleRole = (role: string) =>
-  t(({ ADMIN: 'Administrateur', CAISSIER: 'Caissier', MAGASINIER: 'Magasinier' } as Record<string, string>)[role] ?? role)
+  t(({ ADMIN: 'Propriétaire', PHARMACIEN: 'Pharmacien', CAISSIER: 'Vendeur', MAGASINIER: 'Magasinier' } as Record<string, string>)[role] ?? role)
 
 export const libelleStatut = (statut: string) =>
   ({

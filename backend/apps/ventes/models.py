@@ -41,6 +41,9 @@ class Vente(models.Model):
     statut = models.CharField(max_length=10, choices=StatutVente.choices, default=StatutVente.VALIDEE, db_index=True)
     date_annulation = models.DateTimeField(null=True, blank=True)
     annule_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    # Propriétaire ou pharmacien qui a approuvé (code PIN) l'annulation demandée par un vendeur.
+    annulation_approuvee_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                                 on_delete=models.PROTECT, related_name="+")
     motif_annulation = models.CharField(max_length=255, blank=True)
 
     class Meta:

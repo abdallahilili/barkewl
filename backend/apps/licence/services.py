@@ -114,7 +114,7 @@ def _calculer():
     empreinte = empreinte_machine()
     resultat = {
         "statut": NON_ACTIVEE, "lecture_seule": True, "message": "", "empreinte": empreinte,
-        "client": None, "plan": None, "debut": None, "fin": None, "jours_restants": None,
+        "client": None, "plan": None, "offre": None, "debut": None, "fin": None, "jours_restants": None,
         "editeur": editeur.coordonnees(),
     }
     with transaction.atomic():
@@ -138,7 +138,9 @@ def _calculer():
     except ErreurMetier as erreur:
         resultat.update(statut=INVALIDE, message=str(erreur.detail))
         return resultat
-    resultat.update(client=contenu.get("client"), plan=contenu.get("plan"),
+    # Licences émises avant les offres : Professionnel. Période d'essai : Professionnel (pour tout découvrir).
+    offre = contenu.get("offre") or "PRO"
+    resultat.update(client=contenu.get("client"), plan=contenu.get("plan"), offre=offre,
                     debut=contenu["debut_date"], fin=contenu["fin_date"])
     if contenu.get("machine") != empreinte:
         resultat.update(statut=INVALIDE, message=(

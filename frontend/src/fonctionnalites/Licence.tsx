@@ -59,6 +59,7 @@ export function Licence() {
         {etat.message && <p className={`mt-3 rounded-md px-3 py-2 text-sm ${etat.lecture_seule ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900'}`}>{etat.message}</p>}
         <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div><dt className="text-slate-500">{t('Pharmacie')}</dt><dd className="font-medium">{etat.client ?? '—'}</dd></div>
+          <div><dt className="text-slate-500">{t('Offre')}</dt><dd className="font-medium">{etat.offre_details ? t(etat.offre_details.nom) : '—'}</dd></div>
           <div><dt className="text-slate-500">{t('Abonnement')}</dt><dd className="font-medium">{etat.plan ? PLANS[etat.plan] : '—'}</dd></div>
           <div><dt className="text-slate-500">{t('Valable du')}</dt><dd className="font-medium">{etat.debut ? formaterDate(etat.debut) : '—'}</dd></div>
           <div><dt className="text-slate-500">{t('Jusqu\'au')}</dt><dd className="font-medium">{etat.fin ? `${formaterDate(etat.fin)}${etat.jours_restants != null && etat.jours_restants >= 0 ? t(' ({jours} jours)', { jours: etat.jours_restants }) : ''}` : '—'}</dd></div>

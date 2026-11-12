@@ -1,3 +1,4 @@
+import type { Role } from '../types'
 import { api } from './api'
 
 export type StatutLicence = 'ACTIVE' | 'EXPIRE_BIENTOT' | 'GRACE' | 'EXPIREE' | 'NON_ACTIVEE' | 'INVALIDE' | 'HORLOGE'
@@ -13,6 +14,9 @@ export interface EtatLicence {
   jours_restants: number | null
   client?: string | null
   plan?: 'MENSUEL' | 'ANNUEL' | 'ESSAI' | null
+  offre?: 'ESSENTIEL' | 'PRO' | 'RESEAU' | null
+  /** Ce que débloque l'offre de la licence (rôles, nombre de comptes, fonctions). */
+  offre_details?: { code: string; nom: string; max_utilisateurs: number | null; roles: Role[]; fonctions: string[] }
   debut?: string | null
   fin?: string | null
 }

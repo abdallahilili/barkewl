@@ -25,6 +25,8 @@ class Utilisateur(AbstractBaseUser):
     telephone = models.CharField(max_length=30, blank=True)
     role = models.CharField(max_length=20, choices=ROLES, default=CAISSIER)
     actif = models.BooleanField(default=True)
+    # Code PIN (haché) du propriétaire ou du pharmacien : approuve sur place une opération sensible d'un vendeur.
+    code_pin = models.CharField(max_length=128, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
     # Noms imposés par Django / SimpleJWT, mais colonnes en français en base.
@@ -46,6 +48,16 @@ class Utilisateur(AbstractBaseUser):
     @property
     def nom_complet(self):
         return f"{self.prenom} {self.nom}".strip()
+
+    def definir_code_pin(self, code):
+        from django.contrib.auth.hashers import make_password
+
+        self.code_pin = make_password(code) if code else ""
+
+    def verifier_code_pin(self, code):
+        from django.contrib.auth.hashers import check_password
+
+        return bool(self.code_pin) and check_password(code, self.code_pin)
 
     def __str__(self):
         return self.nom_complet or self.identifiant

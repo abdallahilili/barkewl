@@ -3,7 +3,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import services
+from . import offres, services
 
 
 class LicenceView(APIView):
@@ -13,6 +13,10 @@ class LicenceView(APIView):
 
     def get(self, request):
         etat = dict(services.etat_licence())
+        definition = offres.definition()
+        etat["offre_details"] = {"code": offres.offre_courante(), "nom": definition["nom"],
+                                 "max_utilisateurs": definition["max_utilisateurs"], "roles": list(definition["roles"]),
+                                 "fonctions": sorted(definition["fonctions"])}
         if not (request.user and request.user.is_authenticated):
             # Sans connexion : pas de détail commercial, seulement de quoi afficher l'alerte et le code du PC.
             etat = {cle: etat[cle] for cle in ("statut", "lecture_seule", "message", "empreinte", "editeur", "jours_restants")}
