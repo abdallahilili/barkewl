@@ -1,4 +1,6 @@
-from django.urls import include, path
+from django.urls import include, path, re_path
+
+from .frontend import servir_interface
 
 urlpatterns = [
     path("api/auth/", include("apps.utilisateurs.urls_auth")),
@@ -14,4 +16,6 @@ urlpatterns = [
     path("api/", include("apps.facturation.urls")),
     path("api/", include("apps.rapports.urls")),
     path("api/", include("apps.licence.urls")),
+    # Tout le reste : l'interface (si elle est construite), servie par le même serveur.
+    re_path(r"^(?!api/)(?P<chemin>.*)$", servir_interface),
 ]

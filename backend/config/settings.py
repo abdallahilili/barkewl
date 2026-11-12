@@ -20,7 +20,8 @@ SECRET_KEY = env("CLE_SECRETE", "cle-de-developpement-a-changer")
 if not DEBUG and SECRET_KEY == "cle-de-developpement-a-changer":
     raise ImproperlyConfigured("CLE_SECRETE doit être définie en production.")
 
-ALLOWED_HOSTS = ['*']
+# « * » par défaut : en réseau local, les postes de caisse joignent le serveur par son adresse IP (qui peut changer).
+ALLOWED_HOSTS = [h.strip() for h in env("HOTES_AUTORISES", "*").split(",") if h.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
