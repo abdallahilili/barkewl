@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
 import type { MouvementStock, Vente } from '../types'
 import { extraireErreur } from '../utilitaires/erreurs'
-import { formaterDate, formaterDateHeure, formaterMontant, formaterNombre } from '../utilitaires/formatage'
+import { formaterDate, formaterDateHeure, formaterMontant, formaterNombre, libelleTypeMouvement } from '../utilitaires/formatage'
 
 import { t } from '../i18n'
 interface Donnees {
@@ -83,10 +83,10 @@ export default function TableauDeBord() {
       )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {donnees.ventes_aujourdhui && <Indicateur titre={libellePour('Ventes')} valeur={formaterMontant(donnees.ventes_aujourdhui.total)} detail={`${donnees.ventes_aujourdhui.nombre} vente(s)`} vers={peut('ventes') ? '/ventes' : undefined} />}
-        {donnees.achats_aujourdhui && <Indicateur titre={libellePour('Achats')} valeur={formaterMontant(donnees.achats_aujourdhui.total)} detail={`${donnees.achats_aujourdhui.nombre} achat(s)`} vers="/achats" />}
+        {donnees.ventes_aujourdhui && <Indicateur titre={libellePour(t('Ventes'))} valeur={formaterMontant(donnees.ventes_aujourdhui.total)} detail={t('{n} vente(s)', { n: donnees.ventes_aujourdhui.nombre })} vers={peut('ventes') ? '/ventes' : undefined} />}
+        {donnees.achats_aujourdhui && <Indicateur titre={libellePour(t('Achats'))} valeur={formaterMontant(donnees.achats_aujourdhui.total)} detail={t('{n} achat(s)', { n: donnees.achats_aujourdhui.nombre })} vers="/achats" />}
         {donnees.dettes_fournisseurs != null && <Indicateur titre={t('Dettes fournisseurs')} valeur={formaterMontant(donnees.dettes_fournisseurs)} ton={donnees.dettes_fournisseurs > 0 ? 'text-red-700' : ''} vers="/achats" />}
-        {s?.valeur_totale != null && <Indicateur titre={t('Valeur du stock')} valeur={formaterMontant(s.valeur_totale)} detail={`${formaterNombre(s.nombre_medicaments)} médicaments`} vers="/stock" />}
+        {s?.valeur_totale != null && <Indicateur titre={t('Valeur du stock')} valeur={formaterMontant(s.valeur_totale)} detail={t('{n} médicaments', { n: formaterNombre(s.nombre_medicaments) })} vers="/stock" />}
         {s && <Indicateur titre={t('Ruptures')} valeur={formaterNombre(s.nombre_ruptures)} ton={s.nombre_ruptures ? 'text-red-700' : ''} vers={peut('stock_etat') ? '/stock' : undefined} />}
         {s && <Indicateur titre={t('Stock faible')} valeur={formaterNombre(s.nombre_stock_faible)} ton={s.nombre_stock_faible ? 'text-amber-700' : ''} vers="/stock" />}
         {s && <Indicateur titre={t('Bientôt périmés')} valeur={formaterNombre(s.nombre_bientot_perimes)} ton={s.nombre_bientot_perimes ? 'text-amber-700' : ''} vers="/stock" />}
@@ -112,7 +112,7 @@ export default function TableauDeBord() {
       <div className="grid gap-4 lg:grid-cols-2">
         {a && (
           <Panneau titre={t('Bientôt périmés')} vers="/stock">
-            {a.peremption_proche.length === 0 ? vide : <ul className="divide-y divide-slate-100">{a.peremption_proche.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">{t('— lot')}{' '}{l.numero_lot}, {l.quantite_texte ?? `${l.quantite} u.`}</span></span><Badge ton="orange">{l.jours_restants} j</Badge></li>)}</ul>}
+            {a.peremption_proche.length === 0 ? vide : <ul className="divide-y divide-slate-100">{a.peremption_proche.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">{t('— lot')}{' '}{l.numero_lot}, {l.quantite_texte ?? t('{n} u.', { n: l.quantite })}</span></span><Badge ton="orange">{t('{n} j', { n: l.jours_restants })}</Badge></li>)}</ul>}
           </Panneau>
         )}
         {a && (
@@ -127,7 +127,7 @@ export default function TableauDeBord() {
         )}
         {a && a.perimes.length > 0 && (
           <Panneau titre={t('Périmés à retirer du stock')} vers="/stock/sorties">
-            <ul className="divide-y divide-slate-100">{a.perimes.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">{t('— lot')}{' '}{l.numero_lot}, {l.quantite_texte ?? `${l.quantite} u.`} ({l.depot})</span></span><Badge ton="rouge">{formaterDate(l.date_peremption)}</Badge></li>)}</ul>
+            <ul className="divide-y divide-slate-100">{a.perimes.map((l) => <li key={l.lot_id + l.depot} className="flex justify-between gap-2 py-1.5"><span>{l.medicament} <span className="text-slate-500">{t('— lot')}{' '}{l.numero_lot}, {l.quantite_texte ?? t('{n} u.', { n: l.quantite })} ({l.depot})</span></span><Badge ton="rouge">{formaterDate(l.date_peremption)}</Badge></li>)}</ul>
           </Panneau>
         )}
         {donnees.dernieres_ventes && (
@@ -137,7 +137,7 @@ export default function TableauDeBord() {
         )}
         {donnees.derniers_mouvements && (
           <Panneau titre={t('Derniers mouvements de stock')} vers="/stock/historique">
-            {donnees.derniers_mouvements.length === 0 ? <p className="text-slate-500">{t('Aucun mouvement.')}</p> : <ul className="divide-y divide-slate-100">{donnees.derniers_mouvements.map((m) => <li key={m.id} className="flex justify-between gap-2 py-1.5"><span>{m.medicament_nom} <span className="text-slate-500">— {m.type_libelle}</span></span><span className={`font-medium ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</span></li>)}</ul>}
+            {donnees.derniers_mouvements.length === 0 ? <p className="text-slate-500">{t('Aucun mouvement.')}</p> : <ul className="divide-y divide-slate-100">{donnees.derniers_mouvements.map((m) => <li key={m.id} className="flex justify-between gap-2 py-1.5"><span>{m.medicament_nom} <span className="text-slate-500">— {libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</span></span><span className={`font-medium ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</span></li>)}</ul>}
           </Panneau>
         )}
       </div>

@@ -23,7 +23,7 @@ export default function Lots() {
         { cle: 'medicament_nom', titre: t('Médicament'), tri: 'medicament__nom', rendu: (l) => <span className="font-medium">{l.medicament_nom}</span> },
         { cle: 'numero_lot', titre: t('Lot'), tri: 'numero_lot' },
         { cle: 'date_peremption', titre: t('Péremption'), tri: 'date_peremption',
-          rendu: (l) => <span>{formaterDate(l.date_peremption)} {l.perime ? <Badge ton="rouge">{t('Périmé')}</Badge> : l.jours_restants <= 90 ? <Badge ton="orange">{l.jours_restants} j</Badge> : null}</span>,
+          rendu: (l) => <span>{formaterDate(l.date_peremption)} {l.perime ? <Badge ton="rouge">{t('Périmé')}</Badge> : l.jours_restants <= 90 ? <Badge ton="orange">{t('{n} j', { n: l.jours_restants })}</Badge> : null}</span>,
           exportRendu: (l) => formaterDateExport(l.date_peremption) },
         { cle: 'quantite_actuelle', titre: t('En stock'), alignement: 'droite', tri: 'quantite_actuelle', rendu: (l) => l.quantite_texte ?? l.quantite_actuelle },
         ...(voirPrixAchat ? [{ cle: 'prix_achat', titre: t('Prix d\'achat'), alignement: 'droite' as const, rendu: (l: Lot) => formaterMontant(l.prix_achat) }] : []),

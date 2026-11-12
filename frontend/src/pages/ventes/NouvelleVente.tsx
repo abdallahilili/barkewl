@@ -210,7 +210,7 @@ export default function NouvelleVente() {
 
   return (
     <div>
-      <EnTetePage titre={t('Nouvelle vente')} description={`${session.caisse_nom} — dépôt : ${session.depot_nom}`}
+      <EnTetePage titre={t('Nouvelle vente')} description={t('{caisse} — dépôt : {depot}', { caisse: session.caisse_nom, depot: session.depot_nom })}
         actions={<span className="text-xs text-slate-500">{t('F2 : rechercher · F9 : encaisser')}</span>} />
       <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
         <section>
@@ -251,7 +251,7 @@ export default function NouvelleVente() {
                 <div className="mt-2 flex flex-wrap gap-1 border-t border-slate-100 pt-2">
                   {r.conditionnements.map((o) => (
                     <button key={o.code} type="button" disabled={o.disponible <= 0} onClick={() => ajouter(r, o.code)}
-                      className="btn-secondaire btn-petit disabled:opacity-40" title={`${o.disponible} ${libelleOption(o, o.disponible)} disponible(s)`}>
+                      className="btn-secondaire btn-petit disabled:opacity-40" title={t('{n} {conditionnement} disponible(s)', { n: o.disponible, conditionnement: libelleOption(o, o.disponible) })}>
                       + {o.libelle} <span className="font-semibold">{formaterMontant(o.prix)}</span>
                     </button>
                   ))}

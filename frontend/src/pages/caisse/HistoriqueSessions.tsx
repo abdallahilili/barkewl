@@ -11,7 +11,7 @@ import { useListe } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { MouvementCaisse, SessionCaisse } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
-import { formaterDateHeure, formaterDateHeureExport, formaterMontant, libelleStatut } from '../../utilitaires/formatage'
+import { formaterDateHeure, formaterDateHeureExport, formaterMontant, libelleStatut, libelleTypeMouvement } from '../../utilitaires/formatage'
 
 import { t } from '../../i18n'
 function ClotureAdmin({ session, onCloturee }: { session: SessionCaisse; onCloturee: (s: SessionCaisse) => void }) {
@@ -82,7 +82,7 @@ function DetailSession({ session, admin, onFermer, onCloturee }: {
               <thead className="bg-slate-50 text-start text-slate-600"><tr><th className="px-3 py-2">{t('Heure')}</th><th className="px-3 py-2">{t('Type')}</th><th className="px-3 py-2">{t('Paiement')}</th><th className="px-3 py-2">{t('Motif')}</th><th className="px-3 py-2 text-end">{t('Montant')}</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {mouvements.map((m) => (
-                  <tr key={m.id}><td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{m.type_libelle}</td><td className="px-3 py-2">{m.mode_paiement_nom}</td><td className="px-3 py-2">{m.motif}</td><td className="px-3 py-2 text-end">{formaterMontant(m.montant)}</td></tr>
+                  <tr key={m.id}><td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</td><td className="px-3 py-2">{m.mode_paiement_nom}</td><td className="px-3 py-2">{m.motif}</td><td className="px-3 py-2 text-end">{formaterMontant(m.montant)}</td></tr>
                 ))}
               </tbody>
             </table>

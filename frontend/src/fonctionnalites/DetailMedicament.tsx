@@ -5,7 +5,7 @@ import { Modale } from '../composants/Modale'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
 import type { Lot, Medicament, MouvementStock, ReponsePaginee } from '../types'
-import { formaterDate, formaterDateHeure, formaterMontant, formaterNombre, gestionRayonnagesActive } from '../utilitaires/formatage'
+import { formaterDate, formaterDateHeure, formaterMontant, formaterNombre, gestionRayonnagesActive, libelleTypeMouvement } from '../utilitaires/formatage'
 
 import { t } from '../i18n'
 interface Modification {
@@ -53,7 +53,7 @@ export function DetailMedicament({ medicament, onFermer }: { medicament: Medicam
                   {lots.map((l) => (
                     <tr key={l.id}>
                       <td className="px-3 py-2">{l.numero_lot}</td>
-                      <td className="px-3 py-2">{formaterDate(l.date_peremption)} {l.perime ? <Badge ton="rouge">{t('Périmé')}</Badge> : l.jours_restants <= 90 ? <Badge ton="orange">{l.jours_restants} j</Badge> : null}</td>
+                      <td className="px-3 py-2">{formaterDate(l.date_peremption)} {l.perime ? <Badge ton="rouge">{t('Périmé')}</Badge> : l.jours_restants <= 90 ? <Badge ton="orange">{t('{n} j', { n: l.jours_restants })}</Badge> : null}</td>
                       <td className="px-3 py-2 text-end">{l.quantite_texte ?? l.quantite_actuelle}</td>
                       <td className="px-3 py-2 text-end">{formaterMontant(l.prix_vente ?? medicament.prix_vente)}</td>
                     </tr>
@@ -73,7 +73,7 @@ export function DetailMedicament({ medicament, onFermer }: { medicament: Medicam
                       {historique.mouvements.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-500">{t('Aucun mouvement.')}</td></tr>}
                       {historique.mouvements.map((m) => (
                         <tr key={m.id}>
-                          <td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{m.type_libelle}</td>
+                          <td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</td>
                           <td className="px-3 py-2">{m.numero_lot}</td><td className="px-3 py-2">{m.depot_nom}</td>
                           <td className={`px-3 py-2 text-end font-medium ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</td>
                           <td className="px-3 py-2 text-end">{m.stock_avant} → {m.stock_apres}</td>

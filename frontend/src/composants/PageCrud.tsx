@@ -156,7 +156,7 @@ export function PageCrud<T extends { id: number }>({
       if (enEdition) await api.patch(`${endpoint}${enEdition.id}/`, charge)
       else await api.post(endpoint, charge)
       viderCacheOptions()
-      notifier.succes(`${nomElement} enregistré${nomElement.endsWith('e') || nomElement.endsWith('ie') ? 'e' : ''}.`)
+      notifier.succes(t('Enregistré : {element}.', { element: nomElement }))
       setOuvert(false)
       liste.recharger()
     } catch (err) {

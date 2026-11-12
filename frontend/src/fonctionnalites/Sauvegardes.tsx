@@ -23,7 +23,7 @@ interface EtatSauvegardes {
 const ORIGINES = { manuelle: [t('Manuelle'), 'bleu'], auto: [t('Automatique'), 'vert'], restauration: [t('Avant restauration'), 'orange'] } as const
 
 export const formaterTaille = (octets: number) =>
-  octets < 1024 * 1024 ? `${Math.max(1, Math.round(octets / 1024))} Ko` : `${(octets / 1024 / 1024).toFixed(1)} Mo`
+  octets < 1024 * 1024 ? t('{n} Ko', { n: Math.max(1, Math.round(octets / 1024)) }) : t('{n} Mo', { n: (octets / 1024 / 1024).toFixed(1) })
 
 export function Sauvegardes() {
   const notifier = useNotifier()

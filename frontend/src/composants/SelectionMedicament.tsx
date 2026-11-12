@@ -100,7 +100,7 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Recherch
                     <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                       {depot != null && m.stock_depot != null && (
                         <span className={rupture ? 'font-medium text-red-600' : 'font-medium text-emerald-600'}>
-                          {rupture ? t('Rupture') : `${m.stock_depot} en stock`}
+                          {rupture ? t('Rupture') : t('{n} en stock', { n: m.stock_depot })}
                         </span>
                       )}
                       <span className="text-slate-400">{m.code}</span>

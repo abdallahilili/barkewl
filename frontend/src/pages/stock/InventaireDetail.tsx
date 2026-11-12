@@ -52,7 +52,7 @@ export default function InventaireDetail() {
   const action = async (nom: 'recharger' | 'valider' | 'annuler') => {
     if (!inventaire) return
     if (nom === 'valider') {
-      const ok = await confirmer({ titre: t('Valider l\'inventaire'), message: `${ecarts} écart(s) seront corrigés par des mouvements d'ajustement. Cette opération est définitive. Continuer ?`, libelle: t('Valider') })
+      const ok = await confirmer({ titre: t('Valider l\'inventaire'), message: t("{n} écart(s) seront corrigés par des mouvements d'ajustement. Cette opération est définitive. Continuer ?", { n: ecarts }), libelle: t('Valider') })
       if (!ok || !(await enregistrer(true))) return
     }
     if (nom === 'annuler') {
@@ -77,7 +77,7 @@ export default function InventaireDetail() {
   return (
     <div>
       <Link to="/stock/inventaires" className="mb-2 inline-flex items-center gap-1 text-sm text-slate-600 hover:underline"><ArrowLeft size={14} className="rtl:-scale-x-100" /> {' '}{t('Retour aux inventaires')}</Link>
-      <EnTetePage titre={t('Inventaire {reference}', { reference: inventaire.reference })} description={`${inventaire.depot_nom} · créé le ${formaterDateHeure(inventaire.date_creation)} par ${inventaire.utilisateur_nom}`}
+      <EnTetePage titre={t('Inventaire {reference}', { reference: inventaire.reference })} description={t('{depot} · créé le {date} par {nom}', { depot: inventaire.depot_nom, date: formaterDateHeure(inventaire.date_creation), nom: inventaire.utilisateur_nom })}
         actions={<>
           <Badge ton={tonStatut(inventaire.statut)}>{inventaire.statut === 'BROUILLON' ? t('En cours') : libelleStatut(inventaire.statut)}</Badge>
           {modifiable && <>

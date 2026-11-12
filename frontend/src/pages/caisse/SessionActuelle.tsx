@@ -8,7 +8,7 @@ import { useOptions } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { Caisse, MouvementCaisse, SessionCaisse } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
-import { formaterDateHeure, formaterMontant } from '../../utilitaires/formatage'
+import { formaterDateHeure, formaterMontant, libelleTypeMouvement } from '../../utilitaires/formatage'
 import { ResumeSession } from '../../fonctionnalites/ResumeSession'
 
 import { t } from '../../i18n'
@@ -108,7 +108,7 @@ export default function SessionActuelle() {
 
   return (
     <div>
-      <EnTetePage titre={t('Session de caisse')} description={session ? `${session.caisse_nom} — ouverte le ${formaterDateHeure(session.date_ouverture)}` : undefined}
+      <EnTetePage titre={t('Session de caisse')} description={session ? t('{caisse} — ouverte le {date}', { caisse: session.caisse_nom, date: formaterDateHeure(session.date_ouverture) }) : undefined}
         actions={session && <>
           <button className="btn-secondaire" onClick={() => { setErreurModale(null); setModaleManuelle(true) }}>{t('Entrée / sortie manuelle')}</button>
           <button className="btn-primaire" onClick={() => { setErreurModale(null); setCloture({ montant_reel: '', note: '' }); setModaleCloture(true) }}>{t('Clôturer la session')}</button>
@@ -142,7 +142,7 @@ export default function SessionActuelle() {
                   return (
                     <tr key={m.id}>
                       <td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td>
-                      <td className="px-3 py-2"><Badge ton={negatif ? 'rouge' : 'vert'}>{m.type_libelle}</Badge></td>
+                      <td className="px-3 py-2"><Badge ton={negatif ? 'rouge' : 'vert'}>{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</Badge></td>
                       <td className="px-3 py-2">{m.mode_paiement_nom}</td>
                       <td className="px-3 py-2 text-slate-600">{m.motif}</td>
                       <td className={`px-3 py-2 text-end font-medium ${negatif ? 'text-red-700' : 'text-emerald-700'}`}>{negatif ? '−' : '+'}{formaterMontant(m.montant)}</td>

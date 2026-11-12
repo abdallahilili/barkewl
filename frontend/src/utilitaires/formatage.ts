@@ -71,6 +71,16 @@ export const libelleStatut = (statut: string) =>
     OUVERTE: 'Ouverte', FERMEE: 'Clôturée',
   } as Record<string, string>)[statut]) : statut
 
+/** Libellé d'un type de mouvement (stock ou caisse) dans la langue de l'interface, à partir de son code. */
+const TYPES_MOUVEMENT: Record<string, string> = {
+  ENTREE: 'Entrée', SORTIE: 'Sortie', VENTE: 'Vente', RETOUR: 'Retour', TRANSFERT_ENTREE: 'Transfert (entrée)',
+  TRANSFERT_SORTIE: 'Transfert (sortie)', INVENTAIRE: 'Inventaire', AJUSTEMENT: 'Ajustement', PERTE: 'Perte',
+  PEREMPTION: 'Péremption', ENDOMMAGE: 'Produit endommagé', CONSOMMATION_INTERNE: 'Consommation interne',
+  REMBOURSEMENT: 'Remboursement', ENTREE_MANUELLE: 'Entrée manuelle', SORTIE_MANUELLE: 'Sortie manuelle',
+}
+export const libelleTypeMouvement = (code: string, parDefaut?: string) =>
+  TYPES_MOUVEMENT[code] ? t(TYPES_MOUVEMENT[code]) : parDefaut ?? code
+
 export const libelleEtatStock = (etat: string) =>
   ({
     DISPONIBLE: 'Disponible', STOCK_FAIBLE: 'Stock faible', RUPTURE: 'Rupture', EPUISE: 'Lot épuisé',

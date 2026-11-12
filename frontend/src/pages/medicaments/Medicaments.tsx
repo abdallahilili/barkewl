@@ -35,7 +35,7 @@ export default function Medicaments() {
             rendu: (m) => <span className={m.stock_minimum > 0 && m.stock_total <= m.stock_minimum * m.unites_par_boite ? 'font-semibold text-red-700' : ''}>{m.unites_par_boite > 1 ? m.stock_texte : formaterNombre(m.stock_total)}</span> },
           { cle: 'conditionnement', titre: t('Conditionnement'), cacheParDefaut: true,
             rendu: (m) => (m.unites_par_boite > 1
-              ? `${m.unites_par_boite} ${m.nom_unite_detail || 'unités'}${m.unites_par_plaquette ? ` (${m.unites_par_boite / m.unites_par_plaquette} × ${m.unites_par_plaquette})` : ''}`
+              ? `${m.unites_par_boite} ${m.nom_unite_detail || t('unités')}${m.unites_par_plaquette ? ` (${m.unites_par_boite / m.unites_par_plaquette} × ${m.unites_par_plaquette})` : ''}`
               : 'Boîte uniquement') },
           { cle: 'stock_minimum', titre: t('Stock minimum'), alignement: 'droite', cacheParDefaut: true },
           { cle: 'code_barre', titre: t('Code-barres'), cacheParDefaut: true },

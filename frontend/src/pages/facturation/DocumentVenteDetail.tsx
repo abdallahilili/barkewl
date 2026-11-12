@@ -174,7 +174,7 @@ export default function DocumentVenteDetail() {
       l.prixAchat != null ? { ...l, prix_unitaire: (l.prixAchat * (1 + pourcentage / 100)).toFixed(2), margeAppliquee: true } : l
     )))
     const sansPrixAchat = lignes.filter((l) => l.medicament && l.prixAchat == null).length
-    if (sansPrixAchat > 0) notifier.erreur(`${sansPrixAchat} ligne(s) sans prix d'achat connu n'ont pas été modifiées.`)
+    if (sansPrixAchat > 0) notifier.erreur(t("{n} ligne(s) sans prix d'achat connu n'ont pas été modifiées.", { n: sansPrixAchat }))
   }
 
   const annulerMarge = () => {

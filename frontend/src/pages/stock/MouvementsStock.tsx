@@ -12,7 +12,7 @@ import { useListe, useOptions } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { Depot, LigneStock, MouvementStock } from '../../types'
 import { erreursParChamp, extraireErreur } from '../../utilitaires/erreurs'
-import { formaterDate, formaterDateHeure, formaterDateHeureExport } from '../../utilitaires/formatage'
+import { formaterDate, formaterDateHeure, formaterDateHeureExport, libelleTypeMouvement } from '../../utilitaires/formatage'
 
 import { t } from '../../i18n'
 type Mode = 'entree' | 'sortie' | 'tous'
@@ -196,7 +196,7 @@ export default function MouvementsStock({ mode }: { mode: Mode }) {
           { cle: 'medicament_nom', titre: t('Médicament'), tri: 'medicament__nom', rendu: (m) => <span className="font-medium">{m.medicament_nom}</span> },
           { cle: 'numero_lot', titre: t('Lot') },
           { cle: 'depot_nom', titre: t('Dépôt') },
-          { cle: 'type_libelle', titre: t('Type'), rendu: (m) => <Badge ton={m.quantite > 0 ? 'vert' : 'orange'}>{m.type_libelle}</Badge> },
+          { cle: 'type_libelle', titre: t('Type'), rendu: (m) => <Badge ton={m.quantite > 0 ? 'vert' : 'orange'}>{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</Badge> },
           { cle: 'quantite', titre: t('Quantité'), alignement: 'droite', tri: 'quantite', rendu: (m) => <span className={`font-semibold ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</span>, exportRendu: (m) => m.quantite_texte },
           { cle: 'stock', titre: t('Stock avant → après'), alignement: 'droite', rendu: (m) => `${m.stock_avant} → ${m.stock_apres}`, exportRendu: (m) => `${m.stock_avant} -> ${m.stock_apres}` },
           { cle: 'reference', titre: t('Référence') },

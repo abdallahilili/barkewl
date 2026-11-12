@@ -21,7 +21,7 @@ export function extraireErreur(erreur: unknown): string {
 
 function aplatir(valeur: unknown, prefixe = ''): string[] {
   if (Array.isArray(valeur)) {
-    return valeur.flatMap((v, i) => (typeof v === 'string' ? [prefixe ? `${prefixe} : ${v}` : v] : aplatir(v, prefixe ? `${prefixe} (ligne ${i + 1})` : '')))
+    return valeur.flatMap((v, i) => (typeof v === 'string' ? [prefixe ? `${prefixe} : ${v}` : v] : aplatir(v, prefixe ? t('{champ} (ligne {n})', { champ: prefixe, n: i + 1 }) : '')))
   }
   if (valeur && typeof valeur === 'object') {
     return Object.entries(valeur as Record<string, unknown>).flatMap(([cle, v]) => aplatir(v, cle === 'non_field_errors' ? '' : cle))
