@@ -194,7 +194,17 @@ Wamp, qui continue de servir phpMyAdmin normalement sur http://localhost/.
 > **Tester une restauration** sur le PC du client à l'installation : une sauvegarde qu'on n'a
 > jamais restaurée n'est pas une sauvegarde.
 
-## 9. Mettre à jour l'application plus tard
+## 9. Licence (Rawafid Digital Services)
+
+Sans licence valide, Barkewl démarre en **mode consultation** (aucune vente).
+
+1. Lire le code du PC : `python manage.py licence` (ou *Paramètres > Licence*).
+2. Créer la licence avec l'outil éditeur (`rawafid-licences\Creer_une_licence.bat`, **jamais copié chez le client**).
+3. Activer : `python manage.py licence --activer BRKW1....` ou coller la clé dans *Paramètres > Licence*.
+
+Le code du PC change si Windows est réinstallé ou si l'on change de PC : il faut alors une nouvelle licence.
+
+## 10. Mettre à jour l'application plus tard
 
 ```powershell
 REM Backend (si le code a changé)

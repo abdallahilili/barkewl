@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { MessageErreur } from '../composants/EnTetePage'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
+import { EDITEUR_PAR_DEFAUT, EtatLicence, lireLicence, NOM_LOGICIEL } from '../services/licence'
 import { extraireErreur } from '../utilitaires/erreurs'
 
 export default function Connexion() {
@@ -14,8 +15,11 @@ export default function Connexion() {
   const [afficherMotDePasse, setAfficherMotDePasse] = useState(false)
   const [identite, setIdentite] = useState<{ nom: string; logo: string } | null>(null)
 
+  const [licence, setLicence] = useState<EtatLicence | null>(null)
+
   useEffect(() => {
     api.get<{ nom: string; logo: string }>('/identite-pharmacie/').then((r) => setIdentite(r.data)).catch(() => undefined)
+    lireLicence().then(setLicence).catch(() => undefined)
   }, [])
 
   const soumettre = async (e: FormEvent) => {
@@ -70,7 +74,9 @@ export default function Connexion() {
           </ul>
         </div>
 
-        <p className="relative text-xs text-slate-400">© {new Date().getFullYear()} {nomPharmacie}</p>
+        <p className="relative text-xs text-slate-400">
+          © {new Date().getFullYear()} {nomPharmacie} · Logiciel {NOM_LOGICIEL}, un produit <span className="font-medium text-slate-300">{licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</span>
+        </p>
       </div>
 
       {/* Formulaire */}
@@ -141,9 +147,17 @@ export default function Connexion() {
             </div>
           </div>
 
+          {licence && licence.statut !== 'ACTIVE' && (
+            <div className={`mt-4 rounded-lg border px-3 py-2 text-xs ${licence.lecture_seule ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+              <p>{licence.message}</p>
+              <p className="mt-1">Code du PC : <strong className="tracking-wider">{licence.empreinte}</strong></p>
+            </div>
+          )}
+
           <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
             <ShieldCheck size={14} /> Accès réservé au personnel autorisé de la pharmacie.
           </p>
+          <p className="mt-2 text-center text-xs text-slate-400 lg:hidden">{NOM_LOGICIEL} — un produit {licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</p>
         </div>
       </div>
     </div>

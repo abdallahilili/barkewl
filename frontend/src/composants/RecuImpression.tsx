@@ -1,5 +1,6 @@
 import { Printer } from 'lucide-react'
 import type { Recu } from '../types'
+import { EDITEUR_PAR_DEFAUT, NOM_LOGICIEL } from '../services/licence'
 import { formaterDateHeure, formaterNombre } from '../utilitaires/formatage'
 import { EnTeteDocument, MessagePied } from './EnTeteDocument'
 import { Modale } from './Modale'
@@ -115,6 +116,9 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
               </div>
 
               <MessagePied message={recu.pharmacie.message} />
+              <p style={{ marginTop: 6, textAlign: 'center', fontSize: 9, color: '#94a3b8' }}>
+                Logiciel {NOM_LOGICIEL} — {EDITEUR_PAR_DEFAUT}
+              </p>
 
             </div>
           </div>

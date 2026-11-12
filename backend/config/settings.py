@@ -1,5 +1,6 @@
 """Configuration Django de l'application de gestion de pharmacie."""
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -37,13 +38,19 @@ INSTALLED_APPS = [
     "apps.caisse",
     "apps.facturation",
     "apps.rapports",
+    "apps.licence",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "apps.licence.middleware.LicenceMiddleware",
 ]
+
+# Licence Rawafid Digital Services : toujours exigée, sauf pendant les tests automatiques
+# (les tests de licence l'activent eux-mêmes). Volontairement non réglable par le fichier .env.
+LICENCE_OBLIGATOIRE = not (len(sys.argv) > 1 and sys.argv[1] == "test")
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"

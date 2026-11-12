@@ -1,7 +1,9 @@
 import { KeyRound, LogOut, Menu, Pill, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { BandeauLicence } from "../composants/BandeauLicence";
 import { Champ } from "../composants/Champ";
+import { EDITEUR_PAR_DEFAUT, NOM_LOGICIEL } from "../services/licence";
 import { MessageErreur } from "../composants/EnTetePage";
 import { Modale } from "../composants/Modale";
 import { useNotifier } from "../composants/Notifications";
@@ -160,11 +162,20 @@ export function MiseEnPagePrincipale() {
     </div>
   );
 
+  // Signature de l'éditeur en bas du menu.
+  const signature = (
+    <div className="border-t border-slate-100 px-4 py-3 text-xs leading-tight text-slate-400">
+      <p className="font-medium text-slate-500">{NOM_LOGICIEL}</p>
+      <p>un produit {EDITEUR_PAR_DEFAUT}</p>
+    </div>
+  );
+
   return (
     <div className="min-h-screen lg:pl-64">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex sans-impression">
         {marque}
         {navigation}
+        {signature}
       </aside>
 
       {menuOuvert && (
@@ -176,6 +187,7 @@ export function MiseEnPagePrincipale() {
           <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
             {marque}
             {navigation}
+            {signature}
           </aside>
         </div>
       )}
@@ -209,6 +221,7 @@ export function MiseEnPagePrincipale() {
         </div>
       </header>
 
+      <BandeauLicence />
       <main className="mx-auto max-w-[1400px] p-4 sm:p-6">
         <Outlet />
       </main>

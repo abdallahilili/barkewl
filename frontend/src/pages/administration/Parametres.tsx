@@ -1,4 +1,5 @@
-import { Building2, DatabaseBackup, FileText, Pill, Trash2, Upload } from 'lucide-react'
+import { Building2, DatabaseBackup, FileText, KeyRound, Pill, Trash2, Upload } from 'lucide-react'
+import { Licence } from '../../fonctionnalites/Licence'
 import { useLocation } from 'react-router-dom'
 import { Sauvegardes } from '../../fonctionnalites/Sauvegardes'
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react'
@@ -17,7 +18,7 @@ import { lireEntete, lireLogo } from '../../utilitaires/images'
 import type { Depot } from '../../types'
 
 type Section = 'pharmacie' | 'documents' | 'medicaments'
-type Onglet = Section | 'caisses' | 'paiements' | 'sauvegardes' | 'audit'
+type Onglet = Section | 'caisses' | 'paiements' | 'sauvegardes' | 'licence' | 'audit'
 type Valeurs = Record<string, string>
 
 // Paramètres enregistrés par chaque section (chaque onglet n'envoie que les siens).
@@ -229,6 +230,7 @@ export default function Parametres() {
     { cle: 'pharmacie', libelle: 'Pharmacie', icone: Building2 }, { cle: 'documents', libelle: 'Reçus et documents', icone: FileText },
     { cle: 'medicaments', libelle: 'Médicaments et stock', icone: Pill }, { cle: 'caisses', libelle: 'Caisses' },
     { cle: 'paiements', libelle: 'Modes de paiement' }, { cle: 'sauvegardes', libelle: 'Sauvegardes', icone: DatabaseBackup },
+    { cle: 'licence', libelle: 'Licence', icone: KeyRound },
     { cle: 'audit', libelle: "Journal d'audit" },
   ]
   return (
@@ -271,6 +273,7 @@ export default function Parametres() {
           ]} />
       )}
       {onglet === 'sauvegardes' && <Sauvegardes />}
+      {onglet === 'licence' && <Licence />}
       {onglet === 'audit' && <JournalAudit />}
     </div>
   )
