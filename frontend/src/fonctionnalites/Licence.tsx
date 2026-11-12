@@ -52,7 +52,7 @@ export function Licence() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm text-slate-500">{t('Logiciel')}</p>
-            <p className="text-lg font-semibold">{NOM_LOGICIEL} <span className="text-sm font-normal text-slate-500">{t('— un produit')}{' '}{etat.editeur.nom}</span></p>
+            <p className="text-lg font-semibold">{NOM_LOGICIEL} {etat.version && <span className="chiffres text-sm font-medium text-marque-700" dir="ltr">v{etat.version}</span>} <span className="text-sm font-normal text-slate-500">{t('— un produit')}{' '}{etat.editeur.nom}</span></p>
           </div>
           <Badge ton={ton}>{libelle}</Badge>
         </div>

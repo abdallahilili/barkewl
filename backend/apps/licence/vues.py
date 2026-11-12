@@ -19,7 +19,7 @@ class LicenceView(APIView):
                                  "fonctions": sorted(definition["fonctions"])}
         if not (request.user and request.user.is_authenticated):
             # Sans connexion : pas de détail commercial, seulement de quoi afficher l'alerte et le code du PC.
-            etat = {cle: etat[cle] for cle in ("statut", "lecture_seule", "message", "empreinte", "editeur", "jours_restants")}
+            etat = {cle: etat[cle] for cle in ("statut", "lecture_seule", "message", "empreinte", "editeur", "jours_restants", "version")}
         return Response(etat)
 
 

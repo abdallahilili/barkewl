@@ -24,6 +24,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.commun.exceptions import ErreurMetier
+from config.version import VERSION
 
 from . import ed25519, editeur
 from .models import EtatLicence
@@ -115,7 +116,7 @@ def _calculer():
     resultat = {
         "statut": NON_ACTIVEE, "lecture_seule": True, "message": "", "empreinte": empreinte,
         "client": None, "plan": None, "offre": None, "debut": None, "fin": None, "jours_restants": None,
-        "editeur": editeur.coordonnees(),
+        "editeur": editeur.coordonnees(), "version": VERSION,
     }
     with transaction.atomic():
         etat = EtatLicence.objects.select_for_update().filter(pk=_etat_ligne().pk).first()

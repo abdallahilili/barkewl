@@ -12,6 +12,7 @@ export interface EtatLicence {
   empreinte: string
   editeur: Editeur
   jours_restants: number | null
+  version?: string
   client?: string | null
   plan?: 'MENSUEL' | 'ANNUEL' | 'ESSAI' | null
   offre?: 'ESSENTIEL' | 'PRO' | 'RESEAU' | null

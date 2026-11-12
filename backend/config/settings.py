@@ -79,7 +79,9 @@ else:
             "PORT": env("BD_PORT", "3306"),
             "OPTIONS": {
                 "charset": "utf8mb4",
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                # InnoDB obligatoire : transactions (« tout ou rien ») et verrous de ligne. Certains MySQL
+                # (WampServer notamment) créent par défaut des tables MyISAM, qui ignorent les deux sans prévenir.
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES', default_storage_engine=INNODB",
             },
         }
     }
