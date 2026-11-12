@@ -173,7 +173,28 @@ Wamp, qui continue de servir phpMyAdmin normalement sur http://localhost/.
   (`schtasks /query /tn "BarkewlBackend"`, ou dans le Planificateur de tâches
   Windows > Bibliothèque), et que WampServer (MySQL) est bien démarré.
 
-## 8. Mettre à jour l'application plus tard
+## 8. Sauvegardes (à vérifier à chaque installation)
+
+- **Automatiques** : tant que le backend tourne, la base est sauvegardée toutes les
+  `SAUVEGARDE_INTERVALLE_HEURES` heures (6 par défaut) dans `backend\sauvegardes\`
+  (fichiers `barkewl_AAAAMMJJ_HHMMSS*.sql.gz`, conservés 30 jours, minimum les 7 dernières).
+- **Copie de secours** : renseigner `DOSSIER_SAUVEGARDES_COPIE` dans `backend\.env`
+  (clé USB laissée branchée, second disque, ou dossier OneDrive/Google Drive pour une copie
+  hors de la pharmacie). Fortement conseillé : un PC volé ou un disque mort = tout perdu sinon.
+- **Contrôle** : menu *Paramètres > Sauvegardes* (bouton « Sauvegarder maintenant »,
+  téléchargement). Le tableau de bord de l'administrateur affiche une alerte rouge si la
+  dernière sauvegarde a plus de 26 h.
+- **Manuel** : `deploy\sauvegarder_maintenant.bat` (à lancer avant chaque mise à jour).
+- **Restauration** : `deploy\restaurer_sauvegarde.bat` (double-clic pour choisir, ou glisser
+  un fichier `.sql.gz` depuis une clé USB dessus). Une sauvegarde de sécurité de l'état actuel
+  est faite juste avant. En ligne de commande : `python manage.py restaurer_sauvegarde <fichier>`.
+- `mysqldump` est trouvé automatiquement (WampServer, XAMPP, MySQL, MariaDB) ; sinon renseigner
+  `CHEMIN_MYSQL_BIN`. Journal des erreurs : `backend\logs\barkewl.log`.
+
+> **Tester une restauration** sur le PC du client à l'installation : une sauvegarde qu'on n'a
+> jamais restaurée n'est pas une sauvegarde.
+
+## 9. Mettre à jour l'application plus tard
 
 ```powershell
 REM Backend (si le code a changé)

@@ -52,6 +52,16 @@ AUTH_USER_MODEL = "utilisateurs.Utilisateur"
 if env("UTILISER_SQLITE", "0") == "1":
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 else:
+    # mysqlclient (pilote C) est privilégié. S'il ne peut pas être chargé — par exemple quand
+    # Windows (Smart App Control) bloque sa DLL — on bascule sur PyMySQL (pur Python).
+    try:
+        import MySQLdb  # noqa: F401
+    except ImportError:
+        import pymysql
+
+        pymysql.version_info = (2, 2, 1, "final", 0)  # Django exige mysqlclient >= 2.2.1
+        pymysql.install_as_MySQLdb()
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
@@ -98,7 +108,23 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": False,
 }
 
-CORS_ALLOWED_ORIGINS = [o.strip() for o in env("ORIGINES_CORS", "http://localhost:5173").split(",") if o.strip()]
+DOSSIER_JOURNAUX = BASE_DIR / "logs"
+DOSSIER_JOURNAUX.mkdir(exist_ok=True)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"simple": {"format": "%(asctime)s %(levelname)s %(name)s : %(message)s"}},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+        "fichier": {
+            "class": "logging.handlers.RotatingFileHandler", "filename": DOSSIER_JOURNAUX / "barkewl.log",
+            "maxBytes": 2 * 1024 * 1024, "backupCount": 5, "encoding": "utf-8", "formatter": "simple",
+        },
+    },
+    "loggers": {"barkewl": {"handlers": ["console", "fichier"], "level": "INFO"}},
+}
+
+CORS_ALLOWED_ORIGINS =[o.strip() for o in env("ORIGINES_CORS", "http://localhost:5173").split(",") if o.strip()]
 
 if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True

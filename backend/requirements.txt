@@ -3,4 +3,5 @@ djangorestframework>=3.16
 djangorestframework-simplejwt>=5.5
 django-cors-headers>=4.6
 mysqlclient>=2.2
+PyMySQL>=1.1          # repli automatique si mysqlclient ne peut pas être chargé (ex. Windows)
 python-dotenv>=1.0

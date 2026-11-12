@@ -10,6 +10,7 @@ from apps.achats.models import Achat
 from apps.caisse.models import SessionCaisse
 from apps.caisse.serializers import SessionCaisseSerializer
 from apps.commun.constantes import ADMIN, CAISSIER, MAGASINIER, TOUS_LES_ROLES
+from apps.commun import sauvegarde
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.utilitaires import plage_dates
 from apps.stock import alertes
@@ -226,6 +227,8 @@ class TableauDeBordView(APIView):
             donnees["achats_aujourdhui"] = {"nombre": achats["nombre"], "total": achats["total"]}
             donnees["dettes_fournisseurs"] = Achat.objects.filter(statut="VALIDE").aggregate(
                 t=_somme(ExpressionWrapper(F("total") - F("montant_paye"), output_field=MONNAIE)))["t"]
+            etat = sauvegarde.etat_sauvegardes()
+            donnees["sauvegarde"] = {"derniere": etat["derniere"], "en_retard": etat["en_retard"]}
 
         if role in (ADMIN, MAGASINIER):
             donnees["stock"] = alertes.calculer_synthese()

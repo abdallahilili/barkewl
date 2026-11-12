@@ -24,6 +24,7 @@ interface Donnees {
     perimes: { lot_id: number; medicament: string; numero_lot: string; depot: string; quantite: number; date_peremption: string }[]
   }
   derniers_mouvements?: MouvementStock[]
+  sauvegarde?: { derniere: { date: string } | null; en_retard: boolean }
 }
 
 function Indicateur({ titre, valeur, detail, ton = '', vers }: { titre: string; valeur: string; detail?: string; ton?: string; vers?: string }) {
@@ -67,6 +68,18 @@ export default function TableauDeBord() {
     <div>
       <EnTetePage titre={`Bonjour ${utilisateur?.prenom || utilisateur?.nom}`} description={`Situation du ${formaterDate(new Date().toISOString().slice(0, 10))}`} />
       <SelecteurPeriode periode={periode} onChange={setPeriode} />
+
+      {donnees.sauvegarde?.en_retard && (
+        <div className="carte mb-5 flex flex-wrap items-center justify-between gap-3 border-red-300 bg-red-50 p-4">
+          <p className="flex items-center gap-2 text-sm text-red-900">
+            <AlertTriangle size={16} />
+            {donnees.sauvegarde.derniere
+              ? `Attention : la dernière sauvegarde des données date du ${formaterDateHeure(donnees.sauvegarde.derniere.date)}.`
+              : 'Attention : aucune sauvegarde des données n\'a encore été faite.'}
+          </p>
+          <Link to="/administration/parametres" state={{ onglet: 'sauvegardes' }} className="btn-primaire">Sauvegarder maintenant</Link>
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {donnees.ventes_aujourdhui && <Indicateur titre={libellePour('Ventes')} valeur={formaterMontant(donnees.ventes_aujourdhui.total)} detail={`${donnees.ventes_aujourdhui.nombre} vente(s)`} vers={peut('ventes') ? '/ventes' : undefined} />}

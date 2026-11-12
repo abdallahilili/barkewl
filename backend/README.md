@@ -28,6 +28,17 @@ python manage.py runserver                    # http://localhost:8000/api/
 Comptes de démonstration (après `charger_demo`) : `caissier` et `magasinier`, mot de passe `demo12345`.
 En production : `DEBUG=0`, `CLE_SECRETE` longue et aléatoire, `HOTES_AUTORISES`, `ORIGINES_CORS`, serveur WSGI (gunicorn) derrière HTTPS.
 
+## Sauvegardes
+
+Automatiques toutes les 6 h tant que le serveur tourne (`backend/sauvegardes/`, copie facultative vers
+`DOSSIER_SAUVEGARDES_COPIE`), visibles dans *Paramètres > Sauvegardes*.
+
+```bash
+python manage.py sauvegarder                       # sauvegarde immédiate
+python manage.py restaurer_sauvegarde              # liste des sauvegardes
+python manage.py restaurer_sauvegarde <fichier>    # restauration (sauvegarde de sécurité faite avant)
+```
+
 ## Tests
 
 ```bash
