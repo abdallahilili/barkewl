@@ -1,4 +1,6 @@
-Django>=5.2,<7.0
+# Django 5.2 LTS (supporté jusqu'en avril 2028) : compatible MySQL 8.0+ et MariaDB 10.5+, donc avec les
+# WampServer répandus chez les clients. Django 6 exige MySQL 8.4+ (refusé par un WampServer en MySQL 8.0).
+Django>=5.2,<5.3
 djangorestframework>=3.16
 djangorestframework-simplejwt>=5.5
 django-cors-headers>=4.6

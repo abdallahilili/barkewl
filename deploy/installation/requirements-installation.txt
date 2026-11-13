@@ -1,6 +1,7 @@
 # Paquets Python installés chez le client (hors ligne, depuis le dossier « paquets » du paquet d'installation).
 # Pas de mysqlclient : sa DLL est parfois bloquée par Windows ; PyMySQL (100 % Python) le remplace.
-Django>=5.2,<7.0
+# Django 5.2 LTS : compatible MySQL 8.0+ / MariaDB 10.5+ (Django 6 exige MySQL 8.4+). Même version qu'en développement.
+Django>=5.2,<5.3
 djangorestframework>=3.16
 djangorestframework-simplejwt>=5.5
 django-cors-headers>=4.6
