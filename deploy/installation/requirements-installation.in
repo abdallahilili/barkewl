@@ -1,0 +1,12 @@
+# SOURCE des paquets Python livrés au client (plages de versions acceptées).
+# Après toute modification : python verrouiller_dependances.py  (régénère requirements-installation.txt,
+# versions exactes + empreintes SHA-256, seul fichier utilisé pour construire le paquet).
+# Pas de mysqlclient : sa DLL est parfois bloquée par Windows ; PyMySQL (100 % Python) le remplace.
+# Django 5.2 LTS : compatible MySQL 8.0+ / MariaDB 10.5+ (Django 6 exige MySQL 8.4+). Même version qu'en développement.
+Django>=5.2,<5.3
+djangorestframework>=3.16
+djangorestframework-simplejwt>=5.5
+django-cors-headers>=4.6
+PyMySQL>=1.1
+python-dotenv>=1.0
+waitress>=3.0

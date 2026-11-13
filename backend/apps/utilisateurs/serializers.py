@@ -1,9 +1,20 @@
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as ErreurValidationDjango
 from rest_framework import serializers
 
 from apps.commun.constantes import ADMIN, MODULES_PAR_ROLE, ROLES_APPROBATEURS
 from apps.licence import offres
 
 from .models import Utilisateur
+
+
+def verifier_robustesse(mot_de_passe, utilisateur=None):
+    """Règles AUTH_PASSWORD_VALIDATORS ; renvoie la liste des problèmes (vide si le mot de passe convient)."""
+    try:
+        validate_password(mot_de_passe, utilisateur)
+    except ErreurValidationDjango as erreur:
+        return list(erreur.messages)
+    return []
 
 
 class UtilisateurSerializer(serializers.ModelSerializer):
@@ -29,6 +40,11 @@ class UtilisateurSerializer(serializers.ModelSerializer):
     def validate(self, donnees):
         if self.instance is None and not donnees.get("mot_de_passe"):
             raise serializers.ValidationError({"mot_de_passe": "Le mot de passe est obligatoire."})
+        if self.instance is None:
+            candidat = Utilisateur(**{c: donnees.get(c, "") for c in ("identifiant", "nom", "prenom", "email")})
+            problemes = verifier_robustesse(donnees["mot_de_passe"], candidat)
+            if problemes:
+                raise serializers.ValidationError({"mot_de_passe": problemes})
         requete = self.context.get("request")
         if self.instance and requete and self.instance.pk == requete.user.pk:
             if donnees.get("actif") is False or donnees.get("role", ADMIN) != ADMIN and self.instance.role == ADMIN:

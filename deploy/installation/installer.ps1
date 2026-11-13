@@ -1,4 +1,4 @@
-# RAQEEM PHARMA - installation chez le client (Rawafid Digital Services).
+﻿# RAQEEM PHARMA - installation chez le client (Rawafid Digital Services).
 # Lancé par « Installer.bat » (en administrateur). Compatible Windows PowerShell 5.1.
 #
 # Ce que fait l'installation :
@@ -32,7 +32,9 @@ function Ok($texte) { Write-Host "    OK  $texte" -ForegroundColor Green }
 function Echec($texte) { Write-Host ""; Write-Host "ERREUR : $texte" -ForegroundColor Red; Write-Host "L'installation est interrompue. Rien n'a été démarré." -ForegroundColor Red; exit 1 }
 function Read-Secret($question) {
     $s = Read-Host -AsSecureString $question
-    return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s)
+    try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr); $s.Dispose() }   # efface la copie en mémoire
 }
 # Programmes externes (python, robocopy…) : seul leur code de sortie compte. Sous PowerShell 5.1, avec
 # « Stop », un simple message d'information écrit sur la sortie d'erreur interromprait le script.
@@ -70,6 +72,7 @@ if (Test-Path (Join-Path $Dossier "app\backend\.env")) {
     # installation.json n'est écrit qu'à la toute fin : une installation précédente s'est arrêtée en route.
     Write-Host "    Installation précédente incomplète détectée : elle est reprise." -ForegroundColor Yellow
     Remove-Item (Join-Path $Dossier "app\backend\.env") -Force
+    if (-not $SansTache) { Natif { schtasks /end /tn $NomTache 2>$null } | Out-Null }   # serveur resté lancé
 }
 
 # ---------------------------------------------------------------- 1. Python
@@ -82,6 +85,24 @@ robocopy (Join-Path $Paquet "python") (Join-Path $Dossier "python") /MIR /NFL /N
 if ($LASTEXITCODE -ge 8) { Echec "Copie de Python impossible." }
 $py = Join-Path $Dossier "python\python.exe"
 Ok (Natif { & $py --version })
+
+# Port du logiciel : certains PC interdisent des ports (réservés par Windows pour Hyper-V / WSL / Docker,
+# ou pris par un autre logiciel ; erreur 10013). On vérifie réellement l'accès et, si le port n'a pas été
+# imposé, on prend le premier port libre de la liste.
+$adresseEcoute = "127.0.0.1"
+if ($Reseau) { $adresseEcoute = "0.0.0.0" }
+function Test-PortLibre([int]$numero) {
+    Natif { & $py -c "import socket; s = socket.socket(); s.bind(('$adresseEcoute', $numero)); s.close()" 2>$null } | Out-Null
+    return ($LASTEXITCODE -eq 0)
+}
+if ($PSBoundParameters.ContainsKey("Port")) {
+    if (-not (Test-PortLibre $Port)) { Echec "Le port $Port est interdit ou déjà utilisé sur ce PC. Relancez sans « -Port » (choix automatique)." }
+} else {
+    $Port = $null
+    foreach ($candidat in 8080, 8765, 8090, 9080, 18080, 28080) { if (Test-PortLibre $candidat) { $Port = $candidat; break } }
+    if (-not $Port) { Echec "Aucun port disponible pour le logiciel (8080, 8765, 8090, 9080, 18080, 28080)." }
+}
+Ok "Port du logiciel : $Port"
 
 # ---------------------------------------------------------------- 2. Copie du logiciel
 Titre "2/8  Copie du logiciel"
@@ -124,7 +145,10 @@ $lignesEnv = @(
     "# RAQEEM PHARMA - configuration de ce poste (générée par l'installation le $(Get-Date -Format 'yyyy-MM-dd HH:mm'))",
     "DEBUG=0",
     "CLE_SECRETE=$cle",
-    "HOTES_AUTORISES=*",
+    # Ce PC uniquement (nom, localhost). En mode plusieurs postes, le serveur ajoute à chaque démarrage
+    # le nom réseau et les adresses IP actuelles de ce PC (HOTES_RESEAU_LOCAL).
+    "HOTES_AUTORISES=localhost,127.0.0.1,$env:COMPUTERNAME",
+    "HOTES_RESEAU_LOCAL=$(if ($Reseau) { '1' } else { '0' })",
     "ORIGINES_CORS=http://localhost:$Port,http://127.0.0.1:$Port",
     "BD_NOM=$BdNom", "BD_UTILISATEUR=$BdUtilisateur", "BD_MOT_DE_PASSE=$mdpBd", "BD_HOTE=$MysqlHote", "BD_PORT=$MysqlPort",
     "UTILISER_SQLITE=0",
@@ -150,16 +174,28 @@ try {
     Executer $py @("manage.py", "migrate", "--noinput", "-v", "0") "Préparation de la base impossible."
     Ok "Tables créées (InnoDB)"
     Write-Host "    Compte du PROPRIÉTAIRE (identifiant : admin)."
-    if ($NonInteractif) { $mdpAdmin = $env:RAQEEM_ADMIN_MDP }
-    else {
-        do {
-            $mdpAdmin = Read-Secret "    Choisissez son mot de passe (8 caractères minimum)"
+    # Le mot de passe passe par une variable d'environnement de ce seul processus (jamais par la ligne de
+    # commande, visible des autres programmes) ; la commande le vérifie (longueur, mots trop courants…).
+    while ($true) {
+        if ($NonInteractif) { $mdpAdmin = $env:RAQEEM_ADMIN_MDP }
+        else {
+            $mdpAdmin = Read-Secret "    Choisissez son mot de passe (8 caractères min., pas uniquement des chiffres)"
             $confirmation = Read-Secret "    Confirmez le mot de passe"
-            if ($mdpAdmin -ne $confirmation) { Write-Host "    Les deux mots de passe sont différents." -ForegroundColor Yellow }
-            elseif ($mdpAdmin.Length -lt 8) { Write-Host "    8 caractères minimum." -ForegroundColor Yellow }
-        } while ($mdpAdmin -ne $confirmation -or $mdpAdmin.Length -lt 8)
+            if ($mdpAdmin -ne $confirmation) { Write-Host "    Les deux mots de passe sont différents." -ForegroundColor Yellow; continue }
+        }
+        if ([string]::IsNullOrEmpty($mdpAdmin)) {
+            if ($NonInteractif) { Echec "Mot de passe du propriétaire absent (RAQEEM_ADMIN_MDP)." }
+            Write-Host "    Le mot de passe ne peut pas être vide." -ForegroundColor Yellow; continue
+        }
+        $env:RAQEEM_ADMIN_MDP = $mdpAdmin
+        Natif { & $py manage.py initialiser_donnees --identifiant admin }
+        $codeAdmin = $LASTEXITCODE
+        Remove-Item Env:RAQEEM_ADMIN_MDP -ErrorAction SilentlyContinue
+        $mdpAdmin = $null; $confirmation = $null
+        if ($codeAdmin -eq 0) { break }
+        if ($codeAdmin -eq 3 -and -not $NonInteractif) { Write-Host "    Choisissez un autre mot de passe." -ForegroundColor Yellow; continue }
+        Echec "Création du compte propriétaire impossible."
     }
-    Executer $py @("manage.py", "initialiser_donnees", "--identifiant", "admin", "--mot-de-passe", $mdpAdmin) "Création du compte propriétaire impossible."
     Ok "Compte « admin » créé, dépôts, caisse et modes de paiement prêts"
 } finally { Pop-Location }
 
@@ -197,11 +233,18 @@ Titre "8/8  Vérification"
     ConvertTo-Json | Set-Content -Path (Join-Path $Dossier "installation.json") -Encoding UTF8
 if (-not $SansTache) {
     $repond = $false
-    for ($i = 0; $i -lt 30 -and -not $repond; $i++) {
+    for ($i = 0; $i -lt 45 -and -not $repond; $i++) {
         Start-Sleep -Seconds 2
         try { $repond = (Invoke-WebRequest "http://127.0.0.1:$Port/api/licence/" -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200 } catch { }
     }
-    if (-not $repond) { Echec "Le logiciel ne répond pas. Consultez $Dossier\journaux\serveur.log" }
+    if (-not $repond) {
+        $journal = Join-Path $Dossier "journaux\serveur.log"
+        Write-Host ""
+        Write-Host "    Dernières lignes de $journal :" -ForegroundColor Yellow
+        if (Test-Path $journal) { Get-Content $journal -Tail 25 | ForEach-Object { Write-Host "      $_" } }
+        else { Write-Host "      (journal absent : le serveur n'a pas été lancé par la tâche « $NomTache »)" }
+        Echec "Le logiciel ne répond pas. Envoyez une photo de ces lignes à Rawafid Digital Services."
+    }
     Ok "Le logiciel répond sur http://localhost:$Port"
 }
 Push-Location (Join-Path $Dossier "app\backend")

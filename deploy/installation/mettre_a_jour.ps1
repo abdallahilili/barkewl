@@ -91,6 +91,21 @@ try {
     Copier (Join-Path $Paquet "app\interface") (Join-Path $app "interface")
     Copier (Join-Path $Paquet "lib") $lib
     Write-CheminsPython $Dossier
+    # Configuration des versions antérieures : « HOTES_AUTORISES=* » (tous les noms acceptés) est remplacé
+    # par ce PC seulement, plus son nom et ses adresses réseau s'il sert plusieurs postes.
+    $fichierEnv = Join-Path $backend ".env"
+    $lignesEnv = [IO.File]::ReadAllLines($fichierEnv)
+    if ($lignesEnv -contains "HOTES_AUTORISES=*") {
+        $plusieursPostes = $false
+        try { $plusieursPostes = [bool](Get-Content (Join-Path $Dossier "installation.json") -Raw | ConvertFrom-Json).reseau } catch { }
+        $lignesEnv = @($lignesEnv | ForEach-Object {
+            if ($_ -eq "HOTES_AUTORISES=*") {
+                "HOTES_AUTORISES=localhost,127.0.0.1,$env:COMPUTERNAME"
+                "HOTES_RESEAU_LOCAL=$(if ($plusieursPostes) { '1' } else { '0' })"
+            } else { $_ }
+        })
+        [IO.File]::WriteAllLines($fichierEnv, $lignesEnv, (New-Object Text.UTF8Encoding $false))
+    }
     Ok "Fichiers et composants à jour"
 
     # ------------------------------------------------------------ 4. Base de données

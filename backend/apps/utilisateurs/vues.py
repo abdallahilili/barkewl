@@ -14,7 +14,9 @@ from apps.commun.vues_base import ViewSetGestion
 from .models import Utilisateur
 from apps.commun.constantes import ROLES_APPROBATEURS
 
-from .serializers import ChangerMotDePasseSerializer, CodePinSerializer, ConnexionSerializer, UtilisateurSerializer
+from .serializers import (
+    ChangerMotDePasseSerializer, CodePinSerializer, ConnexionSerializer, UtilisateurSerializer, verifier_robustesse,
+)
 
 
 class ConnexionView(APIView):
@@ -77,6 +79,9 @@ class ChangerMotDePasseView(APIView):
         serializer.is_valid(raise_exception=True)
         if not request.user.check_password(serializer.validated_data["ancien_mot_de_passe"]):
             raise ErreurMetier("L'ancien mot de passe est incorrect.")
+        problemes = verifier_robustesse(serializer.validated_data["nouveau_mot_de_passe"], request.user)
+        if problemes:
+            raise ErreurMetier(" ".join(problemes))
         request.user.set_password(serializer.validated_data["nouveau_mot_de_passe"])
         request.user.save(update_fields=["password"])
         enregistrer_audit(request.user, "MODIFICATION", "Utilisateur", request.user.pk, description="Changement de mot de passe")
@@ -97,8 +102,9 @@ class UtilisateurViewSet(ViewSetGestion):
     def reinitialiser_mot_de_passe(self, request, pk=None):
         utilisateur = self.get_object()
         mot_de_passe = request.data.get("mot_de_passe", "")
-        if len(mot_de_passe) < 8:
-            raise ErreurMetier("Le mot de passe doit contenir au moins 8 caractères.")
+        problemes = verifier_robustesse(mot_de_passe, utilisateur)
+        if problemes:
+            raise ErreurMetier(" ".join(problemes))
         utilisateur.set_password(mot_de_passe)
         utilisateur.save(update_fields=["password"])
         enregistrer_audit(request.user, "MODIFICATION", "Utilisateur", utilisateur.pk, reference=str(utilisateur),

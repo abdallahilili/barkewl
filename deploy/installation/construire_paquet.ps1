@@ -63,7 +63,7 @@ $majeure = ($VersionPython.Split(".")[0..1] -join "")
 $telechargement = Join-Path $env:TEMP "raqeem-paquets"
 if (Test-Path $telechargement) { Remove-Item -Recurse -Force $telechargement }
 & $PythonDev -m pip download --quiet --only-binary=:all: --platform win_amd64 --python-version ($VersionPython.Split(".")[0..1] -join ".") `
-    --implementation cp --abi "cp$majeure" -r (Join-Path $Ici "requirements-installation.txt") -d $telechargement
+    --implementation cp --abi "cp$majeure" --require-hashes --no-deps -r (Join-Path $Ici "requirements-installation.txt") -d $telechargement
 if ($LASTEXITCODE -ne 0) { throw "Téléchargement des composants Python impossible." }
 & $PythonDev -m pip install --quiet --no-index --no-deps --target (Join-Path $sortie "lib") (Get-ChildItem $telechargement -Filter *.whl).FullName
 if ($LASTEXITCODE -ne 0) { throw "Préparation des composants Python impossible." }

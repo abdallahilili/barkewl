@@ -23,6 +23,26 @@ def mot_de_passe():
     print("".join(secrets.choice(alphabet) for _ in range(24)))
 
 
+# Versions minimales exigées par Django 5.2 (le serveur refuse de démarrer en dessous).
+MINIMUM_MYSQL = (8, 0, 11)
+MINIMUM_MARIADB = (10, 5)
+
+
+def verifier_version(version):
+    """« 8.0.27 », « 8.4.7 », « 11.4.5-MariaDB-log »… -> arrêt avec un message clair si trop ancienne."""
+    import re
+
+    chiffres = tuple(int(n) for n in re.findall(r"\d+", version.split("-")[0])[:3])
+    if "mariadb" in version.lower():
+        produit, minimum = "MariaDB", MINIMUM_MARIADB
+    else:
+        produit, minimum = "MySQL", MINIMUM_MYSQL
+    if chiffres < minimum:
+        attendu = ".".join(map(str, minimum))
+        sys.exit(f"{produit} {version} est trop ancien : RAQEEM PHARMA exige {produit} {attendu} ou plus récent. "
+                 f"Mettez WampServer / {produit} à jour, puis relancez l'installation.")
+
+
 def verifier_format_lignes(curseur, version):
     """
     Index en utf8mb4 (arabe) : le format de ligne InnoDB doit être DYNAMIC (index jusqu'à 3072 octets).
@@ -61,6 +81,7 @@ def base():
         c.execute("SELECT VERSION()")
         version = c.fetchone()[0]
         print("Serveur :", version)
+        verifier_version(version)
         verifier_format_lignes(c, version)
 
         # Reprise d'une installation interrompue : une base sans aucun utilisateur n'a jamais servi,
