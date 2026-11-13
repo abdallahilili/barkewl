@@ -69,12 +69,16 @@ function Afficher-EtatTache($nom) {
 # Démarrage automatique de MySQL avec Windows. WampServer installe MySQL / MariaDB comme service Windows
 # en démarrage « manuel » : sans ouvrir WampServer, le logiciel n'aurait pas de base. On retrouve le service
 # qui écoute sur le port de la base et on le passe en démarrage automatique.
-function Activer-DemarrageMysql([int]$portBase) {
+function Trouver-ServiceMysql([int]$portBase) {
     $services = @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-Object { $_.PathName -match "mysqld|mariadbd" })
     # 1) le service dont le processus écoute sur le port de la base
     $pids = @(Get-NetTCPConnection -LocalPort $portBase -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $_.OwningProcess })
     $service = $services | Where-Object { $pids -contains $_.ProcessId } | Select-Object -First 1
     # 2) sinon, le service dont le fichier my.ini (dossier de sa version, comme dans WampServer) indique ce port
+    return $service
+}
+function Activer-DemarrageMysql([int]$portBase) {
+    $service = Trouver-ServiceMysql $portBase
     if (-not $service) {
         $service = $services | Where-Object {
             $exe = ($_.PathName -replace '^"([^"]+)".*$', '$1') -replace '^(\S+\.exe).*$', '$1'
@@ -88,6 +92,70 @@ function Activer-DemarrageMysql([int]$portBase) {
     }
     if ($service.StartMode -ne "Auto") { Set-Service -Name $service.Name -StartupType Automatic -ErrorAction Stop }
     Ok "MySQL démarre automatiquement avec Windows (service « $($service.Name) »), sans ouvrir WampServer"
+}
+$NomServiceMysql = "RaqeemMySQL"
+function Attendre-Port([int]$numero, [int]$secondes) {
+    for ($i = 0; $i -lt $secondes; $i++) {
+        if (Get-NetTCPConnection -LocalPort $numero -State Listen -ErrorAction SilentlyContinue) { return $true }
+        Start-Sleep -Seconds 1
+    }
+    return $false
+}
+# MySQL inclus dans le paquet complet : installé comme service Windows « RaqeemMySQL » (démarrage automatique),
+# données dans <dossier>\donnees_mysql, mot de passe root aléatoire dans <dossier>\mysql_root.txt (administrateurs).
+function Installer-MysqlInclus {
+    Write-Host "    Aucun MySQL sur ce PC : installation du MySQL inclus dans le paquet (aucune question)."
+    # Moteur Visual C++ de Microsoft, nécessaire à MySQL (souvent déjà présent).
+    $dll = Join-Path $env:WINDIR "System32\msvcp140.dll"
+    $vcOk = $false
+    if (Test-Path $dll) { try { $vcOk = [version]((Get-Item $dll).VersionInfo.FileVersion.Split(" ")[0]) -ge [version]"14.38" } catch { } }
+    if (-not $vcOk) {
+        Write-Host "    Installation du moteur Visual C++ (Microsoft)..."
+        $p = Start-Process (Join-Path $Paquet "vc_redist.x64.exe") -ArgumentList "/install", "/quiet", "/norestart" -Wait -PassThru
+        if ($p.ExitCode -notin 0, 1638, 3010) { Echec "Installation du moteur Visual C++ impossible (code $($p.ExitCode))." }
+    }
+    # Port : 3306 sauf s'il est pris ou interdit.
+    $script:MysqlPort = $null
+    foreach ($candidat in 3306, 3307, 3308, 3316) {
+        Natif { & $py -c "import socket; s = socket.socket(); s.bind(('127.0.0.1', $candidat)); s.close()" 2>$null } | Out-Null
+        if ($LASTEXITCODE -eq 0) { $script:MysqlPort = $candidat; break }
+    }
+    if (-not $script:MysqlPort) { Echec "Aucun port disponible pour MySQL (3306, 3307, 3308, 3316)." }
+    $dossierMysql = Join-Path $Dossier "mysql"
+    $donnees = Join-Path $Dossier "donnees_mysql"
+    robocopy (Join-Path $Paquet "mysql") $dossierMysql /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { Echec "Copie de MySQL impossible." }
+    $ini = Join-Path $Dossier "mysql.ini"
+    @(
+        "# MySQL de RAQEEM PHARMA (genere par l'installation)",
+        "[mysqld]",
+        "basedir=$($dossierMysql -replace '\\', '/')",
+        "datadir=$($donnees -replace '\\', '/')",
+        "port=$($script:MysqlPort)",
+        "bind-address=127.0.0.1",
+        "mysqlx=OFF",
+        "default-storage-engine=INNODB",
+        "innodb_default_row_format=DYNAMIC",
+        "innodb_buffer_pool_size=256M",
+        "max_connections=60",
+        "log-error=$((Join-Path $Dossier 'journaux\mysql.err') -replace '\\', '/')",
+        "[client]",
+        "port=$($script:MysqlPort)"
+    ) | Set-Content -Path $ini -Encoding ASCII
+    if (-not (Test-Path (Join-Path $donnees "mysql.ibd"))) {
+        if (Test-Path $donnees) { Remove-Item -Recurse -Force $donnees }   # initialisation précédente incomplète
+        Executer (Join-Path $dossierMysql "bin\mysqld.exe") @("--defaults-file=$ini", "--initialize-insecure") "Initialisation de MySQL impossible (voir journaux\mysql.err)."
+    }
+    if ($SansTache) {
+        # Tests sans droits administrateur : MySQL lancé comme simple programme.
+        Start-Process (Join-Path $dossierMysql "bin\mysqld.exe") -ArgumentList "--defaults-file=`"$ini`"" -WindowStyle Hidden | Out-Null
+    } else {
+        Executer (Join-Path $dossierMysql "bin\mysqld.exe") @("--install", $NomServiceMysql, "--defaults-file=$ini") "Installation du service MySQL impossible."
+        Set-Service -Name $NomServiceMysql -StartupType Automatic
+        Start-Service -Name $NomServiceMysql
+    }
+    if (-not (Attendre-Port $script:MysqlPort 60)) { Echec "MySQL ne démarre pas (voir $Dossier\journaux\mysql.err)." }
+    Ok "MySQL $((Get-Item (Join-Path $dossierMysql 'bin\mysqld.exe')).VersionInfo.ProductVersion) installé (port $($script:MysqlPort), démarrage automatique avec Windows)"
 }
 function Natif([scriptblock]$bloc) { $ErrorActionPreference = "Continue"; & $bloc }
 function Executer($exe, [string[]]$arguments, $message) {
@@ -167,9 +235,47 @@ Ok "Composants prêts ($verification)"
 
 # ---------------------------------------------------------------- 4. Base MySQL
 Titre "4/8  Base de données MySQL"
-Write-Host "    Le serveur MySQL (WampServer, MySQL ou MariaDB) doit être démarré sur ${MysqlHote}:${MysqlPort}."
-if ($NonInteractif) { $mdpAdminMysql = $env:RAQEEM_MYSQL_ADMIN_MDP }
-else { $mdpAdminMysql = Read-Secret "    Mot de passe MySQL de « $MysqlAdmin » (vide sous WampServer par défaut)" }
+$fichierRoot = Join-Path $Dossier "mysql_root.txt"
+$mysqlInclus = $false
+$surCePc = $MysqlHote -in "127.0.0.1", "localhost"
+if ($surCePc -and (Get-Service $NomServiceMysql -ErrorAction SilentlyContinue)) {
+    # Reprise : le MySQL inclus a déjà été installé par une installation interrompue.
+    Start-Service -Name $NomServiceMysql -ErrorAction SilentlyContinue
+    $MysqlPort = [int]((Get-Content (Join-Path $Dossier "mysql.ini") | Where-Object { $_ -like "port=*" } | Select-Object -First 1).Substring(5))
+    if (-not (Attendre-Port $MysqlPort 60)) { Echec "Le MySQL de RAQEEM PHARMA ne démarre pas (voir $Dossier\journaux\mysql.err)." }
+    $mysqlInclus = $true
+} elseif ($surCePc -and -not (Get-NetTCPConnection -LocalPort $MysqlPort -State Listen -ErrorAction SilentlyContinue)) {
+    # Rien n'écoute : un MySQL existant (WampServer fermé) est démarré ; sinon, le MySQL du paquet est installé.
+    $existant = Trouver-ServiceMysql $MysqlPort
+    if ($existant) {
+        Write-Host "    Démarrage du service MySQL « $($existant.Name) »..."
+        Start-Service -Name $existant.Name -ErrorAction SilentlyContinue
+        if (-not (Attendre-Port $MysqlPort 60)) { Echec "Le service MySQL « $($existant.Name) » ne démarre pas. Démarrez WampServer puis relancez l'installation." }
+    } elseif (Test-Path (Join-Path $Paquet "mysql\bin\mysqld.exe")) {
+        Installer-MysqlInclus
+        $mysqlInclus = $true
+    } else {
+        Echec "Aucun MySQL sur ce PC. Démarrez WampServer, ou utilisez le paquet COMPLET (RaqeemPharma-$version-complet.zip) qui installe MySQL."
+    }
+}
+if ($mysqlInclus) {
+    $MysqlAdmin = "root"
+    if (Test-Path $fichierRoot) { $mdpAdminMysql = (Get-Content $fichierRoot | Select-Object -First 1).Trim() }
+    else {
+        $mdpAdminMysql = (Natif { & $py (Join-Path $Paquet "outils_installation.py") mot_de_passe }).Trim()
+        [IO.File]::WriteAllLines($fichierRoot, @($mdpAdminMysql, "# Mot de passe root du MySQL de RAQEEM PHARMA (port $MysqlPort). Ne pas diffuser."), (New-Object Text.UTF8Encoding $false))
+        if (-not $SansTache) { icacls $fichierRoot /inheritance:r /grant:r "*S-1-5-32-544:F" "*S-1-5-18:F" | Out-Null }
+    }
+    $env:RAQEEM_MYSQL_PORT = "$MysqlPort"; $env:RAQEEM_MYSQL_ROOT_MDP = $mdpAdminMysql
+    Natif { & $py (Join-Path $Paquet "outils_installation.py") root }
+    $codeRoot = $LASTEXITCODE
+    Remove-Item Env:RAQEEM_MYSQL_ROOT_MDP -ErrorAction SilentlyContinue
+    if ($codeRoot -ne 0) { Echec "Sécurisation du MySQL inclus impossible." }
+} else {
+    Write-Host "    Le serveur MySQL (WampServer, MySQL ou MariaDB) doit être démarré sur ${MysqlHote}:${MysqlPort}."
+    if ($NonInteractif) { $mdpAdminMysql = $env:RAQEEM_MYSQL_ADMIN_MDP }
+    else { $mdpAdminMysql = Read-Secret "    Mot de passe MySQL de « $MysqlAdmin » (vide sous WampServer par défaut)" }
+}
 $mdpBd = (Natif { & $py (Join-Path $Paquet "outils_installation.py") mot_de_passe }).Trim()
 $env:RAQEEM_MYSQL_HOTE = $MysqlHote; $env:RAQEEM_MYSQL_PORT = "$MysqlPort"; $env:RAQEEM_MYSQL_ADMIN = $MysqlAdmin
 $env:RAQEEM_MYSQL_ADMIN_MDP = $mdpAdminMysql; $env:RAQEEM_BD_NOM = $BdNom; $env:RAQEEM_BD_UTILISATEUR = $BdUtilisateur; $env:RAQEEM_BD_MDP = $mdpBd
@@ -196,6 +302,7 @@ $lignesEnv = @(
     "UTILISER_SQLITE=0",
     "DOSSIER_INTERFACE=$(Join-Path $Dossier 'app\interface')",
     "DOSSIER_SAUVEGARDES=$(Join-Path $Dossier 'sauvegardes')",
+    "CHEMIN_MYSQL_BIN=$(if ($mysqlInclus) { Join-Path $Dossier 'mysql\bin' })",
     "# Copie de secours conseillée : clé USB, autre disque ou dossier OneDrive",
     "DOSSIER_SAUVEGARDES_COPIE=",
     "SAUVEGARDE_INTERVALLE_HEURES=6",

@@ -1,12 +1,15 @@
 # RAQEEM PHARMA - construction du paquet d'installation (sur le PC de Rawafid Digital Services).
 #
-# Produit dist-installation\RaqeemPharma-<version>\ et le .zip correspondant : à copier sur clé USB.
+# Produit dist-installation\RaqeemPharma-<version>.zip (PC qui ont déjà WampServer / MySQL) et
+# RaqeemPharma-<version>-complet.zip (avec MySQL, pour les PC qui n'en ont pas) : à copier sur clé USB.
 # Le paquet contient tout ce qu'il faut chez le client, SANS Internet : le serveur, l'interface déjà
 # construite (pas de Node.js chez le client), Python « embarqué » et les composants Python, prêts à copier.
 #
 #   powershell -ExecutionPolicy Bypass -File deploy\installation\construire_paquet.ps1
 param(
-    [string]$VersionPython = "3.12.10"
+    [string]$VersionPython = "3.12.10",
+    [string]$VersionMysql = "8.4.7",   # MySQL du paquet complet (8.4 LTS, la même série que le PC de développement)
+    [switch]$SansMysql                 # ne construire que le paquet léger (PC avec WampServer)
 )
 $ErrorActionPreference = "Stop"
 $Ici = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -92,3 +95,42 @@ Compress-Archive -Path $sortie -DestinationPath $zip
 $taille = [math]::Round((Get-Item $zip).Length / 1MB, 1)
 Write-Host ""
 Write-Host "Paquet prêt : $zip ($taille Mo)" -ForegroundColor Green
+
+# 7. Paquet COMPLET : le même, plus MySQL et le moteur Visual C++ de Microsoft dont MySQL a besoin.
+#    Pour les PC sans WampServer ni MySQL : l'installateur les met en place sans aucune question.
+if (-not $SansMysql) {
+    $fichierMysql = "mysql-$VersionMysql-winx64.zip"
+    $archiveMysql = Join-Path $cache $fichierMysql
+    if (-not (Test-Path $archiveMysql)) {
+        Write-Host "  Téléchargement de $fichierMysql (260 Mo) depuis mysql.com..."
+        $serie = ($VersionMysql.Split(".")[0..1] -join ".")
+        Invoke-WebRequest "https://cdn.mysql.com/archives/mysql-$serie/$fichierMysql" -OutFile $archiveMysql -UseBasicParsing
+    }
+    # Empreinte de l'archive officielle (vérifiée une fois, puis figée ici).
+    $empreintesMysql = @{ "8.4.7" = "FD9BDBD4B5A878D31C8E4067078BD60665B1B3C4677FA1F099416D194B458AFF" }
+    if ($empreintesMysql[$VersionMysql] -and (Get-FileHash $archiveMysql -Algorithm SHA256).Hash -ne $empreintesMysql[$VersionMysql]) {
+        throw "Empreinte de $fichierMysql incorrecte : archive refusée."
+    }
+    & $PythonDev (Join-Path $Ici "preparer_mysql.py") $archiveMysql (Join-Path $sortie "mysql")
+    if ($LASTEXITCODE -ne 0) { throw "Préparation de MySQL impossible." }
+    $signature = Get-AuthenticodeSignature (Join-Path $sortie "mysql\bin\mysqld.exe")
+    if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "Oracle") {
+        throw "Signature de mysqld.exe invalide : paquet refusé."
+    }
+    $vcredist = Join-Path $cache "vc_redist.x64.exe"
+    if (-not (Test-Path $vcredist)) {
+        Write-Host "  Téléchargement du moteur Visual C++ (Microsoft)..."
+        Invoke-WebRequest "https://aka.ms/vs/17/release/vc_redist.x64.exe" -OutFile $vcredist -UseBasicParsing
+    }
+    $signature = Get-AuthenticodeSignature $vcredist
+    if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "Microsoft Corporation") {
+        throw "Signature de vc_redist.x64.exe invalide : paquet refusé."
+    }
+    Copy-Item $vcredist (Join-Path $sortie "vc_redist.x64.exe")
+    Write-Host "  OK MySQL $VersionMysql (signature Oracle vérifiée) et Visual C++ (signature Microsoft vérifiée)" -ForegroundColor Green
+
+    $zipComplet = Join-Path $Racine "dist-installation\$nom-complet.zip"
+    if (Test-Path $zipComplet) { Remove-Item $zipComplet }
+    Compress-Archive -Path $sortie -DestinationPath $zipComplet
+    Write-Host "Paquet COMPLET (PC sans WampServer) : $zipComplet ($([math]::Round((Get-Item $zipComplet).Length / 1MB, 1)) Mo)" -ForegroundColor Green
+}

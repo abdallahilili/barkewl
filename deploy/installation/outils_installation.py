@@ -4,6 +4,8 @@ Outils appelés par l'installateur RAQEEM PHARMA (Python + PyMySQL du paquet).
 Les mots de passe passent par des variables d'environnement, jamais par la ligne de commande.
     python outils_installation.py cle                    une clé secrète Django aléatoire
     python outils_installation.py mot_de_passe           un mot de passe aléatoire (compte MySQL dédié)
+    python outils_installation.py root                   MySQL inclus : fixe le mot de passe root (vide après
+        RAQEEM_MYSQL_PORT, RAQEEM_MYSQL_ROOT_MDP           l'initialisation) ; sans effet s'il est déjà en place
     python outils_installation.py base                   crée la base et le compte MySQL dédié
         RAQEEM_MYSQL_HOTE, RAQEEM_MYSQL_PORT, RAQEEM_MYSQL_ADMIN, RAQEEM_MYSQL_ADMIN_MDP,
         RAQEEM_BD_NOM, RAQEEM_BD_UTILISATEUR, RAQEEM_BD_MDP
@@ -63,6 +65,26 @@ def verifier_format_lignes(curseur, version):
         print("  Conseil : ajoutez « innodb_default_row_format=dynamic » dans le fichier my.ini de MySQL.")
 
 
+def root():
+    import pymysql
+
+    port, mdp = int(os.environ.get("RAQEEM_MYSQL_PORT", "3306")), os.environ["RAQEEM_MYSQL_ROOT_MDP"]
+    try:
+        # Reprise d'une installation interrompue : le mot de passe est peut-être déjà en place.
+        pymysql.connect(host="127.0.0.1", port=port, user="root", password=mdp).close()
+        print("Mot de passe root déjà en place.")
+        return
+    except pymysql.MySQLError:
+        pass
+    try:
+        connexion = pymysql.connect(host="127.0.0.1", port=port, user="root", password="", autocommit=True)
+    except pymysql.MySQLError as erreur:
+        sys.exit(f"Connexion au MySQL inclus impossible : {erreur.args[-1] if erreur.args else erreur}")
+    with connexion.cursor() as c:
+        c.execute("ALTER USER 'root'@'localhost' IDENTIFIED BY %s", (mdp,))
+    print("Mot de passe root du MySQL inclus enregistré.")
+
+
 def base():
     import pymysql
 
@@ -109,4 +131,4 @@ def base():
 
 
 if __name__ == "__main__":
-    {"cle": cle, "mot_de_passe": mot_de_passe, "base": base}.get(sys.argv[1] if len(sys.argv) > 1 else "", lambda: sys.exit(__doc__))()
+    {"cle": cle, "root": root, "mot_de_passe": mot_de_passe, "base": base}.get(sys.argv[1] if len(sys.argv) > 1 else "", lambda: sys.exit(__doc__))()

@@ -2,9 +2,13 @@ RAQEEM PHARMA - Installation chez le client
 Rawafid Digital Services - +222 46 63 59 96 / 31 17 70 08
 ===========================================================
 
-AVANT DE COMMENCER
-  - Un serveur MySQL doit être installé et DÉMARRÉ : WampServer (icône verte), MySQL Server ou MariaDB.
-  - Connaître le mot de passe MySQL de « root » (vide par défaut sous WampServer).
+QUEL PAQUET ?
+  - PC SANS WampServer ni MySQL : paquet COMPLET (RaqeemPharma-<version>-complet.zip). MySQL est installé
+    automatiquement, sans aucune question ; son mot de passe root est dans C:\RaqeemPharma\mysql_root.txt
+    (lisible par les administrateurs seulement).
+  - PC AVEC WampServer (ou MySQL / MariaDB) : l'un ou l'autre paquet. Le MySQL existant est utilisé (et démarré
+    s'il est arrêté) ; connaître le mot de passe MySQL de « root » (vide par défaut sous WampServer).
+  - Dans les deux cas, MySQL démarre ensuite automatiquement avec Windows.
 
 INSTALLER (15 minutes)
   1. Copier ce dossier sur le PC (par exemple sur le Bureau).
