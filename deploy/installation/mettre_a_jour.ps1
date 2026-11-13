@@ -10,13 +10,25 @@ param(
 # « Continue » : chaque étape vérifie explicitement le code de sortie des programmes (python, robocopy).
 # Sous PowerShell 5.1, « Stop » interromprait le script au premier message d'information de Python.
 $ErrorActionPreference = "Continue"
+try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
 $Paquet = Split-Path -Parent $MyInvocation.MyCommand.Path
 $NomTache = "RaqeemPharma"
 $app = Join-Path $Dossier "app"
 $precedent = Join-Path $Dossier "app.precedent"
-$py = Join-Path $Dossier "venv\Scripts\python.exe"
+$py = Join-Path $Dossier "python\python.exe"
+$lib = Join-Path $Dossier "lib"
+$libPrecedent = Join-Path $Dossier "lib.precedent"
 $backend = Join-Path $app "backend"
 
+# Python embarqué : ses chemins de recherche sont fixés par le fichier python3XX._pth (variables
+# d'environnement ignorées). On y ajoute les composants (lib) et le serveur (app\backend).
+function Write-CheminsPython($dossierInstallation) {
+    $pth = Get-ChildItem (Join-Path $dossierInstallation "python") -Filter "python3*._pth" | Select-Object -First 1
+    if (-not $pth) { throw "Fichier ._pth du Python embarqué introuvable." }
+    $zip = (Get-ChildItem (Join-Path $dossierInstallation "python") -Filter "python3*.zip" | Select-Object -First 1).Name
+    $lignes = @($zip, ".", (Join-Path $dossierInstallation "lib"), (Join-Path $dossierInstallation "app\backend"))
+    [IO.File]::WriteAllLines($pth.FullName, $lignes, (New-Object Text.UTF8Encoding $false))
+}
 function Titre($texte) { Write-Host ""; Write-Host "==> $texte" -ForegroundColor Cyan }
 function Ok($texte) { Write-Host "    OK  $texte" -ForegroundColor Green }
 function Arreter-Serveur {
@@ -67,6 +79,7 @@ Ok "Sauvegarde $fichierSauvegarde"
 Titre "2/5  Arrêt du logiciel et conservation de la version actuelle"
 Arreter-Serveur
 Copier $app $precedent
+Copier $lib $libPrecedent
 Ok "Version actuelle conservée dans $precedent"
 
 $baseModifiee = $false
@@ -76,8 +89,8 @@ try {
     # La configuration (.env) et les journaux du poste sont conservés.
     Copier (Join-Path $Paquet "app\backend") $backend @("/XF", ".env", "/XD", "logs", "sauvegardes")
     Copier (Join-Path $Paquet "app\interface") (Join-Path $app "interface")
-    & $py -m pip install --quiet --no-index --find-links (Join-Path $Paquet "paquets") -r (Join-Path $Paquet "requirements-installation.txt")
-    if ($LASTEXITCODE -ne 0) { throw "Installation des composants Python impossible." }
+    Copier (Join-Path $Paquet "lib") $lib
+    Write-CheminsPython $Dossier
     Ok "Fichiers et composants à jour"
 
     # ------------------------------------------------------------ 4. Base de données
@@ -97,6 +110,7 @@ catch {
     Write-Host "ERREUR : $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Retour automatique à la version $ancienne..." -ForegroundColor Yellow
     Copier $precedent $app
+    Copier $libPrecedent $lib
     if ($baseModifiee) {
         Push-Location $backend
         & $py manage.py restaurer_sauvegarde $fichierSauvegarde --oui

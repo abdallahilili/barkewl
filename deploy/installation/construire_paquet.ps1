@@ -2,11 +2,10 @@
 #
 # Produit dist-installation\RaqeemPharma-<version>\ et le .zip correspondant : à copier sur clé USB.
 # Le paquet contient tout ce qu'il faut chez le client, SANS Internet : le serveur, l'interface déjà
-# construite (pas de Node.js chez le client), les composants Python et l'installateur de Python.
+# construite (pas de Node.js chez le client), Python « embarqué » et les composants Python, prêts à copier.
 #
 #   powershell -ExecutionPolicy Bypass -File deploy\installation\construire_paquet.ps1
 param(
-    [switch]$SansPython,                          # ne pas inclure l'installateur Python (paquet plus léger)
     [string]$VersionPython = "3.12.10"
 )
 $ErrorActionPreference = "Stop"
@@ -23,7 +22,7 @@ if ((git -C $Racine status --porcelain backend) -ne $null) {
     Write-Host "Attention : des modifications du serveur ne sont pas enregistrées dans git ; le paquet utilise la dernière version enregistrée." -ForegroundColor Yellow
 }
 if (Test-Path $sortie) { Remove-Item -Recurse -Force $sortie }
-New-Item -ItemType Directory -Force -Path (Join-Path $sortie "app"), (Join-Path $sortie "paquets"), (Join-Path $sortie "prerequis") | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $sortie "app") | Out-Null
 
 # 1. Serveur : exactement la version enregistrée dans git (ni venv, ni .env, ni sauvegardes).
 $archive = Join-Path $env:TEMP "raqeem-backend.zip"
@@ -43,27 +42,36 @@ try {
 } finally { Remove-Item Env:VITE_URL_API -ErrorAction SilentlyContinue; Pop-Location }
 Write-Host "  OK interface" -ForegroundColor Green
 
-# 3. Composants Python pour Windows 64 bits / Python 3.12, installables hors ligne.
-$majeure = ($VersionPython.Split(".")[0..1] -join "")
-& $PythonDev -m pip download --quiet --only-binary=:all: --platform win_amd64 --python-version ($VersionPython.Split(".")[0..1] -join ".") `
-    --implementation cp --abi "cp$majeure" -r (Join-Path $Ici "requirements-installation.txt") -d (Join-Path $sortie "paquets")
-if ($LASTEXITCODE -ne 0) { throw "Téléchargement des composants Python impossible." }
-Write-Host "  OK composants Python ($((Get-ChildItem (Join-Path $sortie 'paquets')).Count) paquets)" -ForegroundColor Green
-
-# 4. Installateur officiel de Python (gardé en cache pour les prochaines constructions).
-if (-not $SansPython) {
-    $cache = Join-Path $Ici "cache"
-    New-Item -ItemType Directory -Force -Path $cache | Out-Null
-    $fichierPython = "python-$VersionPython-amd64.exe"
-    if (-not (Test-Path (Join-Path $cache $fichierPython))) {
-        Write-Host "  Téléchargement de $fichierPython depuis python.org..."
-        Invoke-WebRequest "https://www.python.org/ftp/python/$VersionPython/$fichierPython" -OutFile (Join-Path $cache $fichierPython) -UseBasicParsing
-    }
-    $signature = Get-AuthenticodeSignature (Join-Path $cache $fichierPython)
-    if ($signature.Status -ne "Valid") { throw "Signature de l'installateur Python invalide : fichier refusé." }
-    Copy-Item (Join-Path $cache $fichierPython) (Join-Path $sortie "prerequis")
-    Write-Host "  OK Python $VersionPython (signature vérifiée : $($signature.SignerCertificate.Subject.Split(',')[0]))" -ForegroundColor Green
+# 3. Python « embarqué » officiel (python.org) : une simple archive à copier, sans installateur.
+#    Gardé en cache ; la signature de python.exe (Python Software Foundation) est vérifiée.
+$cache = Join-Path $Ici "cache"
+New-Item -ItemType Directory -Force -Path $cache | Out-Null
+$fichierPython = "python-$VersionPython-embed-amd64.zip"
+if (-not (Test-Path (Join-Path $cache $fichierPython))) {
+    Write-Host "  Téléchargement de $fichierPython depuis python.org..."
+    Invoke-WebRequest "https://www.python.org/ftp/python/$VersionPython/$fichierPython" -OutFile (Join-Path $cache $fichierPython) -UseBasicParsing
 }
+Expand-Archive -Path (Join-Path $cache $fichierPython) -DestinationPath (Join-Path $sortie "python") -Force
+$signature = Get-AuthenticodeSignature (Join-Path $sortie "python\python.exe")
+if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "Python Software Foundation") {
+    throw "Signature de python.exe invalide : paquet refusé."
+}
+Write-Host "  OK Python $VersionPython embarqué (signature vérifiée : Python Software Foundation)" -ForegroundColor Green
+
+# 4. Composants Python (Django, PyMySQL, Waitress…) préparés ici, copiés tels quels chez le client.
+$majeure = ($VersionPython.Split(".")[0..1] -join "")
+$telechargement = Join-Path $env:TEMP "raqeem-paquets"
+if (Test-Path $telechargement) { Remove-Item -Recurse -Force $telechargement }
+& $PythonDev -m pip download --quiet --only-binary=:all: --platform win_amd64 --python-version ($VersionPython.Split(".")[0..1] -join ".") `
+    --implementation cp --abi "cp$majeure" -r (Join-Path $Ici "requirements-installation.txt") -d $telechargement
+if ($LASTEXITCODE -ne 0) { throw "Téléchargement des composants Python impossible." }
+& $PythonDev -m pip install --quiet --no-index --no-deps --target (Join-Path $sortie "lib") (Get-ChildItem $telechargement -Filter *.whl).FullName
+if ($LASTEXITCODE -ne 0) { throw "Préparation des composants Python impossible." }
+# Pas de lanceurs .exe générés par pip (non signés : bloqués par Smart App Control) ; on passe toujours par python.exe -m.
+Remove-Item -Recurse -Force (Join-Path $sortie "lib\bin") -ErrorAction SilentlyContinue
+Get-ChildItem (Join-Path $sortie "lib") -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force
+Remove-Item -Recurse -Force $telechargement
+Write-Host "  OK composants Python ($((Get-ChildItem (Join-Path $sortie 'lib') -Directory -Filter '*.dist-info').Count) paquets)" -ForegroundColor Green
 
 # 5. Scripts : en UTF-8 avec BOM pour que Windows PowerShell 5.1 lise correctement les accents.
 $avecBom = New-Object Text.UTF8Encoding $true

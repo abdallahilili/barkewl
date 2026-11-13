@@ -2,9 +2,9 @@
 # Lancé par « Installer.bat » (en administrateur). Compatible Windows PowerShell 5.1.
 #
 # Ce que fait l'installation :
-#   1. Python : installe la version fournie dans le paquet (dossier prerequis), ou utilise -Python
+#   1. Python embarqué (copié tel quel : n'interfère avec aucun Python déjà installé sur le PC)
 #   2. Copie le logiciel dans le dossier d'installation (par défaut C:\RaqeemPharma)
-#   3. Installe les composants Python hors ligne (dossier paquets)
+#   3. Copie les composants Python (dossier lib, déjà préparés dans le paquet)
 #   4. Crée la base MySQL et un compte MySQL dédié au logiciel (mot de passe aléatoire)
 #   5. Écrit la configuration (.env) : mode production, clé secrète aléatoire, sauvegardes
 #   6. Prépare la base (tables InnoDB) et crée le compte du propriétaire
@@ -13,7 +13,6 @@
 param(
     [string]$Dossier = "C:\RaqeemPharma",
     [int]$Port = 8080,
-    [string]$Python = "",
     [string]$MysqlHote = "127.0.0.1",
     [int]$MysqlPort = 3306,
     [string]$MysqlAdmin = "root",
@@ -24,6 +23,7 @@ param(
     [switch]$NonInteractif      # tests : mots de passe lus dans RAQEEM_MYSQL_ADMIN_MDP et RAQEEM_ADMIN_MDP
 )
 $ErrorActionPreference = "Stop"
+try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
 $Paquet = Split-Path -Parent $MyInvocation.MyCommand.Path
 $NomTache = "RaqeemPharma"
 
@@ -36,6 +36,15 @@ function Read-Secret($question) {
 }
 # Programmes externes (python, robocopy…) : seul leur code de sortie compte. Sous PowerShell 5.1, avec
 # « Stop », un simple message d'information écrit sur la sortie d'erreur interromprait le script.
+# Python embarqué : ses chemins de recherche sont fixés par le fichier python3XX._pth (variables
+# d'environnement ignorées). On y ajoute les composants (lib) et le serveur (app\backend).
+function Write-CheminsPython($dossierInstallation) {
+    $pth = Get-ChildItem (Join-Path $dossierInstallation "python") -Filter "python3*._pth" | Select-Object -First 1
+    if (-not $pth) { throw "Fichier ._pth du Python embarqué introuvable." }
+    $zip = (Get-ChildItem (Join-Path $dossierInstallation "python") -Filter "python3*.zip" | Select-Object -First 1).Name
+    $lignes = @($zip, ".", (Join-Path $dossierInstallation "lib"), (Join-Path $dossierInstallation "app\backend"))
+    [IO.File]::WriteAllLines($pth.FullName, $lignes, (New-Object Text.UTF8Encoding $false))
+}
 function Natif([scriptblock]$bloc) { $ErrorActionPreference = "Continue"; & $bloc }
 function Executer($exe, [string[]]$arguments, $message) {
     Natif { & $exe @arguments }
@@ -60,20 +69,14 @@ if (Test-Path (Join-Path $Dossier "app\backend\.env")) {
 
 # ---------------------------------------------------------------- 1. Python
 Titre "1/8  Python"
-if (-not $Python) {
-    $Python = Join-Path $Dossier "python\python.exe"
-    if (-not (Test-Path $Python)) {
-        $installateur = Get-ChildItem (Join-Path $Paquet "prerequis") -Filter "python-*-amd64.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if (-not $installateur) { Echec "Installateur Python introuvable dans le dossier « prerequis » du paquet." }
-        Write-Host "    Installation de $($installateur.Name) (1 à 2 minutes)..."
-        $p = Start-Process -FilePath $installateur.FullName -Wait -PassThru -ArgumentList @(
-            "/quiet", "InstallAllUsers=1", "PrependPath=0", "Include_launcher=0", "Include_test=0", "Include_doc=0",
-            "Shortcuts=0", "AssociateFiles=0", "TargetDir=`"$(Join-Path $Dossier 'python')`"")
-        if ($p.ExitCode -ne 0 -or -not (Test-Path $Python)) { Echec "L'installation de Python a échoué (code $($p.ExitCode))." }
-    }
-}
-if (-not (Test-Path $Python)) { Echec "Python introuvable : $Python" }
-Ok (Natif { & $Python --version })
+# Python « embarqué » officiel (python.org) : simple copie de fichiers, sans installateur ni registre.
+# Indépendant de tout autre Python présent sur le PC (l'installateur classique, lui, réutilise un Python
+# 3.12 existant et ignore le dossier demandé).
+New-Item -ItemType Directory -Force -Path $Dossier | Out-Null
+robocopy (Join-Path $Paquet "python") (Join-Path $Dossier "python") /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+if ($LASTEXITCODE -ge 8) { Echec "Copie de Python impossible." }
+$py = Join-Path $Dossier "python\python.exe"
+Ok (Natif { & $py --version })
 
 # ---------------------------------------------------------------- 2. Copie du logiciel
 Titre "2/8  Copie du logiciel"
@@ -87,12 +90,12 @@ Ok "Logiciel copié dans $Dossier\app"
 
 # ---------------------------------------------------------------- 3. Composants Python
 Titre "3/8  Composants Python (hors ligne)"
-$venv = Join-Path $Dossier "venv"
-if (-not (Test-Path (Join-Path $venv "Scripts\python.exe"))) { Executer $Python @("-m", "venv", $venv) "Création de l'environnement Python impossible." }
-$py = Join-Path $venv "Scripts\python.exe"
-Executer $py @("-m", "pip", "install", "--quiet", "--no-index", "--find-links", (Join-Path $Paquet "paquets"),
-    "-r", (Join-Path $Paquet "requirements-installation.txt")) "Installation des composants Python impossible."
-Ok "Composants installés"
+robocopy (Join-Path $Paquet "lib") (Join-Path $Dossier "lib") /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+if ($LASTEXITCODE -ge 8) { Echec "Copie des composants Python impossible." }
+Write-CheminsPython $Dossier
+$verification = Natif { & $py -c "import django, rest_framework, pymysql, waitress; print('Django', django.get_version())" }
+if ($LASTEXITCODE -ne 0) { Echec "Composants Python incomplets." }
+Ok "Composants prêts ($verification)"
 
 # ---------------------------------------------------------------- 4. Base MySQL
 Titre "4/8  Base de données MySQL"
@@ -165,7 +168,7 @@ $demarrer = Join-Path $Dossier "demarrer_serveur.bat"
     "REM RAQEEM PHARMA - serveur (lancé au démarrage de Windows par la tâche $NomTache)",
     "cd /d `"$(Join-Path $Dossier 'app\backend')`"",
     "REM python.exe -m waitress (et non waitress-serve.exe, non signé et bloqué par Smart App Control sur certains PC)",
-    "`"$(Join-Path $venv 'Scripts\python.exe')`" -m waitress --host=$hote --port=$Port --threads=8 config.wsgi:application >> `"$(Join-Path $Dossier 'journaux\serveur.log')`" 2>&1"
+    "`"$py`" -m waitress --host=$hote --port=$Port --threads=8 config.wsgi:application >> `"$(Join-Path $Dossier 'journaux\serveur.log')`" 2>&1"
 ) | Set-Content -Path $demarrer -Encoding ASCII
 if ($SansTache) {
     Ok "Mode test : pas de tâche planifiée"

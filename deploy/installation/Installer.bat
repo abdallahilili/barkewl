@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 title RAQEEM PHARMA - Installation
 REM Demande les droits administrateur si nécessaire, puis lance l'installation.
 net session >nul 2>&1

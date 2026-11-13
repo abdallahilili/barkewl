@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 title RAQEEM PHARMA - Mise a jour
 REM Demande les droits administrateur si nécessaire, puis lance la mise à jour.
 net session >nul 2>&1
