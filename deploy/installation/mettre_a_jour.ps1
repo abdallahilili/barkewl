@@ -192,6 +192,16 @@ catch {
 # ---------------------------------------------------------------- 5. Redémarrage et vérification
 Titre "5/5  Redémarrage"
 Copy-Item (Join-Path $Paquet "VERSION.txt") (Join-Path $Dossier "VERSION.txt") -Force -ErrorAction Stop
+# Raccourci du bureau avec l'icône RAQEEM (les anciennes versions n'en avaient pas).
+if (-not $SansTache -and (Test-Path (Join-Path $Paquet "raqeem.ico"))) {
+    try {
+        $icone = Join-Path $Dossier "raqeem.ico"
+        Copy-Item (Join-Path $Paquet "raqeem.ico") $icone -Force
+        $portLogiciel = (Get-Content (Join-Path $Dossier "installation.json") -Raw | ConvertFrom-Json).port
+        $raccourci = Join-Path ([Environment]::GetFolderPath("CommonDesktopDirectory")) "RAQEEM PHARMA.url"
+        @("[InternetShortcut]", "URL=http://localhost:$portLogiciel/", "IconFile=$icone", "IconIndex=0") | Set-Content -Path $raccourci -Encoding ASCII
+    } catch { Write-Host "Raccourci non mis à jour : $($_.Exception.Message)" -ForegroundColor Yellow }
+}
 Demarrer-Serveur
 if (-not $SansTache) {
     $info = Get-Content (Join-Path $Dossier "installation.json") -Raw | ConvertFrom-Json

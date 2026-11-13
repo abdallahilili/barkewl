@@ -85,7 +85,7 @@ foreach ($fichier in "Installer.bat", "Mettre_a_jour.bat") {
     $texte = [IO.File]::ReadAllText((Join-Path $Ici $fichier)) -replace "`r?`n", "`r`n"
     [IO.File]::WriteAllText((Join-Path $sortie $fichier), $texte, [Text.Encoding]::GetEncoding(1252))
 }
-Copy-Item (Join-Path $Ici "outils_installation.py"), (Join-Path $Ici "requirements-installation.txt"), (Join-Path $Ici "LISEZMOI.txt") $sortie
+Copy-Item (Join-Path $Ici "outils_installation.py"), (Join-Path $Ici "requirements-installation.txt"), (Join-Path $Ici "LISEZMOI.txt"), (Join-Path $Ici "raqeem.ico") $sortie
 Set-Content -Path (Join-Path $sortie "VERSION.txt") -Value $version -Encoding ASCII
 
 # 6. Archive à copier sur clé USB.

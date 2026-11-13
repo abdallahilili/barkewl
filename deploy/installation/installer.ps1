@@ -373,7 +373,9 @@ if ($SansTache) {
         Ok "Pare-feu ouvert sur le port $Port pour les autres postes"
     }
     $raccourci = Join-Path ([Environment]::GetFolderPath("CommonDesktopDirectory")) "RAQEEM PHARMA.url"
-    @("[InternetShortcut]", "URL=http://localhost:$Port/") | Set-Content -Path $raccourci -Encoding ASCII
+    $icone = Join-Path $Dossier "raqeem.ico"
+    Copy-Item (Join-Path $Paquet "raqeem.ico") $icone -Force -ErrorAction SilentlyContinue
+    @("[InternetShortcut]", "URL=http://localhost:$Port/", "IconFile=$icone", "IconIndex=0") | Set-Content -Path $raccourci -Encoding ASCII
     Ok "Raccourci « RAQEEM PHARMA » sur le bureau"
 }
 
