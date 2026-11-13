@@ -58,12 +58,39 @@ function Afficher-EtatTache($nom) {
     $batterie = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($batterie) { Write-Host "      Batterie : $($batterie.EstimatedChargeRemaining) % (statut $($batterie.BatteryStatus) ; 2 = sur secteur)" }
 }
+# Démarrage automatique de MySQL avec Windows. WampServer installe MySQL / MariaDB comme service Windows
+# en démarrage « manuel » : sans ouvrir WampServer, le logiciel n'aurait pas de base. On retrouve le service
+# qui écoute sur le port de la base et on le passe en démarrage automatique.
+function Activer-DemarrageMysql([int]$portBase) {
+    $services = @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-Object { $_.PathName -match "mysqld|mariadbd" })
+    # 1) le service dont le processus écoute sur le port de la base
+    $pids = @(Get-NetTCPConnection -LocalPort $portBase -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $_.OwningProcess })
+    $service = $services | Where-Object { $pids -contains $_.ProcessId } | Select-Object -First 1
+    # 2) sinon, le service dont le fichier my.ini (dossier de sa version, comme dans WampServer) indique ce port
+    if (-not $service) {
+        $service = $services | Where-Object {
+            $exe = ($_.PathName -replace '^"([^"]+)".*$', '$1') -replace '^(\S+\.exe).*$', '$1'
+            $ini = Join-Path (Split-Path (Split-Path $exe)) "my.ini"
+            (Test-Path $ini) -and (Select-String -Path $ini -Pattern "^\s*port\s*=\s*$portBase\s*$" -Quiet)
+        } | Select-Object -First 1
+    }
+    if (-not $service) {
+        Write-Host "    Attention : service MySQL non trouvé. Lancez WampServer au démarrage de Windows." -ForegroundColor Yellow
+        return
+    }
+    if ($service.StartMode -ne "Auto") { Set-Service -Name $service.Name -StartupType Automatic -ErrorAction Stop }
+    Ok "MySQL démarre automatiquement avec Windows (service « $($service.Name) »), sans ouvrir WampServer"
+}
 function Demarrer-Serveur {
     if ($SansTache) { return }
     # Réglages de la tâche remis à neuf à chaque mise à jour (anciennes versions : arrêt après 72 h, pas sur batterie).
     $bat = Join-Path $Dossier "demarrer_serveur.bat"
     if (Test-Path $bat) { try { Enregistrer-Tache $NomTache $bat } catch { Write-Host "Tâche non mise à jour : $($_.Exception.Message)" -ForegroundColor Yellow } }
     Start-ScheduledTask -TaskName $NomTache -ErrorAction SilentlyContinue
+    $ligne = Get-Content (Join-Path $backend ".env") | Where-Object { $_ -like "BD_PORT=*" } | Select-Object -First 1
+    $portBase = 3306
+    if ($ligne) { $portBase = [int]$ligne.Substring(8) }
+    try { Activer-DemarrageMysql $portBase } catch { Write-Host "Démarrage automatique de MySQL non réglé : $($_.Exception.Message)" -ForegroundColor Yellow }
 }
 function Copier($source, $cible, [string[]]$exclusions = @()) {
     $arguments = @($source, $cible, "/MIR", "/NFL", "/NDL", "/NJH", "/NJS", "/NP", "/XD", "__pycache__") + $exclusions

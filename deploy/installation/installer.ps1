@@ -66,6 +66,29 @@ function Afficher-EtatTache($nom) {
     $batterie = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($batterie) { Write-Host "      Batterie : $($batterie.EstimatedChargeRemaining) % (statut $($batterie.BatteryStatus) ; 2 = sur secteur)" }
 }
+# Démarrage automatique de MySQL avec Windows. WampServer installe MySQL / MariaDB comme service Windows
+# en démarrage « manuel » : sans ouvrir WampServer, le logiciel n'aurait pas de base. On retrouve le service
+# qui écoute sur le port de la base et on le passe en démarrage automatique.
+function Activer-DemarrageMysql([int]$portBase) {
+    $services = @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-Object { $_.PathName -match "mysqld|mariadbd" })
+    # 1) le service dont le processus écoute sur le port de la base
+    $pids = @(Get-NetTCPConnection -LocalPort $portBase -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $_.OwningProcess })
+    $service = $services | Where-Object { $pids -contains $_.ProcessId } | Select-Object -First 1
+    # 2) sinon, le service dont le fichier my.ini (dossier de sa version, comme dans WampServer) indique ce port
+    if (-not $service) {
+        $service = $services | Where-Object {
+            $exe = ($_.PathName -replace '^"([^"]+)".*$', '$1') -replace '^(\S+\.exe).*$', '$1'
+            $ini = Join-Path (Split-Path (Split-Path $exe)) "my.ini"
+            (Test-Path $ini) -and (Select-String -Path $ini -Pattern "^\s*port\s*=\s*$portBase\s*$" -Quiet)
+        } | Select-Object -First 1
+    }
+    if (-not $service) {
+        Write-Host "    Attention : service MySQL non trouvé. Lancez WampServer au démarrage de Windows." -ForegroundColor Yellow
+        return
+    }
+    if ($service.StartMode -ne "Auto") { Set-Service -Name $service.Name -StartupType Automatic -ErrorAction Stop }
+    Ok "MySQL démarre automatiquement avec Windows (service « $($service.Name) »), sans ouvrir WampServer"
+}
 function Natif([scriptblock]$bloc) { $ErrorActionPreference = "Continue"; & $bloc }
 function Executer($exe, [string[]]$arguments, $message) {
     Natif { & $exe @arguments }
@@ -237,6 +260,7 @@ if ($SansTache) {
     try { Enregistrer-Tache $NomTache $demarrer } catch { Echec "Création de la tâche de démarrage impossible : $($_.Exception.Message)" }
     Start-ScheduledTask -TaskName $NomTache
     Ok "Le logiciel démarre automatiquement avec Windows (tâche « $NomTache »)"
+    try { Activer-DemarrageMysql $MysqlPort } catch { Write-Host "    Attention : démarrage automatique de MySQL non réglé ($($_.Exception.Message))." -ForegroundColor Yellow }
     if ($Reseau) {
         netsh advfirewall firewall add rule name="RAQEEM PHARMA" dir=in action=allow protocol=TCP localport=$Port | Out-Null
         Ok "Pare-feu ouvert sur le port $Port pour les autres postes"
