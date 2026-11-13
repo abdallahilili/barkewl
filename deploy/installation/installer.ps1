@@ -47,6 +47,25 @@ function Write-CheminsPython($dossierInstallation) {
     $lignes = @($zip, ".", (Join-Path $dossierInstallation "lib"), (Join-Path $dossierInstallation "app\backend"))
     [IO.File]::WriteAllLines($pth.FullName, $lignes, (New-Object Text.UTF8Encoding $false))
 }
+# Tâche de démarrage du serveur. Pas « schtasks /create » : ses réglages par défaut empêchent le démarrage
+# d'un PC portable sur batterie et arrêtent le serveur au bout de 72 heures.
+function Enregistrer-Tache($nom, $bat) {
+    $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$bat`""
+    $declencheur = New-ScheduledTaskTrigger -AtStartup
+    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    $reglages = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
+        -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
+    Register-ScheduledTask -TaskName $nom -Action $action -Trigger $declencheur -Principal $principal -Settings $reglages -Force | Out-Null
+}
+# Diagnostic affiché si le serveur ne répond pas.
+function Afficher-EtatTache($nom) {
+    $info = Get-ScheduledTaskInfo -TaskName $nom -ErrorAction SilentlyContinue
+    $tache = Get-ScheduledTask -TaskName $nom -ErrorAction SilentlyContinue
+    if ($tache) { Write-Host "      Tâche : état $($tache.State), dernier lancement $($info.LastRunTime), résultat 0x$('{0:X}' -f $info.LastTaskResult)" }
+    else { Write-Host "      Tâche « $nom » introuvable." }
+    $batterie = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($batterie) { Write-Host "      Batterie : $($batterie.EstimatedChargeRemaining) % (statut $($batterie.BatteryStatus) ; 2 = sur secteur)" }
+}
 function Natif([scriptblock]$bloc) { $ErrorActionPreference = "Continue"; & $bloc }
 function Executer($exe, [string[]]$arguments, $message) {
     Natif { & $exe @arguments }
@@ -214,9 +233,9 @@ $demarrer = Join-Path $Dossier "demarrer_serveur.bat"
 if ($SansTache) {
     Ok "Mode test : pas de tâche planifiée"
 } else {
-    schtasks /create /tn $NomTache /tr "`"$demarrer`"" /sc onstart /ru SYSTEM /rl HIGHEST /f | Out-Null
-    if ($LASTEXITCODE -ne 0) { Echec "Création de la tâche de démarrage impossible." }
-    schtasks /run /tn $NomTache | Out-Null
+    Natif { schtasks /end /tn $NomTache 2>$null } | Out-Null
+    try { Enregistrer-Tache $NomTache $demarrer } catch { Echec "Création de la tâche de démarrage impossible : $($_.Exception.Message)" }
+    Start-ScheduledTask -TaskName $NomTache
     Ok "Le logiciel démarre automatiquement avec Windows (tâche « $NomTache »)"
     if ($Reseau) {
         netsh advfirewall firewall add rule name="RAQEEM PHARMA" dir=in action=allow protocol=TCP localport=$Port | Out-Null
@@ -243,6 +262,7 @@ if (-not $SansTache) {
         Write-Host "    Dernières lignes de $journal :" -ForegroundColor Yellow
         if (Test-Path $journal) { Get-Content $journal -Tail 25 | ForEach-Object { Write-Host "      $_" } }
         else { Write-Host "      (journal absent : le serveur n'a pas été lancé par la tâche « $NomTache »)" }
+        Afficher-EtatTache $NomTache
         Echec "Le logiciel ne répond pas. Envoyez une photo de ces lignes à Rawafid Digital Services."
     }
     Ok "Le logiciel répond sur http://localhost:$Port"

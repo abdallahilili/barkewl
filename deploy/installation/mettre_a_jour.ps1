@@ -39,9 +39,31 @@ function Arreter-Serveur {
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     Start-Sleep -Seconds 2
 }
+# Tâche de démarrage du serveur. Pas « schtasks /create » : ses réglages par défaut empêchent le démarrage
+# d'un PC portable sur batterie et arrêtent le serveur au bout de 72 heures.
+function Enregistrer-Tache($nom, $bat) {
+    $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$bat`""
+    $declencheur = New-ScheduledTaskTrigger -AtStartup
+    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    $reglages = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
+        -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
+    Register-ScheduledTask -TaskName $nom -Action $action -Trigger $declencheur -Principal $principal -Settings $reglages -Force | Out-Null
+}
+# Diagnostic affiché si le serveur ne répond pas.
+function Afficher-EtatTache($nom) {
+    $info = Get-ScheduledTaskInfo -TaskName $nom -ErrorAction SilentlyContinue
+    $tache = Get-ScheduledTask -TaskName $nom -ErrorAction SilentlyContinue
+    if ($tache) { Write-Host "      Tâche : état $($tache.State), dernier lancement $($info.LastRunTime), résultat 0x$('{0:X}' -f $info.LastTaskResult)" }
+    else { Write-Host "      Tâche « $nom » introuvable." }
+    $batterie = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($batterie) { Write-Host "      Batterie : $($batterie.EstimatedChargeRemaining) % (statut $($batterie.BatteryStatus) ; 2 = sur secteur)" }
+}
 function Demarrer-Serveur {
     if ($SansTache) { return }
-    schtasks /run /tn $NomTache | Out-Null
+    # Réglages de la tâche remis à neuf à chaque mise à jour (anciennes versions : arrêt après 72 h, pas sur batterie).
+    $bat = Join-Path $Dossier "demarrer_serveur.bat"
+    if (Test-Path $bat) { try { Enregistrer-Tache $NomTache $bat } catch { Write-Host "Tâche non mise à jour : $($_.Exception.Message)" -ForegroundColor Yellow } }
+    Start-ScheduledTask -TaskName $NomTache -ErrorAction SilentlyContinue
 }
 function Copier($source, $cible, [string[]]$exclusions = @()) {
     $arguments = @($source, $cible, "/MIR", "/NFL", "/NDL", "/NJH", "/NJS", "/NP", "/XD", "__pycache__") + $exclusions
@@ -151,7 +173,10 @@ if (-not $SansTache) {
         Start-Sleep -Seconds 2
         try { $repond = (Invoke-WebRequest "http://127.0.0.1:$($info.port)/api/licence/" -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200 } catch { }
     }
-    if (-not $repond) { Write-Host "Attention : le logiciel ne répond pas encore. Consultez $Dossier\journaux\serveur.log" -ForegroundColor Yellow }
+    if (-not $repond) {
+        Write-Host "Attention : le logiciel ne répond pas encore. Consultez $Dossier\journaux\serveur.log" -ForegroundColor Yellow
+        Afficher-EtatTache $NomTache
+    }
     else { Ok "Le logiciel répond" }
 }
 Write-Host ""
