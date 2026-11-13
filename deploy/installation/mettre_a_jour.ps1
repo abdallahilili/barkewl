@@ -1,4 +1,4 @@
-# RAQEEM PHARMA - mise à jour chez le client (Rawafid Digital Services).
+﻿# RAQEEM PHARMA - mise à jour chez le client (Rawafid Digital Services).
 # Lancé par « Mettre_a_jour.bat » (en administrateur), depuis le dossier du NOUVEAU paquet.
 #
 # Sécurité : 1) sauvegarde de la base  2) copie de l'ancienne version  3) mise à jour
@@ -62,12 +62,15 @@ if (-not $SansTache) {
 }
 
 # ---------------------------------------------------------------- 1. Sauvegarde
+# Le nom du fichier est repéré par son extension (.sql.gz) et non par la phrase « Sauvegarde créée » :
+# selon la console, les accents peuvent arriver déformés.
 Titre "1/5  Sauvegarde de la base"
 Push-Location $backend
+$env:PYTHONIOENCODING = "utf-8"
 $sortie = & $py manage.py sauvegarder 2>&1 | Out-String
 $codeSauvegarde = $LASTEXITCODE
 Pop-Location
-if ($codeSauvegarde -ne 0 -or $sortie -notmatch "Sauvegarde créée : (\S+)") {
+if ($codeSauvegarde -ne 0 -or $sortie -notmatch ": (\S+\.sql(?:\.gz)?)") {
     Write-Host $sortie
     Write-Host "ERREUR : sauvegarde impossible. Mise à jour annulée, rien n'a été modifié." -ForegroundColor Red
     exit 1
