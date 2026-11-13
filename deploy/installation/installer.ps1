@@ -63,8 +63,13 @@ if (-not $SansTache) {
     $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $admin) { Echec "Lancez « Installer.bat » par clic droit > Exécuter en tant qu'administrateur." }
 }
-if (Test-Path (Join-Path $Dossier "app\backend\.env")) {
+if (Test-Path (Join-Path $Dossier "installation.json")) {
     Echec "RAQEEM PHARMA est déjà installé dans $Dossier. Pour une nouvelle version, utilisez « Mettre_a_jour.bat »."
+}
+if (Test-Path (Join-Path $Dossier "app\backend\.env")) {
+    # installation.json n'est écrit qu'à la toute fin : une installation précédente s'est arrêtée en route.
+    Write-Host "    Installation précédente incomplète détectée : elle est reprise." -ForegroundColor Yellow
+    Remove-Item (Join-Path $Dossier "app\backend\.env") -Force
 }
 
 # ---------------------------------------------------------------- 1. Python
@@ -108,7 +113,7 @@ $env:RAQEEM_MYSQL_ADMIN_MDP = $mdpAdminMysql; $env:RAQEEM_BD_NOM = $BdNom; $env:
 Natif { & $py (Join-Path $Paquet "outils_installation.py") base }
 $codeBase = $LASTEXITCODE
 Remove-Item Env:RAQEEM_MYSQL_ADMIN_MDP, Env:RAQEEM_BD_MDP -ErrorAction SilentlyContinue
-if ($codeBase -ne 0) { Echec "Vérifiez que MySQL est démarré et que le mot de passe est correct." }
+if ($codeBase -ne 0) { Echec "Base de données non préparée : voir le message ci-dessus (MySQL démarré ? mot de passe correct ?)." }
 Ok "Base « $BdNom » prête (compte dédié « $BdUtilisateur »)"
 
 # ---------------------------------------------------------------- 5. Configuration

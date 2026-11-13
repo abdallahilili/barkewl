@@ -23,6 +23,26 @@ def mot_de_passe():
     print("".join(secrets.choice(alphabet) for _ in range(24)))
 
 
+def verifier_format_lignes(curseur, version):
+    """
+    Index en utf8mb4 (arabe) : le format de ligne InnoDB doit être DYNAMIC (index jusqu'à 3072 octets).
+    Certains MySQL (WampServer) sont réglés en COMPACT (767 octets) : la création des tables échoue
+    (« Index column size too large »). On règle le serveur en DYNAMIC, le format par défaut des MySQL récents.
+    """
+    curseur.execute("SELECT @@innodb_default_row_format")
+    actuel = (curseur.fetchone()[0] or "").lower()
+    if actuel == "dynamic":
+        return
+    print(f"Format des tables du serveur : {actuel.upper()} -> DYNAMIC")
+    try:
+        # MySQL 8 : réglage conservé après redémarrage du serveur.
+        curseur.execute("SET PERSIST innodb_default_row_format = 'DYNAMIC'")
+    except Exception:
+        # MariaDB / anciens MySQL : valable jusqu'au prochain redémarrage de MySQL.
+        curseur.execute("SET GLOBAL innodb_default_row_format = 'DYNAMIC'")
+        print("  Conseil : ajoutez « innodb_default_row_format=dynamic » dans le fichier my.ini de MySQL.")
+
+
 def base():
     import pymysql
 
@@ -39,7 +59,24 @@ def base():
         sys.exit(f"Connexion à MySQL impossible : {erreur.args[-1] if erreur.args else erreur}")
     with connexion.cursor() as c:
         c.execute("SELECT VERSION()")
-        print("Serveur :", c.fetchone()[0])
+        version = c.fetchone()[0]
+        print("Serveur :", version)
+        verifier_format_lignes(c, version)
+
+        # Reprise d'une installation interrompue : une base sans aucun utilisateur n'a jamais servi,
+        # on peut la recréer. Une base qui contient des données n'est JAMAIS supprimée.
+        c.execute("SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = %s", (nom,))
+        if c.fetchone()[0]:
+            c.execute("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'utilisateurs'", (nom,))
+            utilisee = False
+            if c.fetchone()[0]:
+                c.execute(f"SELECT COUNT(*) FROM `{nom}`.`utilisateurs`")
+                utilisee = c.fetchone()[0] > 0
+            if utilisee:
+                sys.exit(f"La base « {nom} » existe déjà et contient des données : elle n'est pas modifiée. "
+                         "Utilisez « Mettre_a_jour.bat », ou choisissez un autre nom de base.")
+            c.execute(f"DROP DATABASE `{nom}`")
+            print(f"Base « {nom} » d'une installation interrompue (vide) : recréée.")
         c.execute(f"CREATE DATABASE IF NOT EXISTS `{nom}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
         for hote in ("localhost", "127.0.0.1"):
             c.execute("CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY %s", (utilisateur, hote, mdp))
