@@ -8,7 +8,8 @@
 #   2. vérifications : pages, connexion du propriétaire, mode production, hôte inconnu refusé, sauvegarde ;
 #   3. mise à jour normale (ancienne configuration « HOTES_AUTORISES=* » remplacée) ;
 #   4. mise à jour VOLONTAIREMENT CASSÉE : le retour automatique à la version précédente doit fonctionner ;
-#   5. nettoyage complet.
+#   5. désinstallation (sauvegardes conservées) ;
+#   6. nettoyage complet.
 # Affiche « TOUS LES TESTS SONT PASSÉS » ou la liste des échecs (code de sortie 1).
 param(
     [string]$Paquet = ""
@@ -129,10 +130,21 @@ try {
     $serveur = Lancer-Serveur
     Verifier "le logiciel répond après le retour automatique" ((Repond "/api/licence/") -eq 200)
     Stop-Process -Id $serveur.Id -Force -ErrorAction SilentlyContinue
+
+    # ------------------------------------------------------------ 5. Désinstallation
+    Write-Host "==> 5. Désinstallation" -ForegroundColor Cyan
+    Verifier "programme de désinstallation copié dans le dossier installé" ((Test-Path "$cible\Desinstaller.bat") -and (Test-Path "$cible\desinstaller.ps1"))
+    Lancer-MysqlInclus
+    $journal = powershell -NoProfile -ExecutionPolicy Bypass -File "$cible\desinstaller.ps1" -Dossier $cible -SansTache -Confirmer 2>&1 | Out-String
+    Verifier "désinstallation terminée sans erreur" ($LASTEXITCODE -eq 0)
+    Verifier "dossier d'installation supprimé" (-not (Test-Path $cible))
+    Verifier "MySQL inclus arrêté" (-not (Get-CimInstance Win32_Process -Filter "Name='mysqld.exe'" | Where-Object { $_.ExecutablePath -like "$cible*" }))
+    $copie = Get-ChildItem $essai -Directory -Filter "installation_sauvegardes_*" | Select-Object -First 1
+    Verifier "sauvegardes conservées après la désinstallation" ($copie -and @(Get-ChildItem $copie.FullName -Filter "*.sql.gz").Count -ge 2)
 }
 catch { Verifier "déroulement du test ($($_.Exception.Message))" $false }
 finally {
-    # ------------------------------------------------------------ 5. Nettoyage
+    # ------------------------------------------------------------ 6. Nettoyage
     Arreter-Tout
     Remove-Item -Recurse -Force $essai -ErrorAction SilentlyContinue
 }

@@ -106,3 +106,24 @@ function Activer-DemarrageMysql([int]$portBase) {
     if ($service.StartMode -ne "Auto") { Set-Service -Name $service.Name -StartupType Automatic -ErrorAction Stop }
     Ok "MySQL démarre automatiquement avec Windows (service « $($service.Name) »)"
 }
+
+# ------------------------------------------------------------------------------------------- Inscription Windows
+# Paramètres Windows > Applications installées : RAQEEM PHARMA y apparaît avec son icône, sa version et un
+# bouton « Désinstaller » (Desinstaller.bat). Le script de désinstallation est copié dans le dossier installé.
+$CleDesinstallation = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\RaqeemPharma"
+function Copier-Desinstallation($paquet, $dossier) {
+    Copy-Item (Join-Path $paquet "desinstaller.ps1"), (Join-Path $paquet "Desinstaller.bat") $dossier -Force -ErrorAction Stop
+}
+function Enregistrer-Programme($dossier, [string]$version) {
+    New-Item -Path $CleDesinstallation -Force | Out-Null
+    $tailleKo = [int]((Get-ChildItem $dossier -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1KB)
+    $valeurs = @{
+        DisplayName = "RAQEEM PHARMA"; DisplayVersion = $version; Publisher = "Rawafid Digital Services"
+        DisplayIcon = (Join-Path $dossier "raqeem.ico"); InstallLocation = $dossier
+        UninstallString = "cmd.exe /c `"$(Join-Path $dossier 'Desinstaller.bat')`""
+        HelpTelephone = "+222 46 63 59 96 / 31 17 70 08"; InstallDate = (Get-Date -Format "yyyyMMdd")
+    }
+    foreach ($nom in $valeurs.Keys) { Set-ItemProperty -Path $CleDesinstallation -Name $nom -Value $valeurs[$nom] }
+    foreach ($nom in "NoModify", "NoRepair") { New-ItemProperty -Path $CleDesinstallation -Name $nom -Value 1 -PropertyType DWord -Force | Out-Null }
+    New-ItemProperty -Path $CleDesinstallation -Name "EstimatedSize" -Value $tailleKo -PropertyType DWord -Force | Out-Null
+}

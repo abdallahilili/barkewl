@@ -150,6 +150,11 @@ if ((Test-Path (Join-Path $Paquet "outils\HeidiSQL\heidisql.exe")) -and (Test-Pa
         Ok "Accès à la base : $Dossier\Base_de_donnees.bat (administrateurs)"
     } catch { Write-Host "Outil d'accès à la base non installé : $($_.Exception.Message)" -ForegroundColor Yellow }
 }
+# Désinstallation : script à jour dans le dossier installé, version affichée dans les applications installées.
+try {
+    Copier-Desinstallation $Paquet $Dossier
+    if (-not $SansTache) { Enregistrer-Programme $Dossier $nouvelle }
+} catch { Write-Host "Désinstallation non mise à jour : $($_.Exception.Message)" -ForegroundColor Yellow }
 # Raccourci du bureau avec l'icône RAQEEM (les anciennes versions n'en avaient pas).
 if (-not $SansTache -and (Test-Path (Join-Path $Paquet "raqeem.ico"))) {
     try {

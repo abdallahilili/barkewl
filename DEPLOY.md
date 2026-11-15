@@ -42,7 +42,17 @@ La mise à jour sauvegarde la base, garde l'ancienne version, installe la nouvel
 En cas d'échec : **retour automatique** à la version précédente et à la base d'avant. Les données, la
 configuration et la licence sont conservées.
 
-## 4. Après l'installation
+## 4. Désinstaller
+
+- **Paramètres Windows > Applications > Applications installées > RAQEEM PHARMA > Désinstaller**,
+- ou `C:\RaqeemPharma\Desinstaller.bat` (clic droit > Exécuter en tant qu'administrateur).
+
+Il faut taper **OUI** pour confirmer. La désinstallation fait une **dernière sauvegarde**, copie **toutes les
+sauvegardes** dans `C:\RaqeemPharma_sauvegardes_<date>` (jamais supprimé), puis retire le démarrage
+automatique, le MySQL inclus (paquet complet), le raccourci et le dossier `C:\RaqeemPharma`.
+Avec WampServer, la base `raqeem` reste dans WampServer (à supprimer dans phpMyAdmin si besoin).
+
+## 5. Après l'installation
 
 - **Copie de secours des sauvegardes** (fortement conseillé) : dans `C:\RaqeemPharma\app\backend\.env`
   (Bloc-notes en administrateur), indiquer un dossier sur clé USB ou autre disque dans
@@ -52,7 +62,7 @@ configuration et la licence sont conservées.
   - paquet complet : `C:\RaqeemPharma\Base_de_donnees.bat` (HeidiSQL, administrateurs seulement).
   Toujours faire une sauvegarde avant de modifier des données.
 
-## 5. Dépannage
+## 6. Dépannage
 
 | Symptôme | À faire |
 |---|---|

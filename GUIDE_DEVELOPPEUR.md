@@ -187,13 +187,14 @@ Changer une version = modifier les deux fichiers, relancer `verrouiller_dependan
 | `construire_paquet.ps1` | construit les paquets (sur le PC Rawafid, avec Internet la première fois) |
 | `installer.ps1` + `Installer.bat` | installation chez le client (8 étapes) |
 | `mettre_a_jour.ps1` + `Mettre_a_jour.bat` | mise à jour avec retour automatique |
+| `desinstaller.ps1` + `Desinstaller.bat` | désinstallation (sauvegardes conservées) ; copiés dans le dossier installé et inscrits dans *Applications installées* |
 | `commun.ps1` | **fonctions partagées** par l'installation et la mise à jour (ne pas les recopier ailleurs) |
 | `outils_installation.py` | clé secrète, mots de passe, création de la base et du compte MySQL, version MySQL |
 | `preparer_mysql.py` | allège l'archive MySQL officielle (1 Go → 146 Mo) |
 | `generer_icone.py` | `raqeem.ico` (raccourci du bureau) à partir du logo de l'interface |
 | `verrouiller_dependances.py` | versions exactes + empreintes des composants Python |
 | `base_de_donnees.ps1` + `Base_de_donnees.bat` | ouverture de la base dans HeidiSQL (support) |
-| `tester_paquet.ps1` | test automatique du paquet complet |
+| `tester_paquet.ps1` | test automatique du paquet complet (installation, mise à jour, mise à jour cassée, désinstallation) |
 | `LISEZMOI.txt` | guide remis avec le paquet |
 | `cache/` (non versionné) | Python embarqué, MySQL, Visual C++, HeidiSQL téléchargés une fois |
 

@@ -315,6 +315,11 @@ if ($SansTache) {
     @("[InternetShortcut]", "URL=http://localhost:$Port/", "IconFile=$icone", "IconIndex=0") | Set-Content -Path $raccourci -Encoding ASCII
     Ok "Raccourci « RAQEEM PHARMA » sur le bureau"
 }
+try { Copier-Desinstallation $Paquet $Dossier } catch { Echec "Copie du programme de désinstallation impossible." }
+if (-not $SansTache) {
+    try { Enregistrer-Programme $Dossier $version; Ok "Inscrit dans Paramètres Windows > Applications installées (désinstallation)" }
+    catch { Write-Host "    Attention : inscription dans les applications installées impossible ($($_.Exception.Message))." -ForegroundColor Yellow }
+}
 
 # ---------------------------------------------------------------- 8. Vérification
 Titre "8/8  Vérification"
