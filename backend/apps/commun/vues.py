@@ -84,6 +84,44 @@ class TelechargerSauvegardeView(APIView):
         return FileResponse(open(chemin, "rb"), as_attachment=True, filename=nom, content_type="application/gzip")
 
 
+class SauvegardeUsbLecteursView(APIView):
+    """GET : clés USB et disques externes branchés (pour choisir celui à préparer). Administrateur uniquement."""
+
+    roles_lecture = ()
+    roles_ecriture = ()
+
+    def get(self, request):
+        return Response(sauvegarde.lecteurs_externes())
+
+
+class SauvegardeUsbPreparerView(APIView):
+    """POST {"racine": "E:\\\\"} : prépare le disque (dossier + marqueur) et y copie une sauvegarde. Administrateur uniquement."""
+
+    roles_lecture = ()
+    roles_ecriture = ()
+
+    def post(self, request):
+        racine = request.data.get("racine") if isinstance(request.data, dict) else None
+        resultat = sauvegarde.preparer_lecteur(str(racine or ""))
+        enregistrer_audit(request.user, "SAUVEGARDE", "Clé USB", reference=resultat["lecteur"]["racine"][:60],
+                          description="Préparation d'un disque de sauvegarde")
+        return Response(resultat)
+
+
+class SauvegardeUsbCopierView(APIView):
+    """POST : copie immédiate de la dernière sauvegarde sur les clés préparées et branchées. Administrateur uniquement."""
+
+    roles_lecture = ()
+    roles_ecriture = ()
+
+    def post(self, request):
+        resultats = sauvegarde.copier_vers_usb(forcer=True)
+        enregistrer_audit(request.user, "SAUVEGARDE", "Clé USB",
+                          reference=", ".join(r["racine"] for r in resultats)[:60] or "-",
+                          description="Copie manuelle vers la clé USB")
+        return Response(resultats)
+
+
 class JournalAuditViewSet(ViewSetLecture):
     """Journal d'audit (administrateur)."""
 

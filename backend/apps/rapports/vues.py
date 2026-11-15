@@ -244,7 +244,8 @@ class TableauDeBordView(APIView):
             donnees["dettes_fournisseurs"] = Achat.objects.filter(statut="VALIDE").aggregate(
                 t=_somme(ExpressionWrapper(F("total") - F("montant_paye"), output_field=MONNAIE)))["t"]
             etat = sauvegarde.etat_sauvegardes()
-            donnees["sauvegarde"] = {"derniere": etat["derniere"], "en_retard": etat["en_retard"]}
+            donnees["sauvegarde"] = {"derniere": etat["derniere"], "en_retard": etat["en_retard"],
+                                    "usb_en_retard": etat["usb"]["en_retard"], "usb_derniere_copie": etat["usb"]["derniere_copie"]}
 
         if role in (ADMIN, MAGASINIER, PHARMACIEN):
             donnees["stock"] = alertes.calculer_synthese()

@@ -30,11 +30,17 @@ En production : `DEBUG=0`, `CLE_SECRETE` longue et aléatoire, `HOTES_AUTORISES`
 
 ## Sauvegardes
 
-Automatiques toutes les 6 h tant que le serveur tourne (`backend/sauvegardes/`, copie facultative vers
-`DOSSIER_SAUVEGARDES_COPIE`), visibles dans *Paramètres > Sauvegardes*.
+Automatiques toutes les 6 h tant que le serveur tourne (`backend/sauvegardes/`), visibles dans
+*Paramètres > Sauvegardes*.
+
+Copie de secours : brancher une clé USB ou un disque externe, puis *Paramètres > Sauvegardes > Préparer un disque*.
+Laisser la clé branchée : une copie par jour, les 5 dernières sont gardées (`SAUVEGARDE_USB_INTERVALLE_HEURES`,
+`SAUVEGARDE_USB_NOMBRE`). Conseil : utiliser deux clés et les échanger chaque semaine, en gardant l'une hors de la
+pharmacie. Option avancée, toujours disponible : `DOSSIER_SAUVEGARDES_COPIE` (copie vers un dossier fixe).
 
 ```bash
 python manage.py sauvegarder                       # sauvegarde immédiate
+python manage.py sauvegarder --usb                 # sauvegarde immédiate + copie sur les clés préparées
 python manage.py restaurer_sauvegarde              # liste des sauvegardes
 python manage.py restaurer_sauvegarde <fichier>    # restauration (sauvegarde de sécurité faite avant)
 ```

@@ -27,8 +27,11 @@ PLUSIEURS POSTES (2 caisses ou plus)
 APRÈS L'INSTALLATION (à faire avec le pharmacien)
   - Paramètres > Pharmacie : nom, logo, téléphones.
   - Utilisateurs : un compte par personne ; code PIN pour le propriétaire et le pharmacien.
-  - Paramètres > Sauvegardes : régler une copie de secours (clé USB ou OneDrive) dans
-    C:\RaqeemPharma\app\backend\.env  (ligne DOSSIER_SAUVEGARDES_COPIE=), puis vérifier.
+  - Brancher une clé USB ou un disque externe, puis Paramètres > Sauvegardes > Préparer un disque.
+    Laisser la clé branchée : une copie par jour, les 5 dernières sont gardées.
+    Conseil : utiliser deux clés et les échanger chaque semaine, en gardant l'une hors de la pharmacie.
+    (Option avancée, toujours disponible : DOSSIER_SAUVEGARDES_COPIE= dans
+    C:\RaqeemPharma\app\backend\.env pour une copie vers un dossier fixe, par exemple OneDrive.)
   - Tester une restauration de sauvegarde.
 
 METTRE À JOUR (nouvelle version)

@@ -316,7 +316,9 @@ $lignesEnv = @(
     "# Copie de secours conseillée : clé USB, autre disque ou dossier OneDrive",
     "DOSSIER_SAUVEGARDES_COPIE=",
     "SAUVEGARDE_INTERVALLE_HEURES=6",
-    "SAUVEGARDES_JOURS_CONSERVATION=30"
+    "SAUVEGARDES_JOURS_CONSERVATION=30",
+    "SAUVEGARDE_USB_INTERVALLE_HEURES=24",
+    "SAUVEGARDE_USB_NOMBRE=5"
 )
 # UTF-8 sans BOM : la marque BOM de PowerShell 5.1 gênerait la lecture de la première ligne.
 [IO.File]::WriteAllLines($fichierEnv, $lignesEnv, (New-Object Text.UTF8Encoding $false))
