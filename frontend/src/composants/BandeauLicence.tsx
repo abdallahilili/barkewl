@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { EtatLicence, EVENEMENT_LICENCE, lienWhatsappLicence, lireLicence } from '../services/licence'
 
-import { t } from '../i18n'
+import { t, traduireServeur } from '../i18n'
 /** Bandeau en haut de chaque page quand la licence expire bientôt, a expiré ou n'est pas activée. */
 export function BandeauLicence() {
   const { utilisateur } = useAuth()
@@ -29,7 +29,7 @@ export function BandeauLicence() {
         <p className="flex items-start gap-2">
           {bloque ? <Lock size={16} className="mt-0.5 shrink-0" /> : <AlertTriangle size={16} className="mt-0.5 shrink-0" />}
           <span>
-            {bloque && <strong>{t('Mode consultation —')}{' '}</strong>}{etat.message}
+            {bloque && <strong>{t('Mode consultation —')}{' '}</strong>}{traduireServeur(etat.message)}
             {contact && <span className="ms-1 opacity-80">{etat.editeur.nom} : {contact}</span>}
           </span>
         </p>

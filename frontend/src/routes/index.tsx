@@ -4,12 +4,11 @@ import AchatDetail from '../pages/achats/AchatDetail'
 import Fournisseurs from '../pages/achats/Fournisseurs'
 import Utilisateurs from '../pages/administration/Utilisateurs'
 import Parametres from '../pages/administration/Parametres'
+import Referentiels from '../pages/administration/Referentiels'
 import HistoriqueSessions from '../pages/caisse/HistoriqueSessions'
 import SessionActuelle from '../pages/caisse/SessionActuelle'
-import Depots from '../pages/Depots'
 import DocumentVenteDetail from '../pages/facturation/DocumentVenteDetail'
 import Facturation from '../pages/facturation/Facturation'
-import Categories from '../pages/medicaments/Categories'
 import Lots from '../pages/medicaments/Lots'
 import Medicaments from '../pages/medicaments/Medicaments'
 import Rapports from '../pages/Rapports'
@@ -41,7 +40,6 @@ export const routesProtegees: RouteProtegee[] = [
   { chemin: '/stock/inventaires', module: 'stock_gestion', element: <Inventaires /> },
   { chemin: '/stock/inventaires/:id', module: 'stock_gestion', element: <InventaireDetail /> },
   { chemin: '/medicaments', module: 'medicaments', element: <Medicaments /> },
-  { chemin: '/categories', module: 'medicaments', element: <Categories /> },
   { chemin: '/lots', module: 'lots', element: <Lots /> },
   { chemin: '/achats', module: 'achats', element: <Achats /> },
   { chemin: '/achats/nouveau', module: 'achats', element: <AchatDetail /> },
@@ -52,8 +50,8 @@ export const routesProtegees: RouteProtegee[] = [
   { chemin: '/facturation/:id', module: 'facturation', element: <DocumentVenteDetail /> },
   { chemin: '/caisse', module: 'caisse', element: <SessionActuelle /> },
   { chemin: '/caisse/historique', module: 'caisse', element: <HistoriqueSessions /> },
-  { chemin: '/depots', module: 'depots', element: <Depots /> },
   { chemin: '/rapports', module: 'rapports', element: <Rapports /> },
   { chemin: '/administration/utilisateurs', module: 'administration', element: <Utilisateurs /> },
   { chemin: '/administration/parametres', module: 'administration', element: <Parametres /> },
+  { chemin: '/referentiels', module: 'administration', element: <Referentiels /> },
 ]

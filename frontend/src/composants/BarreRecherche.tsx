@@ -1,7 +1,8 @@
 import { Search } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { t } from '../i18n'
 
-export function BarreRecherche({ valeur, onChange, placeholder = 'Rechercher…', children }: {
+export function BarreRecherche({ valeur, onChange, placeholder = t('Rechercher…'), children }: {
   valeur: string; onChange: (v: string) => void; placeholder?: string; children?: ReactNode
 }) {
   return (

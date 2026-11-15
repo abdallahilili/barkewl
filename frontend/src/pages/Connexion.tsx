@@ -8,7 +8,7 @@ import { api } from '../services/api'
 import { EDITEUR_PAR_DEFAUT, EtatLicence, lireLicence, NOM_LOGICIEL } from '../services/licence'
 import { extraireErreur } from '../utilitaires/erreurs'
 
-import { estArabe, t } from '../i18n'
+import { estArabe, t, traduireServeur } from '../i18n'
 export default function Connexion() {
   const { connecter } = useAuth()
   const [identifiant, setIdentifiant] = useState('')
@@ -85,7 +85,7 @@ export default function Connexion() {
             {identite?.logo && <img src={identite.logo} alt="" className="h-8 w-8 rounded-md bg-white object-contain p-1" />}
             <span className="font-medium text-white">{nomPharmacie}</span>
           </span>
-          <span>© {new Date().getFullYear()} {NOM_LOGICIEL} · {licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</span>
+          <span>© {new Date().getFullYear()} {NOM_LOGICIEL} · {t(licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT)}</span>
         </div>
       </div>
 
@@ -158,7 +158,7 @@ export default function Connexion() {
 
           {licence && licence.statut !== 'ACTIVE' && (
             <div className={`mt-4 rounded-lg border px-3 py-2 text-xs ${licence.lecture_seule ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
-              <p>{licence.message}</p>
+              <p>{traduireServeur(licence.message)}</p>
               <p className="mt-1">{t('Code du PC :')}{' '}<strong className="tracking-wider">{licence.empreinte}</strong></p>
             </div>
           )}
@@ -166,7 +166,7 @@ export default function Connexion() {
           <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
             <ShieldCheck size={14} /> {' '}{t('Accès réservé au personnel autorisé de la pharmacie.')}
           </p>
-          <p className="mt-2 text-center text-xs text-slate-500 lg:hidden">{NOM_LOGICIEL} {' '}{t('— par')}{' '}{licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT}</p>
+          <p className="mt-2 text-center text-xs text-slate-500 lg:hidden">{NOM_LOGICIEL} {' '}{t('— par')}{' '}{t(licence?.editeur.nom ?? EDITEUR_PAR_DEFAUT)}</p>
         </div>
       </div>
     </div>

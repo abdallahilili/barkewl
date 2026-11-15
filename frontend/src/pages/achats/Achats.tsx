@@ -29,14 +29,14 @@ export default function Achats() {
       </BarreRecherche>
       <TableauDonnees<Achat>
         colonnes={[
-          { cle: 'reference', titre: t('Référence'), tri: 'reference', rendu: (a) => <span className="font-medium">{a.reference}</span> },
-          { cle: 'date_achat', titre: t('Date'), tri: 'date_achat', rendu: (a) => formaterDate(a.date_achat), exportRendu: (a) => formaterDateExport(a.date_achat) },
-          { cle: 'fournisseur_nom', titre: t('Fournisseur'), tri: 'fournisseur__nom' },
-          { cle: 'reference_facture', titre: t('N° de facture') },
-          { cle: 'depot_nom', titre: t('Dépôt') },
-          { cle: 'total', titre: t('Total'), alignement: 'droite', tri: 'total', rendu: (a) => formaterMontant(a.total) },
-          { cle: 'reste_a_payer', titre: t('Reste à payer'), alignement: 'droite', rendu: (a) => (a.statut === 'VALIDE' && Number(a.reste_a_payer) > 0 ? <span className="font-semibold text-red-700">{formaterMontant(a.reste_a_payer)}</span> : '—') },
-          { cle: 'statut', titre: t('État'), rendu: (a) => <Badge ton={tonStatut(a.statut)}>{libelleStatut(a.statut)}</Badge> },
+          { cle: 'reference', titre: 'Référence', tri: 'reference', rendu: (a) => <span className="font-medium">{a.reference}</span> },
+          { cle: 'date_achat', titre: 'Date', tri: 'date_achat', rendu: (a) => formaterDate(a.date_achat), exportRendu: (a) => formaterDateExport(a.date_achat) },
+          { cle: 'fournisseur_nom', titre: 'Fournisseur', tri: 'fournisseur__nom' },
+          { cle: 'reference_facture', titre: 'N° de facture' },
+          { cle: 'depot_nom', titre: 'Dépôt' },
+          { cle: 'total', titre: 'Total', alignement: 'droite', tri: 'total', rendu: (a) => formaterMontant(a.total) },
+          { cle: 'reste_a_payer', titre: 'Reste à payer', alignement: 'droite', rendu: (a) => (a.statut === 'VALIDE' && Number(a.reste_a_payer) > 0 ? <span className="font-semibold text-red-700">{formaterMontant(a.reste_a_payer)}</span> : '—') },
+          { cle: 'statut', titre: 'État', rendu: (a) => <Badge ton={tonStatut(a.statut)}>{libelleStatut(a.statut)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(a) => a.id}

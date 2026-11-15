@@ -10,9 +10,11 @@ import { Chargement, EtatVide, MessageErreur } from './EnTetePage'
 import { ModaleExport } from './ModaleExport'
 import { useNotifier } from './Notifications'
 
-import { t } from '../i18n'
+import { estArabe, t } from '../i18n'
 export interface Colonne<T> {
   cle: string
+  /** Texte français brut (pas de `t(...)` ici) : traduit à l'affichage et, indépendamment, à l'export
+   * dans la langue choisie par l'utilisateur dans la fenêtre d'export. */
   titre: string
   rendu?: (ligne: T) => ReactNode
   exportRendu?: (ligne: T) => string | number | null
@@ -63,7 +65,7 @@ interface Props<T> {
   parametresRequete?: Record<string, unknown>
 }
 
-const alignements = { gauche: 'text-left', droite: 'text-right', centre: 'text-center' }
+const alignements = { gauche: 'text-start', droite: 'text-end', centre: 'text-center' }
 const CLE_SELECTION = '_selection'
 
 interface EtatColonnes { ordre: string[]; tailles: Record<string, number>; cachees: string[]; epinglage: ColumnPinningState }
@@ -83,7 +85,7 @@ function sauverEtat(idTableau: string | undefined, etat: EtatColonnes) {
 
 export function TableauDonnees<T>({
   colonnes, lignes, chargement, erreur, total, page, nombrePages, onPage, tri, onTri, cleLigne, onClicLigne,
-  messageVide = 'Aucun résultat.', choixColonnes = true, titre = 'Export', exporter = true, idTableau,
+  messageVide = t('Aucun résultat.'), choixColonnes = true, titre = t('Export'), exporter = true, idTableau,
   actionsMasse, filtresColonnes = {}, onFiltreColonne, endpoint, parametresRequete,
 }: Props<T>) {
   const notifier = useNotifier()
@@ -130,7 +132,7 @@ export function TableauDonnees<T>({
   const colonnesTanStack = useMemo(() => {
     const def = colonnes.map((c) => ({
       id: c.cle,
-      header: c.titre,
+      header: t(c.titre),
       size: c.largeur ?? 160,
       enableSorting: !!c.tri,
       enableHiding: c.titre !== '',
@@ -151,6 +153,7 @@ export function TableauDonnees<T>({
     columns: colonnesTanStack,
     state: { columnVisibility, columnOrder, columnSizing, columnPinning, rowSelection },
     columnResizeMode: 'onChange',
+    columnResizeDirection: estArabe() ? 'rtl' : 'ltr',
     enableRowSelection: !!actionsMasse,
     getRowId: (row) => String(cleLigne(row)),
     onColumnVisibilityChange: setColumnVisibility,
@@ -187,15 +190,16 @@ export function TableauDonnees<T>({
   const lignesSelectionnees = table.getSelectedRowModel().rows.map((r) => r.original)
 
   const executerActionMasse = async (action: ActionMasse<T>) => {
-    const ok = await confirmer({ titre: action.libelle, message: `${action.confirmation} (${lignesSelectionnees.length} ligne${lignesSelectionnees.length > 1 ? 's' : ''})`, libelle: action.libelle, danger: action.danger })
+    const nombre = t(lignesSelectionnees.length > 1 ? '{n} lignes' : '{n} ligne', { n: lignesSelectionnees.length })
+    const ok = await confirmer({ titre: t(action.libelle), message: `${t(action.confirmation)} (${nombre})`, libelle: t(action.libelle), danger: action.danger })
     if (!ok) return
     setExecutionMasse(true)
     try {
       const resultat = await action.executer(lignesSelectionnees)
-      if (resultat.echecs.length === 0) notifier.succes(`${resultat.reussies} ligne(s) traitée(s) avec succès.`)
-      else notifier.erreur(`${resultat.reussies} réussie(s), ${resultat.echecs.length} refusée(s) : ${resultat.echecs.map((e) => `${e.libelle} (${e.raison})`).join(' · ')}`)
+      if (resultat.echecs.length === 0) notifier.succes(t('{n} ligne(s) traitée(s) avec succès.', { n: resultat.reussies }))
+      else notifier.erreur(t('{reussies} réussie(s), {refusees} refusée(s) : {details}', { reussies: resultat.reussies, refusees: resultat.echecs.length, details: resultat.echecs.map((e) => `${e.libelle} (${e.raison})`).join(' · ') }))
       setRowSelection({})
-    } catch { notifier.erreur("Échec de l'action groupée.") }
+    } catch { notifier.erreur(t("Échec de l'action groupée.")) }
     finally { setExecutionMasse(false) }
   }
 
@@ -222,7 +226,7 @@ export function TableauDonnees<T>({
         <div className="flex flex-wrap gap-2">
           {exporter && (
             <button type="button" className="btn-discret btn-petit" onClick={() => setModaleExport(true)}>
-              <Download size={14} /> Exporter
+              <Download size={14} /> {' '}{t('Exporter')}
             </button>
           )}
           {choixColonnes && colonnes.length > 3 && (
@@ -236,7 +240,7 @@ export function TableauDonnees<T>({
                     <label key={c.cle} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
                       <input type="checkbox" checked={columnVisibility[c.cle] !== false}
                         onChange={() => setColumnVisibility((v) => ({ ...v, [c.cle]: v[c.cle] === false }))} />
-                      {c.titre || c.cle}
+                      {t(c.titre) || c.cle}
                     </label>
                   ))}
                 </div>
@@ -250,7 +254,7 @@ export function TableauDonnees<T>({
       </div>
       <MessageErreur message={erreur ?? null} />
       <div className={`overflow-auto ${pleinEcran ? 'flex-1' : ''}`}>
-        <table className="w-full text-sm" style={{ width: table.getTotalSize() }}>
+        <table className="w-full table-fixed text-sm" style={{ width: table.getTotalSize() }}>
           <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
             <tr>
               {table.getHeaderGroups()[0].headers.map((header) => {
@@ -277,7 +281,7 @@ export function TableauDonnees<T>({
                       setGlissee(null)
                     }}>
                     {estSelection ? (
-                      <input type="checkbox" checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} aria-label="Tout sélectionner" />
+                      <input type="checkbox" checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} aria-label={t('Tout sélectionner')} />
                     ) : (
                       <div className="flex items-center gap-1">
                         {!estActions && <GripVertical size={12} className="shrink-0 cursor-grab text-slate-300" />}
@@ -289,14 +293,14 @@ export function TableauDonnees<T>({
                           </button>
                         ) : <span>{header.column.columnDef.header as string}</span>}
                         {!estActions && (
-                          <button type="button" className="ml-auto shrink-0 text-slate-300 hover:text-marque-600" onClick={() => basculerEpingle(header.column.id)}
-                            aria-label={epingle ? 'Détacher la colonne' : 'Figer la colonne'} title={epingle ? 'Détacher' : 'Figer à gauche'}>
+                          <button type="button" className="ms-auto shrink-0 text-slate-300 hover:text-marque-600" onClick={() => basculerEpingle(header.column.id)}
+                            aria-label={t(epingle ? 'Détacher la colonne' : 'Figer la colonne')} title={t(epingle ? 'Détacher' : 'Figer à gauche')}>
                             {epingle ? <PinOff size={12} /> : <Pin size={12} />}
                           </button>
                         )}
                         {header.column.getCanResize() && (
                           <div onMouseDown={header.getResizeHandler()} onTouchStart={header.getResizeHandler()}
-                            className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none hover:bg-marque-300" />
+                            className="absolute end-0 top-0 h-full w-1.5 cursor-col-resize select-none hover:bg-marque-300" />
                         )}
                       </div>
                     )}
@@ -313,14 +317,14 @@ export function TableauDonnees<T>({
                     <th key={header.id} className="px-2 py-1.5">
                       {colonne.optionsFiltre ? (
                         <select className="champ py-1 text-xs" value={filtresColonnes[colonne.cle] ?? ''} onChange={(e) => onFiltreColonne?.(colonne.cle, e.target.value)}>
-                          <option value="">Tous</option>
+                          <option value="">{t('Tous')}</option>
                           {colonne.optionsFiltre.map((o) => <option key={o.valeur} value={o.valeur}>{o.libelle}</option>)}
                         </select>
                       ) : (
                         <div className="relative">
-                          <input className="champ py-1 pr-6 text-xs" value={filtresColonnes[colonne.cle] ?? ''} placeholder="Filtrer…" onChange={(e) => onFiltreColonne?.(colonne.cle, e.target.value)} />
+                          <input className="champ py-1 pe-6 text-xs" value={filtresColonnes[colonne.cle] ?? ''} placeholder={t('Filtrer…')} onChange={(e) => onFiltreColonne?.(colonne.cle, e.target.value)} />
                           {filtresColonnes[colonne.cle] && (
-                            <button type="button" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400" onClick={() => onFiltreColonne?.(colonne.cle, '')} aria-label="Effacer le filtre"><X size={12} /></button>
+                            <button type="button" className="absolute end-1.5 top-1/2 -translate-y-1/2 text-slate-400" onClick={() => onFiltreColonne?.(colonne.cle, '')} aria-label={t('Effacer le filtre')}><X size={12} /></button>
                           )}
                         </div>
                       )}
@@ -339,10 +343,10 @@ export function TableauDonnees<T>({
                   const epingle = cell.column.getIsPinned()
                   return (
                     <td key={cell.id} style={{ width: cell.column.getSize(), left: epingle === 'left' ? cell.column.getStart('left') : undefined, right: epingle === 'right' ? cell.column.getAfter('right') : undefined }}
-                      className={`px-3 py-2.5 align-middle ${alignements[colonne?.alignement ?? 'gauche']} ${epingle ? 'sticky z-[5] bg-white' : ''}`}
+                      className={`overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5 align-middle ${alignements[colonne?.alignement ?? 'gauche']} ${epingle ? 'sticky z-[5] bg-white' : ''}`}
                       onClick={cell.column.id === CLE_SELECTION ? (e) => e.stopPropagation() : undefined}>
                       {cell.column.id === CLE_SELECTION
-                        ? <input type="checkbox" checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} aria-label="Sélectionner la ligne" />
+                        ? <input type="checkbox" checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} aria-label={t('Sélectionner la ligne')} />
                         : flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   )
@@ -355,7 +359,7 @@ export function TableauDonnees<T>({
       {chargement && lignes.length === 0 && <Chargement />}
       {!chargement && lignes.length === 0 && !erreur && <EtatVide titre={messageVide} />}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-3 py-2 text-xs text-slate-500 sans-impression">
-        <span>{total} {' '}{t('résultat')}{total > 1 ? 's' : ''}{chargement && lignes.length > 0 ? t(' — mise à jour…') : ''}</span>
+        <span>{total} {' '}{t(total > 1 ? 'résultats' : 'résultat')}{chargement && lignes.length > 0 ? t(' — mise à jour…') : ''}</span>
         {nombrePages > 1 && (
           <div className="flex items-center gap-1">
             <button className="btn-discret btn-petit" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label={t('Page précédente')}><ChevronLeft size={14} className="rtl:-scale-x-100" /></button>

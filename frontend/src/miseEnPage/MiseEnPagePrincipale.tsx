@@ -174,7 +174,7 @@ export function MiseEnPagePrincipale() {
   const signature = (
     <div className="shrink-0 border-t border-slate-100 px-4 py-3 text-xs leading-tight text-slate-500">
       
-      {t('par')}{' '}<span className="font-medium text-nuit-800">{EDITEUR_PAR_DEFAUT}</span>
+      {t('par')}{' '}<span className="font-medium text-nuit-800">{t(EDITEUR_PAR_DEFAUT)}</span>
     </div>
   );
 

@@ -42,13 +42,13 @@ export default function Inventaires() {
       <div className="mb-3"><select className="champ w-auto" value={statut} onChange={(e) => setStatut(e.target.value)} aria-label={t('État')}><option value="">{t('Tous les états')}</option><option value="BROUILLON">{t('En cours')}</option><option value="VALIDE">{t('Validés')}</option><option value="ANNULE">{t('Annulés')}</option></select></div>
       <TableauDonnees<Inventaire>
         colonnes={[
-          { cle: 'reference', titre: t('Référence'), tri: 'reference', rendu: (i) => <span className="font-medium">{i.reference}</span> },
-          { cle: 'date_creation', titre: t('Date'), tri: 'date_creation', rendu: (i) => formaterDateHeure(i.date_creation), exportRendu: (i) => formaterDateHeureExport(i.date_creation) },
-          { cle: 'depot_nom', titre: t('Dépôt') },
-          { cle: 'nombre_lignes', titre: t('Lignes'), alignement: 'droite' },
-          { cle: 'nombre_ecarts', titre: t('Écarts'), alignement: 'droite', rendu: (i) => (i.nombre_ecarts ? <span className="font-semibold text-amber-700">{i.nombre_ecarts}</span> : 0) },
-          { cle: 'utilisateur_nom', titre: t('Créé par') },
-          { cle: 'statut', titre: t('État'), rendu: (i) => <Badge ton={tonStatut(i.statut)}>{i.statut === 'BROUILLON' ? t('En cours') : libelleStatut(i.statut)}</Badge> },
+          { cle: 'reference', titre: 'Référence', tri: 'reference', rendu: (i) => <span className="font-medium">{i.reference}</span> },
+          { cle: 'date_creation', titre: 'Date', tri: 'date_creation', rendu: (i) => formaterDateHeure(i.date_creation), exportRendu: (i) => formaterDateHeureExport(i.date_creation) },
+          { cle: 'depot_nom', titre: 'Dépôt' },
+          { cle: 'nombre_lignes', titre: 'Lignes', alignement: 'droite' },
+          { cle: 'nombre_ecarts', titre: 'Écarts', alignement: 'droite', rendu: (i) => (i.nombre_ecarts ? <span className="font-semibold text-amber-700">{i.nombre_ecarts}</span> : 0) },
+          { cle: 'utilisateur_nom', titre: 'Créé par' },
+          { cle: 'statut', titre: 'État', rendu: (i) => <Badge ton={tonStatut(i.statut)}>{i.statut === 'BROUILLON' ? t('En cours') : libelleStatut(i.statut)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(i) => i.id}

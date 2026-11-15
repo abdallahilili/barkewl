@@ -7,30 +7,27 @@ import { Badge } from '../../composants/Badge'
 import { EditeurTexteRiche } from '../../composants/EditeurTexteRiche'
 import { EnTetePage, MessageErreur } from '../../composants/EnTetePage'
 import { useNotifier } from '../../composants/Notifications'
-import { PageCrud } from '../../composants/PageCrud'
 import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useListe } from '../../hooks/useListe'
 import { api } from '../../services/api'
-import type { Caisse, ModePaiement, Parametre } from '../../types'
-import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
+import type { Parametre } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
-import { definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie, formaterDateHeure, formaterDateHeureExport } from '../../utilitaires/formatage'
+import { definirCopyrightDocuments, definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie, formaterDateHeure, formaterDateHeureExport, libelleActionAudit, libelleObjetAudit } from '../../utilitaires/formatage'
 import { lireEntete, lireLogo } from '../../utilitaires/images'
-import type { Depot } from '../../types'
 
-import { t } from '../../i18n'
+import { t, traduireServeur } from '../../i18n'
 type Section = 'pharmacie' | 'documents' | 'medicaments'
-type Onglet = Section | 'caisses' | 'paiements' | 'sauvegardes' | 'licence' | 'audit'
+type Onglet = Section | 'sauvegardes' | 'licence' | 'audit'
 type Valeurs = Record<string, string>
 
 // Paramètres enregistrés par chaque section (chaque onglet n'envoie que les siens).
 const CLES_SECTION: Record<Section, string[]> = {
   pharmacie: [
-    'logo_pharmacie', 'entete_image', 'nom_pharmacie', 'adresse_pharmacie', 'telephone_pharmacie', 'telephone_pharmacie_2',
+    'logo_pharmacie', 'entete_image', 'nom_pharmacie', 'nom_pharmacie_ar', 'adresse_pharmacie', 'telephone_pharmacie', 'telephone_pharmacie_2',
     'telephone_pharmacie_3', 'whatsapp_pharmacie', 'whatsapp_pharmacie_2', 'email_pharmacie', 'nif_pharmacie',
   ],
   documents: [
-    'devise', 'afficher_logo_documents', 'bl_afficher_prix', 'message_recu', 'message_devis', 'message_bl', 'message_facture',
+    'devise', 'afficher_logo_documents', 'afficher_copyright_documents', 'bl_afficher_prix', 'message_recu', 'message_devis', 'message_bl', 'message_facture',
   ],
   medicaments: ['jours_alerte_peremption', 'stock_negatif_autorise', 'gestion_rayonnages_active'],
 }
@@ -41,6 +38,7 @@ function appliquerGlobaux(valeurs: Valeurs) {
   definirGestionRayonnages(valeurs.gestion_rayonnages_active === '1')
   definirNomPharmacie(valeurs.nom_pharmacie)
   definirLogoPharmacie(valeurs.logo_pharmacie)
+  definirCopyrightDocuments(valeurs.afficher_copyright_documents)
 }
 
 function Champ({ libelle, aide, pleine, children }: { libelle: string; aide?: string; pleine?: boolean; children: ReactNode }) {
@@ -148,6 +146,9 @@ function ParametresSection({ section }: { section: Section }) {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Champ libelle={t('Nom de la pharmacie')} pleine>{texte('nom_pharmacie')}</Champ>
+            <Champ libelle={t('Nom arabe de la pharmacie')} aide={t('Imprimé sous le nom de la pharmacie sur les reçus, devis, bons de livraison et factures.')} pleine>
+              <input className="champ" type="text" dir="rtl" lang="ar" value={v('nom_pharmacie_ar')} onChange={(e) => maj('nom_pharmacie_ar', e.target.value)} />
+            </Champ>
             <Champ libelle={t('Téléphone 1')}>{texte('telephone_pharmacie')}</Champ>
             <Champ libelle={t('Téléphone 2')}>{texte('telephone_pharmacie_2')}</Champ>
             <Champ libelle={t('Téléphone 3')}>{texte('telephone_pharmacie_3')}</Champ>
@@ -169,6 +170,9 @@ function ParametresSection({ section }: { section: Section }) {
                 onChange={(c) => maj('afficher_logo_documents', c ? '1' : '0')} />
             </div>
           </div>
+          <CaseACocher libelle={t('Afficher le copyright en bas des documents')} valeur={v('afficher_copyright_documents') !== '0'}
+            aide={t('Ligne très petite en bas des reçus, factures, rapports et exports : « Développé par : Rawafid Digital Services » et son téléphone.')}
+            onChange={(c) => maj('afficher_copyright_documents', c ? '1' : '0')} />
           <CaseACocher libelle={t('Afficher les colonnes Prix et Total sur le bon de livraison')} valeur={v('bl_afficher_prix') === '1'}
             aide={t('Désactivé : le bon de livraison ne contient alors ni prix ni total.')}
             onChange={(c) => maj('bl_afficher_prix', c ? '1' : '0')} />
@@ -211,14 +215,14 @@ function JournalAudit() {
   return (
     <TableauDonnees<EntreeAudit>
       colonnes={[
-        { cle: 'date_action', titre: t('Date'), rendu: (a) => formaterDateHeure(a.date_action), exportRendu: (a) => formaterDateHeureExport(a.date_action) },
-        { cle: 'utilisateur', titre: t('Utilisateur') },
-        { cle: 'action', titre: t('Action'), rendu: (a) => <Badge ton="bleu">{a.action}</Badge> },
-        { cle: 'entite', titre: t('Objet') },
-        { cle: 'reference', titre: t('Référence') },
-        { cle: 'detail', titre: t('Détail'), rendu: (a) => (
-          <span className="text-xs text-slate-600">{a.description || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} → ${JSON.stringify(a.nouvelle_valeur)}` : '')}</span>
-        ), exportRendu: (a) => a.description || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} -> ${JSON.stringify(a.nouvelle_valeur)}` : '') },
+        { cle: 'date_action', titre: 'Date', rendu: (a) => formaterDateHeure(a.date_action), exportRendu: (a) => formaterDateHeureExport(a.date_action) },
+        { cle: 'utilisateur', titre: 'Utilisateur' },
+        { cle: 'action', titre: 'Action', rendu: (a) => <Badge ton="bleu">{libelleActionAudit(a.action)}</Badge>, exportRendu: (a) => libelleActionAudit(a.action) },
+        { cle: 'entite', titre: 'Objet', rendu: (a) => libelleObjetAudit(a.entite), exportRendu: (a) => libelleObjetAudit(a.entite) },
+        { cle: 'reference', titre: 'Référence' },
+        { cle: 'detail', titre: 'Détail', rendu: (a) => (
+          <span className="text-xs text-slate-600">{traduireServeur(a.description) || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} → ${JSON.stringify(a.nouvelle_valeur)}` : '')}</span>
+        ), exportRendu: (a) => traduireServeur(a.description) || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} -> ${JSON.stringify(a.nouvelle_valeur)}` : '') },
       ]}
       titre={t('Journal d\'audit')}
       lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
@@ -231,14 +235,13 @@ export default function Parametres() {
   const [onglet, setOnglet] = useState<Onglet>(etatNavigation?.onglet ?? 'pharmacie')
   const onglets: { cle: Onglet; libelle: string; icone?: typeof Building2 }[] = [
     { cle: 'pharmacie', libelle: t('Pharmacie'), icone: Building2 }, { cle: 'documents', libelle: t('Reçus et documents'), icone: FileText },
-    { cle: 'medicaments', libelle: t('Médicaments et stock'), icone: Pill }, { cle: 'caisses', libelle: t('Caisses') },
-    { cle: 'paiements', libelle: t('Modes de paiement') }, { cle: 'sauvegardes', libelle: t('Sauvegardes'), icone: DatabaseBackup },
+    { cle: 'medicaments', libelle: t('Médicaments et stock'), icone: Pill }, { cle: 'sauvegardes', libelle: t('Sauvegardes'), icone: DatabaseBackup },
     { cle: 'licence', libelle: t('Licence'), icone: KeyRound },
     { cle: 'audit', libelle: t('Journal d\'audit') },
   ]
   return (
     <div>
-      <EnTetePage titre={t('Paramètres')} description={t('Pharmacie, reçus et documents, médicaments et stock, caisses et modes de paiement.')} />
+      <EnTetePage titre={t('Paramètres')} description={t('Pharmacie, reçus et documents, médicaments et stock, sauvegardes et licence. Les caisses et modes de paiement sont dans Référentiels.')} />
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
         {onglets.map((o) => (
           <button key={o.cle} onClick={() => setOnglet(o.cle)}
@@ -248,35 +251,6 @@ export default function Parametres() {
         ))}
       </div>
       {(onglet === 'pharmacie' || onglet === 'documents' || onglet === 'medicaments') && <ParametresSection key={onglet} section={onglet} />}
-      {onglet === 'caisses' && (
-        <PageCrud<Caisse> sansEntete titre={t('Caisses')} endpoint="/caisses/" nomElement={t('Caisse')} libelleNouveau={t('Nouvelle caisse')} placeholderRecherche={t('Rechercher une caisse…')}
-          actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les caisses sélectionnées ?'), executer: desactiverEnMasse<Caisse>('/caisses/', 'active', (c) => c.nom) }]}
-          colonnes={[
-            { cle: 'nom', titre: t('Nom'), tri: 'nom', rendu: (c) => <span className="font-medium">{c.nom}</span> },
-            { cle: 'depot_nom', titre: t('Dépôt de vente') },
-            { cle: 'active', titre: t('État'), rendu: (c) => <Badge ton={c.active ? 'vert' : 'gris'}>{c.active ? t('Active') : t('Désactivée')}</Badge> },
-          ]}
-          champs={[
-            { nom: 'nom', libelle: t('Nom'), type: 'texte', requis: true },
-            { nom: 'depot', libelle: t('Dépôt de vente'), type: 'select', requis: true, source: { endpoint: '/depots/', libelle: (d: Depot) => d.nom } },
-            { nom: 'active', libelle: t('État'), type: 'case', aide: t('Caisse active'), defaut: true },
-          ]} />
-      )}
-      {onglet === 'paiements' && (
-        <PageCrud<ModePaiement> sansEntete titre={t('Modes de paiement')} endpoint="/modes-paiement/" nomElement={t('Mode de paiement')} libelleNouveau={t('Nouveau mode de paiement')} placeholderRecherche={t('Rechercher…')}
-          actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les modes de paiement sélectionnés ?'), executer: desactiverEnMasse<ModePaiement>('/modes-paiement/', 'actif', (m) => m.nom) }]}
-          colonnes={[
-            { cle: 'nom', titre: t('Nom'), tri: 'nom', rendu: (m) => <span className="font-medium">{m.nom}</span> },
-            { cle: 'type', titre: t('Type'), rendu: (m) => ({ ESPECES: t('Espèces'), MOBILE: t('Paiement mobile'), CARTE: t('Carte'), VIREMENT: t('Virement'), AUTRE: t('Autre') }[m.type]) },
-            { cle: 'actif', titre: t('État'), rendu: (m) => <Badge ton={m.actif ? 'vert' : 'gris'}>{m.actif ? t('Actif') : t('Désactivé')}</Badge> },
-          ]}
-          champs={[
-            { nom: 'nom', libelle: t('Nom'), type: 'texte', requis: true },
-            { nom: 'type', libelle: t('Type'), type: 'select', requis: true, defaut: 'ESPECES',
-              options: [{ valeur: 'ESPECES', libelle: t('Espèces') }, { valeur: 'MOBILE', libelle: t('Paiement mobile') }, { valeur: 'CARTE', libelle: t('Carte bancaire') }, { valeur: 'VIREMENT', libelle: t('Virement') }, { valeur: 'AUTRE', libelle: t('Autre') }] },
-            { nom: 'actif', libelle: t('État'), type: 'case', aide: t('Mode de paiement actif'), defaut: true },
-          ]} />
-      )}
       {onglet === 'sauvegardes' && <Sauvegardes />}
       {onglet === 'licence' && <Licence />}
       {onglet === 'audit' && <JournalAudit />}

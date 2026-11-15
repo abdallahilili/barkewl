@@ -5,13 +5,14 @@ import { api } from '../services/api'
 import { erreursParChamp, extraireErreur } from '../utilitaires/erreurs'
 import { BarreRecherche } from './BarreRecherche'
 import { Champ } from './Champ'
+import { ChoixRecherchable } from './ChoixRecherchable'
 import { EnTetePage, MessageErreur } from './EnTetePage'
 import { Modale } from './Modale'
 import { useNotifier } from './Notifications'
 import { ActionMasse, Colonne, TableauDonnees } from './TableauDonnees'
 
 import { t } from '../i18n'
-type Valeur = string | number | boolean | null | undefined
+export type Valeur = string | number | boolean | null | undefined
 export type Formulaire = Record<string, Valeur>
 
 export interface ChampDef {
@@ -22,10 +23,26 @@ export interface ChampDef {
   aide?: string
   defaut?: Valeur
   options?: { valeur: string | number; libelle: string }[]
-  source?: { endpoint: string; libelle: (o: any) => string; params?: Record<string, string | number>; vide?: string } // eslint-disable-line @typescript-eslint/no-explicit-any
+  /** `valeur` : valeur enregistrée pour une option (par défaut son id) ; pour un champ texte alimenté par un référentiel
+   * (forme, dosage), c'est le nom. */
+  source?: { endpoint: string; libelle: (o: any) => string; params?: Record<string, string | number>; vide?: string; valeur?: (o: any) => string; /** Liste avec recherche et ajout d'une valeur absente au référentiel (administrateur). */ ajoutPossible?: boolean } // eslint-disable-line @typescript-eslint/no-explicit-any
   masque?: (f: Formulaire, enEdition: boolean) => boolean
   desactiveEnEdition?: boolean
   entiere?: boolean
+  /** Suggère automatiquement la valeur de ce champ à partir d'un autre (ex. prix de vente depuis le prix d'achat).
+   * Suspendu dès que l'utilisateur modifie ce champ directement, pour ne jamais écraser une saisie manuelle. */
+  suggererDepuis?: { champ: string; calcul: (valeurSource: number, formulaire: Formulaire) => number }
+}
+
+/** Applique les suggestions dépendant du champ `nom` qui vient de changer (voir `ChampDef.suggererDepuis`). */
+export function appliquerSuggestions(champs: ChampDef[], nom: string, formulaire: Formulaire, champsModifies: Set<string>): Formulaire {
+  let suivant = formulaire
+  for (const c of champs) {
+    if (c.suggererDepuis?.champ === nom && !champsModifies.has(c.nom)) {
+      suivant = { ...suivant, [c.nom]: c.suggererDepuis.calcul(Number(formulaire[nom]) || 0, suivant) }
+    }
+  }
+  return suivant
 }
 
 export interface FiltreDef {
@@ -39,10 +56,15 @@ function SelectSource({ source, valeur, onChange, vide, disabled }: {
   source: NonNullable<ChampDef['source']>; valeur: Valeur; onChange: (v: string) => void; vide?: string; disabled?: boolean
 }) {
   const options = useOptions<{ id: number }>(source.endpoint, source.params)
+  const courant = String(valeur ?? '')
+  const valeurDe = (o: { id: number }) => (source.valeur ? source.valeur(o) : o.id)
+  // Valeur déjà enregistrée mais absente de la liste (référentiel désactivé ou modifié) : on la garde plutôt que de l'effacer.
+  const absente = !!source.valeur && courant !== '' && !options.some((o) => String(valeurDe(o)) === courant)
   return (
-    <select className="champ" value={String(valeur ?? '')} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
+    <select className="champ" value={courant} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
       <option value="">{vide ?? source.vide ?? t('— Choisir —')}</option>
-      {options.map((o) => <option key={o.id} value={o.id}>{source.libelle(o)}</option>)}
+      {absente && <option value={courant}>{courant}</option>}
+      {options.map((o) => <option key={o.id} value={valeurDe(o)}>{source.libelle(o)}</option>)}
     </select>
   )
 }
@@ -59,6 +81,8 @@ export function ChampFormulaire({ def, formulaire, maj, erreur, enEdition }: {
         <input type="checkbox" checked={!!valeur} onChange={(e) => maj(def.nom, e.target.checked)} /> {def.aide ?? t('Oui')}
       </label>
     )
+  } else if (def.type === 'select' && def.source?.ajoutPossible) {
+    entree = <ChoixRecherchable source={def.source} valeur={valeur} onChange={(v) => maj(def.nom, v)} disabled={desactive} />
   } else if (def.type === 'select' && def.source) {
     entree = <SelectSource source={def.source} valeur={valeur} onChange={(v) => maj(def.nom, v)} disabled={desactive} />
   } else if (def.type === 'select') {
@@ -96,7 +120,10 @@ export function construireCharge(champs: ChampDef[], formulaire: Formulaire, enE
     if (c.type === 'motdepasse' && enEdition && !v) continue
     if (c.type === 'nombre' || c.type === 'decimal') charge[c.nom] = v === '' || v == null ? (c.requis ? v : null) : Number(v)
     else if (c.type === 'date') charge[c.nom] = v || null
-    else if (c.type === 'select') charge[c.nom] = v === '' || v == null ? null : (c.options?.some((o) => typeof o.valeur === 'string') ? v : Number(v))
+    else if (c.type === 'select') {
+      const texte = !!c.source?.valeur  // la valeur est un texte (nom d'un référentiel), jamais un identifiant
+      charge[c.nom] = v === '' || v == null ? (texte ? '' : null) : (texte || c.options?.some((o) => typeof o.valeur === 'string') ? v : Number(v))
+    }
     else charge[c.nom] = v
   }
   return charge
@@ -139,17 +166,23 @@ export function PageCrud<T extends { id: number }>({
   const [ouvert, setOuvert] = useState(false)
   const [enEdition, setEnEdition] = useState<T | null>(null)
   const [formulaire, setFormulaire] = useState<Formulaire>({})
+  const [champsModifies, setChampsModifies] = useState<Set<string>>(new Set())
   const [erreurs, setErreurs] = useState<Record<string, string>>({})
   const [erreurGlobale, setErreurGlobale] = useState<string | null>(null)
   const [envoi, setEnvoi] = useState(false)
 
   const valeursParDefaut = (): Formulaire => Object.fromEntries(champs.map((c) => [c.nom, c.defaut ?? (c.type === 'case' ? false : '')]))
 
-  const ouvrirCreation = () => { setEnEdition(null); setFormulaire(valeursParDefaut()); setErreurs({}); setErreurGlobale(null); setOuvert(true) }
+  const ouvrirCreation = () => { setEnEdition(null); setFormulaire(valeursParDefaut()); setChampsModifies(new Set()); setErreurs({}); setErreurGlobale(null); setOuvert(true) }
   const ouvrirEdition = (ligne: T) => {
     const f: Formulaire = valeursParDefaut()
     for (const c of champs) { if (c.type !== 'motdepasse') f[c.nom] = (ligne as unknown as Formulaire)[c.nom] ?? f[c.nom] }
-    setEnEdition(ligne); setFormulaire(f); setErreurs({}); setErreurGlobale(null); setOuvert(true)
+    setEnEdition(ligne); setFormulaire(f); setChampsModifies(new Set()); setErreurs({}); setErreurGlobale(null); setOuvert(true)
+  }
+
+  const majChamp = (nom: string, v: Valeur) => {
+    setChampsModifies((s) => new Set(s).add(nom))
+    setFormulaire((f) => appliquerSuggestions(champs, nom, { ...f, [nom]: v }, champsModifies))
   }
 
   const soumettre = async (e: FormEvent) => {
@@ -223,7 +256,7 @@ export function PageCrud<T extends { id: number }>({
             {champs.filter((c) => !c.masque || c.masque(formulaire, !!enEdition)).map((c) => (
               <div key={c.nom} className={c.type === 'zone' ? 'sm:col-span-2' : ''}>
                 <ChampFormulaire def={c} formulaire={formulaire} enEdition={!!enEdition} erreur={erreurs[c.nom]}
-                  maj={(nom, v) => setFormulaire((f) => ({ ...f, [nom]: v }))} />
+                  maj={majChamp} />
               </div>
             ))}
           </div>

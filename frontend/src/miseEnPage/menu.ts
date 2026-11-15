@@ -1,6 +1,6 @@
 import {
-  Archive, ArrowLeftRight, BarChart3, Boxes, Building2, ClipboardCheck, ClipboardList, FileText, History, LayoutDashboard,
-  LucideIcon, Package, Pill, Receipt, Settings, ShoppingCart, Store, Tags, Truck, Users, UserCog, Wallet, PackagePlus, PackageMinus, Layers,
+  Archive, ArrowLeftRight, BarChart3, Boxes, Building2, ClipboardCheck, ClipboardList, FileText, History, LayoutDashboard, Library,
+  LucideIcon, Package, Pill, Receipt, Settings, ShoppingCart, Truck, Users, UserCog, Wallet, PackagePlus, PackageMinus, Layers,
 } from 'lucide-react'
 
 import { t } from '../i18n'
@@ -33,7 +33,6 @@ export const menu: GroupeMenu[] = [
     titre: t('Médicaments'),
     elements: [
       { libelle: t('Médicaments'), chemin: '/medicaments', module: 'medicaments', icone: Pill },
-      { libelle: t('Catégories'), chemin: '/categories', module: 'medicaments', icone: Tags },
       { libelle: t('Lots'), chemin: '/lots', module: 'lots', icone: Layers },
     ],
   },
@@ -60,7 +59,6 @@ export const menu: GroupeMenu[] = [
   {
     titre: t('Gestion'),
     elements: [
-      { libelle: t('Dépôts'), chemin: '/depots', module: 'depots', icone: Store },
       { libelle: t('Rapports'), chemin: '/rapports', module: 'rapports', icone: BarChart3 },
     ],
   },
@@ -68,6 +66,7 @@ export const menu: GroupeMenu[] = [
     titre: t('Administration'),
     elements: [
       { libelle: t('Utilisateurs'), chemin: '/administration/utilisateurs', module: 'administration', icone: UserCog },
+      { libelle: t('Référentiels'), chemin: '/referentiels', module: 'administration', icone: Library },
       { libelle: t('Paramètres'), chemin: '/administration/parametres', module: 'administration', icone: Settings },
     ],
   },

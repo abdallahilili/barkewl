@@ -8,7 +8,7 @@ import { EtatLicence, EVENEMENT_LICENCE, lienWhatsappLicence, lireLicence, NOM_L
 import { extraireErreur } from '../utilitaires/erreurs'
 import { formaterDate } from '../utilitaires/formatage'
 
-import { t } from '../i18n'
+import { t, traduireServeur } from '../i18n'
 const STATUTS: Record<StatutLicence, [string, 'vert' | 'orange' | 'rouge' | 'gris']> = {
   ACTIVE: [t('Active'), 'vert'], EXPIRE_BIENTOT: [t('Expire bientôt'), 'orange'], GRACE: [t('Expirée — délai de grâce'), 'orange'],
   EXPIREE: [t('Expirée'), 'rouge'], NON_ACTIVEE: [t('Non activée'), 'gris'], INVALIDE: [t('Invalide'), 'rouge'], HORLOGE: [t('Date du PC incorrecte'), 'rouge'],
@@ -52,11 +52,11 @@ export function Licence() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm text-slate-500">{t('Logiciel')}</p>
-            <p className="text-lg font-semibold">{NOM_LOGICIEL} {etat.version && <span className="chiffres text-sm font-medium text-marque-700" dir="ltr">v{etat.version}</span>} <span className="text-sm font-normal text-slate-500">{t('— un produit')}{' '}{etat.editeur.nom}</span></p>
+            <p className="text-lg font-semibold">{NOM_LOGICIEL} {etat.version && <span className="chiffres text-sm font-medium text-marque-700" dir="ltr">v{etat.version}</span>} <span className="text-sm font-normal text-slate-500">{t('— un produit')}{' '}{t(etat.editeur.nom)}</span></p>
           </div>
           <Badge ton={ton}>{libelle}</Badge>
         </div>
-        {etat.message && <p className={`mt-3 rounded-md px-3 py-2 text-sm ${etat.lecture_seule ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900'}`}>{etat.message}</p>}
+        {etat.message && <p className={`mt-3 rounded-md px-3 py-2 text-sm ${etat.lecture_seule ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900'}`}>{traduireServeur(etat.message)}</p>}
         <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div><dt className="text-slate-500">{t('Pharmacie')}</dt><dd className="font-medium">{etat.client ?? '—'}</dd></div>
           <div><dt className="text-slate-500">{t('Offre')}</dt><dd className="font-medium">{etat.offre_details ? t(etat.offre_details.nom) : '—'}</dd></div>

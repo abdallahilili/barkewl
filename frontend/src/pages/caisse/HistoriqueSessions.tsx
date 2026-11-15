@@ -13,7 +13,7 @@ import type { MouvementCaisse, SessionCaisse } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { formaterDateHeure, formaterDateHeureExport, formaterMontant, libelleStatut, libelleTypeMouvement } from '../../utilitaires/formatage'
 
-import { t } from '../../i18n'
+import { t, traduireServeur } from '../../i18n'
 function ClotureAdmin({ session, onCloturee }: { session: SessionCaisse; onCloturee: (s: SessionCaisse) => void }) {
   const notifier = useNotifier()
   const [ouverte, setOuverte] = useState(false)
@@ -82,7 +82,7 @@ function DetailSession({ session, admin, onFermer, onCloturee }: {
               <thead className="bg-slate-50 text-start text-slate-600"><tr><th className="px-3 py-2">{t('Heure')}</th><th className="px-3 py-2">{t('Type')}</th><th className="px-3 py-2">{t('Paiement')}</th><th className="px-3 py-2">{t('Motif')}</th><th className="px-3 py-2 text-end">{t('Montant')}</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {mouvements.map((m) => (
-                  <tr key={m.id}><td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</td><td className="px-3 py-2">{m.mode_paiement_nom}</td><td className="px-3 py-2">{m.motif}</td><td className="px-3 py-2 text-end">{formaterMontant(m.montant)}</td></tr>
+                  <tr key={m.id}><td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td><td className="px-3 py-2">{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</td><td className="px-3 py-2">{m.mode_paiement_nom}</td><td className="px-3 py-2">{traduireServeur(m.motif)}</td><td className="px-3 py-2 text-end">{formaterMontant(m.montant)}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -115,15 +115,15 @@ export default function HistoriqueSessions() {
       <TableauDonnees<SessionCaisse>
         colonnes={[
           { cle: 'id', titre: 'N°' },
-          { cle: 'date_ouverture', titre: t('Ouverture'), tri: 'date_ouverture', rendu: (s) => formaterDateHeure(s.date_ouverture), exportRendu: (s) => formaterDateHeureExport(s.date_ouverture) },
-          { cle: 'date_fermeture', titre: t('Clôture'), tri: 'date_fermeture', rendu: (s) => formaterDateHeure(s.date_fermeture), exportRendu: (s) => formaterDateHeureExport(s.date_fermeture) },
-          { cle: 'caissier_nom', titre: t('Caissier') },
-          { cle: 'caisse_nom', titre: t('Caisse') },
-          { cle: 'total_ventes', titre: t('Ventes'), alignement: 'droite', rendu: (s) => formaterMontant(s.resume.total_ventes), exportRendu: (s) => s.resume.total_ventes },
-          { cle: 'montant_attendu', titre: t('Attendu'), alignement: 'droite', rendu: (s) => formaterMontant(s.resume.montant_attendu), exportRendu: (s) => s.resume.montant_attendu },
-          { cle: 'montant_reel', titre: t('Compté'), alignement: 'droite', rendu: (s) => formaterMontant(s.montant_reel) },
-          { cle: 'ecart', titre: t('Écart'), alignement: 'droite', tri: 'ecart', rendu: (s) => s.ecart == null ? '—' : <span className={s.ecart === 0 ? 'text-emerald-700' : 'font-semibold text-red-700'}>{s.ecart > 0 ? '+' : ''}{formaterMontant(s.ecart)}</span> },
-          { cle: 'statut', titre: t('État'), rendu: (s) => <Badge ton={tonStatut(s.statut)}>{libelleStatut(s.statut)}</Badge> },
+          { cle: 'date_ouverture', titre: 'Ouverture', tri: 'date_ouverture', rendu: (s) => formaterDateHeure(s.date_ouverture), exportRendu: (s) => formaterDateHeureExport(s.date_ouverture) },
+          { cle: 'date_fermeture', titre: 'Clôture', tri: 'date_fermeture', rendu: (s) => formaterDateHeure(s.date_fermeture), exportRendu: (s) => formaterDateHeureExport(s.date_fermeture) },
+          { cle: 'caissier_nom', titre: 'Caissier' },
+          { cle: 'caisse_nom', titre: 'Caisse' },
+          { cle: 'total_ventes', titre: 'Ventes', alignement: 'droite', rendu: (s) => formaterMontant(s.resume.total_ventes), exportRendu: (s) => s.resume.total_ventes },
+          { cle: 'montant_attendu', titre: 'Attendu', alignement: 'droite', rendu: (s) => formaterMontant(s.resume.montant_attendu), exportRendu: (s) => s.resume.montant_attendu },
+          { cle: 'montant_reel', titre: 'Compté', alignement: 'droite', rendu: (s) => formaterMontant(s.montant_reel) },
+          { cle: 'ecart', titre: 'Écart', alignement: 'droite', tri: 'ecart', rendu: (s) => s.ecart == null ? '—' : <span className={s.ecart === 0 ? 'text-emerald-700' : 'font-semibold text-red-700'}>{s.ecart > 0 ? '+' : ''}{formaterMontant(s.ecart)}</span> },
+          { cle: 'statut', titre: 'État', rendu: (s) => <Badge ton={tonStatut(s.statut)}>{libelleStatut(s.statut)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(s) => s.id}

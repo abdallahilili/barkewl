@@ -108,12 +108,12 @@ export default function Transferts() {
       </div>
       <TableauDonnees<Transfert>
         colonnes={[
-          { cle: 'reference', titre: t('Référence'), tri: 'reference', rendu: (t) => <span className="font-medium">{t.reference}</span> },
-          { cle: 'date_transfert', titre: t('Date'), tri: 'date_transfert', rendu: (t) => formaterDateHeure(t.date_transfert), exportRendu: (t) => formaterDateHeureExport(t.date_transfert) },
-          { cle: 'trajet', titre: t('Trajet'), rendu: (t) => `${t.depot_source_nom} → ${t.depot_destination_nom}`, exportRendu: (t) => `${t.depot_source_nom} -> ${t.depot_destination_nom}` },
-          { cle: 'lignes', titre: t('Lots'), alignement: 'droite', rendu: (t) => t.lignes.length, exportRendu: (t) => t.lignes.length },
-          { cle: 'utilisateur_nom', titre: t('Utilisateur') },
-          { cle: 'statut', titre: t('État'), rendu: (t) => <Badge ton={tonStatut(t.statut)}>{libelleStatut(t.statut)}</Badge> },
+          { cle: 'reference', titre: 'Référence', tri: 'reference', rendu: (t) => <span className="font-medium">{t.reference}</span> },
+          { cle: 'date_transfert', titre: 'Date', tri: 'date_transfert', rendu: (t) => formaterDateHeure(t.date_transfert), exportRendu: (t) => formaterDateHeureExport(t.date_transfert) },
+          { cle: 'trajet', titre: 'Trajet', rendu: (t) => `${t.depot_source_nom} → ${t.depot_destination_nom}`, exportRendu: (t) => `${t.depot_source_nom} -> ${t.depot_destination_nom}` },
+          { cle: 'lignes', titre: 'Lots', alignement: 'droite', rendu: (t) => t.lignes.length, exportRendu: (t) => t.lignes.length },
+          { cle: 'utilisateur_nom', titre: 'Utilisateur' },
+          { cle: 'statut', titre: 'État', rendu: (t) => <Badge ton={tonStatut(t.statut)}>{libelleStatut(t.statut)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(t) => t.id}

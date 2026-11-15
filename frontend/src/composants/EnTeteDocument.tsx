@@ -1,17 +1,27 @@
+import type { ReactNode } from 'react'
 import type { IdentiteDocument } from '../types'
+import { t } from '../i18n'
 import { htmlSur, texteVide } from '../utilitaires/texteRiche'
 
-function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
-  return <div className="recu-entete-ligne"><span className="recu-entete-label">{libelle} :</span><span className="recu-entete-valeur">{valeur}</span></div>
+/** Libellé d'une ligne de l'en-tête : `fin` (« : », « 1 : »…) est ajouté au texte traduit. */
+export type TraduireEntete = (texte: string, fin?: string) => ReactNode
+
+function Ligne({ libelle, valeur }: { libelle: ReactNode; valeur: string }) {
+  return <div className="recu-entete-ligne"><span className="recu-entete-label">{libelle}</span><span className="recu-entete-valeur">{valeur}</span></div>
 }
 
 /** Libellé numéroté seulement s'il y a plusieurs valeurs (« Tél : » ou « Tél 1 : », « Tél 2 : »). */
-const numerote = (libelle: string, valeurs: (string | undefined)[]) =>
-  valeurs.filter(Boolean).map((valeur, i, tout) => <Ligne key={`${libelle}${i}`} libelle={tout.length === 1 ? libelle : `${libelle} ${i + 1}`} valeur={valeur!} />)
+const numerote = (traduire: TraduireEntete, libelle: string, valeurs: (string | undefined)[]) =>
+  valeurs.filter(Boolean).map((valeur, i, tout) => (
+    <Ligne key={`${libelle}${i}`} libelle={traduire(libelle, tout.length === 1 ? ' :' : ` ${i + 1} :`)} valeur={valeur!} />
+  ))
+
+const traduireSimple: TraduireEntete = (texte, fin = '') => t(texte) + fin
 
 /** En-tête commun des reçus, devis, bons de livraison et factures : image personnalisée si elle est
- * définie dans les paramètres, sinon logo, nom et coordonnées de la pharmacie. */
-export function EnTeteDocument({ identite }: { identite: IdentiteDocument }) {
+ * définie dans les paramètres, sinon logo, nom (arabe au-dessus, plus grand ; français dessous) et coordonnées.
+ * `traduire` permet d'imposer une langue (ou les deux à la fois) indépendamment de l'interface courante. */
+export function EnTeteDocument({ identite, traduire = traduireSimple }: { identite: IdentiteDocument; traduire?: TraduireEntete }) {
   if (identite.entete_image) {
     return (
       <div className="recu-entete-personnalise">
@@ -31,14 +41,17 @@ export function EnTeteDocument({ identite }: { identite: IdentiteDocument }) {
             </svg>
           </div>
         )}
-        <h1 className="recu-pharmacie-nom">{identite.nom}</h1>
+        <div className={identite.nom_ar ? 'recu-pharmacie-noms recu-pharmacie-noms--bi' : 'recu-pharmacie-noms'}>
+          {identite.nom_ar && <p className="recu-pharmacie-nom-ar" dir="rtl" lang="ar">{identite.nom_ar}</p>}
+          <h1 className="recu-pharmacie-nom">{identite.nom}</h1>
+        </div>
       </div>
       <div className="recu-entete-droite">
-        {identite.adresse && <Ligne libelle="Adresse" valeur={identite.adresse} />}
-        {numerote('Tél', [identite.telephone, identite.telephone_2, identite.telephone_3])}
-        {numerote('WhatsApp', [identite.whatsapp, identite.whatsapp_2])}
-        {identite.email && <Ligne libelle="Email" valeur={identite.email} />}
-        {identite.nif && <Ligne libelle="NIF" valeur={identite.nif} />}
+        {identite.adresse && <Ligne libelle={traduire('Adresse', ' :')} valeur={identite.adresse} />}
+        {numerote(traduire, 'Tél', [identite.telephone, identite.telephone_2, identite.telephone_3])}
+        {numerote(traduire, 'WhatsApp', [identite.whatsapp, identite.whatsapp_2])}
+        {identite.email && <Ligne libelle={traduire('Email', ' :')} valeur={identite.email} />}
+        {identite.nif && <Ligne libelle={traduire('NIF', ' :')} valeur={identite.nif} />}
       </div>
     </div>
   )

@@ -110,12 +110,38 @@
   margin: 0;
   line-height: 1.2;
 }
+/* Nom de la pharmacie : l'arabe en haut, dans la plus grande taille ; le français dessous, plus petit. */
+.recu-pharmacie-noms {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.recu-pharmacie-nom-ar {
+  font-size: 24px;
+  font-weight: 900;
+  color: #000;
+  margin: 0;
+  line-height: 1.25;
+}
+.recu-pharmacie-noms--bi .recu-pharmacie-nom {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+/* Libellé bilingue sur une ligne (reçu de caisse) : « Français / العربية », l'arabe un peu plus grand. */
+.bi-ar {
+  font-size: 1.2em;
+  letter-spacing: 0;   /* l'espacement des lettres casse la liaison des lettres arabes */
+  text-transform: none;
+}
 .recu-entete-droite {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
-  text-align: right;
+  text-align: end;
   font-size: 11px;
 }
 .recu-entete-ligne {
@@ -195,9 +221,9 @@
   padding: 5px 8px;
   border: none;
 }
-.recu-th-gauche { text-align: left; }
+.recu-th-gauche { text-align: start; }
 .recu-th-centre { text-align: center; }
-.recu-th-droite { text-align: right; }
+.recu-th-droite { text-align: end; }
 
 .recu-td {
   padding: 5px 8px;
@@ -212,7 +238,7 @@
   border-bottom: none;
 }
 .recu-td-centre { text-align: center; }
-.recu-td-droite { text-align: right; }
+.recu-td-droite { text-align: end; }
 .recu-td-gras { font-weight: 700; }
 .recu-td-nom { vertical-align: middle; }
 .recu-med-nom { font-weight: 600; }
@@ -255,7 +281,7 @@
   gap: 2px;
   min-width: 180px;
   margin-top: 6px;
-  padding-right: 4px;
+  padding-inline-end: 4px;
 }
 .recu-paiement-ligne {
   display: flex;
@@ -280,6 +306,18 @@
   text-align: center;
   width: 100%;
 }
+
+/* ── Copyright de l'éditeur : tout petit, tout en bas du document ── */
+.pied-logiciel {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 7px;
+  line-height: 1.2;
+  color: #6b7280;
+}
+/* Dans un cadre de reçu : calé en bas, sous le message de pied s'il y en a un. */
+.recu-cadre > .pied-logiciel { margin-top: auto; padding-top: 6px; }
+.recu-cadre > .recu-pied-message + .pied-logiciel { margin-top: 0; }
 /* Message du pied : retours à la ligne respectés, mise en forme libre (texte riche des paramètres) */
 .recu-message {
   font-size: 11px;

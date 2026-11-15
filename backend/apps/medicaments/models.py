@@ -16,6 +16,32 @@ class Categorie(models.Model):
         return self.nom
 
 
+class Forme(models.Model):
+    """Référentiel des formes galéniques (comprimé, sirop, gélule…) proposées dans la fiche médicament."""
+    nom = models.CharField(max_length=60, unique=True)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "formes"
+        ordering = ["nom"]
+
+    def __str__(self):
+        return self.nom
+
+
+class Dosage(models.Model):
+    """Référentiel des dosages (500 mg, 1 g, 125 mg/5 ml…) proposés dans la fiche médicament."""
+    nom = models.CharField(max_length=60, unique=True)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "dosages"
+        ordering = ["nom"]
+
+    def __str__(self):
+        return self.nom
+
+
 class Medicament(models.Model):
     nom = models.CharField(max_length=200, db_index=True)
     nom_generique = models.CharField(max_length=200, blank=True)

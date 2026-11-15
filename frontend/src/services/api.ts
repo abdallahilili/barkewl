@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import { langueCourante } from '../i18n'
 
 const URL_API: string = import.meta.env.VITE_URL_API ?? 'http://localhost:8000/api'
 const CLE_RAFRAICHISSEMENT = 'pharmacie_rafraichissement'
@@ -17,6 +18,7 @@ export const api = axios.create({ baseURL: URL_API })
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (jetonAcces) config.headers.Authorization = `Bearer ${jetonAcces}`
+  config.headers['Accept-Language'] = langueCourante()
   return config
 })
 

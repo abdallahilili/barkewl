@@ -65,15 +65,15 @@ export default function EtatStock() {
       </BarreRecherche>
       <TableauDonnees<LigneStock>
         colonnes={[
-          { cle: 'medicament', titre: t('Médicament'), tri: 'lot__medicament__nom', rendu: (s) => <span><span className="font-medium">{s.medicament}</span> <span className="text-slate-500">{s.dosage} {s.forme}</span></span> },
-          { cle: 'categorie', titre: t('Catégorie'), cacheParDefaut: true, rendu: (s) => s.categorie ?? '—' },
-          { cle: 'numero_lot', titre: t('Lot') },
-          { cle: 'depot_nom', titre: t('Dépôt'), tri: 'depot__nom' },
-          { cle: 'quantite', titre: t('Quantité'), alignement: 'droite', tri: 'quantite', rendu: (s) => <span className="font-medium">{s.unites_par_boite > 1 ? s.quantite_texte : formaterNombre(s.quantite)}</span>, exportRendu: (s) => s.quantite_texte },
-          { cle: 'prix_vente', titre: t('Prix de vente'), alignement: 'droite', rendu: (s) => formaterMontant(s.prix_vente) },
-          ...(voirPrixAchat ? [{ cle: 'valeur_stock', titre: t('Valeur'), alignement: 'droite' as const, cacheParDefaut: true, rendu: (s: LigneStock) => formaterMontant(s.valeur_stock) }] : []),
-          { cle: 'date_peremption', titre: t('Péremption'), tri: 'lot__date_peremption', rendu: (s) => <span>{formaterDate(s.date_peremption)} <span className="text-xs text-slate-400">({t('{n} j', { n: s.jours_restants })})</span></span>, exportRendu: (s) => formaterDateExport(s.date_peremption) },
-          { cle: 'etat', titre: t('État'), rendu: (s) => <Badge ton={tonEtatStock(s.etat)}>{libelleEtatStock(s.etat)}</Badge> },
+          { cle: 'medicament', titre: 'Médicament', tri: 'lot__medicament__nom', rendu: (s) => <span><span className="font-medium">{s.medicament}</span> <span className="text-slate-500">{s.dosage} {s.forme}</span></span> },
+          { cle: 'categorie', titre: 'Catégorie', cacheParDefaut: true, rendu: (s) => s.categorie ?? '—' },
+          { cle: 'numero_lot', titre: 'Lot' },
+          { cle: 'depot_nom', titre: 'Dépôt', tri: 'depot__nom' },
+          { cle: 'quantite', titre: 'Quantité', alignement: 'droite', tri: 'quantite', rendu: (s) => <span className="font-medium">{s.unites_par_boite > 1 ? s.quantite_texte : formaterNombre(s.quantite)}</span>, exportRendu: (s) => s.quantite_texte },
+          { cle: 'prix_vente', titre: 'Prix de vente', alignement: 'droite', rendu: (s) => formaterMontant(s.prix_vente) },
+          ...(voirPrixAchat ? [{ cle: 'valeur_stock', titre: 'Valeur', alignement: 'droite' as const, cacheParDefaut: true, rendu: (s: LigneStock) => formaterMontant(s.valeur_stock) }] : []),
+          { cle: 'date_peremption', titre: 'Péremption', tri: 'lot__date_peremption', rendu: (s) => <span>{formaterDate(s.date_peremption)} <span className="whitespace-nowrap text-xs text-slate-400">({t('{n} j', { n: s.jours_restants })})</span></span>, exportRendu: (s) => formaterDateExport(s.date_peremption) },
+          { cle: 'etat', titre: 'État', rendu: (s) => <Badge ton={tonEtatStock(s.etat)}>{libelleEtatStock(s.etat)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(s) => s.id} messageVide={t('Aucune ligne de stock pour ces critères.')} titre={t('État du stock')} idTableau="etat-stock"

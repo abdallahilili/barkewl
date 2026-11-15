@@ -6,6 +6,7 @@ DEFAUTS = {
     "stock_negatif_autorise": ("0", "Autoriser un stock négatif (1 = oui, 0 = non)"),
     "jours_alerte_peremption": ("90", "Nombre de jours avant péremption pour l'alerte « bientôt périmé »"),
     "nom_pharmacie": ("PHARMACIE", "Nom affiché sur les reçus"),
+    "nom_pharmacie_ar": ("", "Nom arabe de la pharmacie affiché sur les reçus et documents"),
     "adresse_pharmacie": ("", "Adresse affichée sur les reçus"),
     "telephone_pharmacie": ("", "Téléphone affiché sur les reçus"),
     "telephone_pharmacie_2": ("", "Téléphone 2 affiché sur les reçus"),
@@ -23,6 +24,7 @@ DEFAUTS = {
     "entete_image": ("", "En-tête personnalisé des documents (image encodée en base64) ; vide = en-tête par défaut"),
     "afficher_logo_documents": ("1", "Afficher le logo sur les documents imprimés [1 = oui, 0 = non]"),
     "bl_afficher_prix": ("1", "Afficher les colonnes Prix et Total sur le bon de livraison [1 = oui, 0 = non]"),
+    "afficher_copyright_documents": ("1", "Afficher le copyright et le contact de l'éditeur en bas des documents [1 = oui, 0 = non]"),
     "gestion_rayonnages_active": ("0", "Activer la gestion des rayonnages (emplacement des médicaments) [1 = oui, 0 = non]"),
 }
 
@@ -63,7 +65,8 @@ def identite_documents():
     """Coordonnées de la pharmacie imprimées sur les reçus, devis, bons de livraison et factures."""
     logo = obtenir_parametre("logo_pharmacie") if obtenir_booleen("afficher_logo_documents") else ""
     return {
-        "nom": obtenir_parametre("nom_pharmacie"), "adresse": obtenir_parametre("adresse_pharmacie"),
+        "nom": obtenir_parametre("nom_pharmacie"), "nom_ar": obtenir_parametre("nom_pharmacie_ar").strip(),
+        "adresse": obtenir_parametre("adresse_pharmacie"),
         "telephone": obtenir_parametre("telephone_pharmacie"),
         "telephone_2": obtenir_parametre("telephone_pharmacie_2"),
         "telephone_3": obtenir_parametre("telephone_pharmacie_3"),

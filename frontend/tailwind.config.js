@@ -16,8 +16,8 @@ export default {
         },
       },
       fontFamily: {
-        // Inter pour le latin et les chiffres, IBM Plex Sans Arabic pour l'arabe ; polices embarquées (fonctionnent hors ligne).
-        sans: ['Inter', 'IBM Plex Sans Arabic', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
+        // Inter pour le latin et les chiffres, Cairo pour l'arabe (simple et très lisible) ; polices embarquées (fonctionnent hors ligne).
+        sans: ['Inter', 'Cairo', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
       },
     },
   },

@@ -8,7 +8,7 @@ import { Chargement, EnTetePage, MessageErreur } from '../../composants/EnTetePa
 import { Modale } from '../../composants/Modale'
 import { useNotifier } from '../../composants/Notifications'
 import { SelectionMedicament } from '../../composants/SelectionMedicament'
-import { useOptions } from '../../hooks/useListe'
+import { useOptions, viderCacheOptions } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { Achat, Depot, Fournisseur, ModePaiement } from '../../types'
 import { aujourdhui, formaterDateHeure, formaterMontant, libelleStatut } from '../../utilitaires/formatage'
@@ -54,6 +54,38 @@ export default function AchatDetail() {
   const [modaleValidation, setModaleValidation] = useState(false)
   const [modalePaiement, setModalePaiement] = useState(false)
   const [paye, setPaye] = useState({ montant: '', mode: '', reference: '' })
+  const [nouveauxFournisseurs, setNouveauxFournisseurs] = useState<Fournisseur[]>([])
+  const [modaleFournisseur, setModaleFournisseur] = useState(false)
+  const [nouveauFournisseur, setNouveauFournisseur] = useState({ nom: '', telephone: '', adresse: '', email: '' })
+  const [erreurFournisseur, setErreurFournisseur] = useState<string | null>(null)
+  const [envoiFournisseur, setEnvoiFournisseur] = useState(false)
+
+  const optionsFournisseurs = useMemo(() => {
+    const base = [...fournisseurs]
+    for (const f of nouveauxFournisseurs) if (!base.some((x) => x.id === f.id)) base.unshift(f)
+    return base
+  }, [fournisseurs, nouveauxFournisseurs])
+
+  const ouvrirCreationFournisseur = () => {
+    setNouveauFournisseur({ nom: '', telephone: '', adresse: '', email: '' }); setErreurFournisseur(null); setModaleFournisseur(true)
+  }
+
+  const creerFournisseur = async (e: FormEvent) => {
+    e.preventDefault()
+    setEnvoiFournisseur(true); setErreurFournisseur(null)
+    try {
+      const { data } = await api.post<Fournisseur>('/fournisseurs/', {
+        nom: nouveauFournisseur.nom.trim(), telephone: nouveauFournisseur.telephone.trim(),
+        adresse: nouveauFournisseur.adresse.trim(), email: nouveauFournisseur.email.trim(),
+      })
+      viderCacheOptions()
+      setNouveauxFournisseurs((f) => [data, ...f])
+      setFournisseur(String(data.id))
+      setModaleFournisseur(false)
+      notifier.succes(t('« {nom} » ajouté.', { nom: data.nom }))
+    } catch (err) { setErreurFournisseur(extraireErreur(err)) }
+    finally { setEnvoiFournisseur(false) }
+  }
 
   const modifiable = !achat || achat.statut === 'BROUILLON'
 
@@ -84,9 +116,9 @@ export default function AchatDetail() {
   })
 
   const verifier = () => {
-    if (!fournisseur || !depot) return 'Choisissez le fournisseur et le dépôt de réception.'
+    if (!fournisseur || !depot) return t('Choisissez le fournisseur et le dépôt de réception.')
     if (lignes.some((l) => !l.medicament || !l.numero_lot.trim() || !l.date_peremption || !(Number(l.quantite) > 0) || l.prix_achat === '')) {
-      return 'Chaque ligne doit indiquer le médicament, le lot, la péremption, la quantité et le prix d’achat.'
+      return t("Chaque ligne doit indiquer le médicament, le lot, la péremption, la quantité et le prix d'achat.")
     }
     return null
   }
@@ -170,7 +202,10 @@ export default function AchatDetail() {
 
       <div className="carte mb-4 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <Champ libelle={t('Fournisseur')} requis>
-          <select className="champ" value={fournisseur} onChange={(e) => setFournisseur(e.target.value)} disabled={!modifiable}><option value="">{t('— Choisir —')}</option>{fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}</select>
+          <div className="flex gap-2">
+            <select className="champ" value={fournisseur} onChange={(e) => setFournisseur(e.target.value)} disabled={!modifiable}><option value="">{t('— Choisir —')}</option>{optionsFournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}</select>
+            {modifiable && <button type="button" className="btn-secondaire shrink-0 px-2.5" onClick={ouvrirCreationFournisseur} aria-label={t('Nouveau fournisseur')} title={t('Nouveau fournisseur')}><Plus size={16} /></button>}
+          </div>
         </Champ>
         <Champ libelle={t('Dépôt de réception')} requis>
           <select className="champ" value={depot} onChange={(e) => setDepot(e.target.value)} disabled={!modifiable}><option value="">{t('— Choisir —')}</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
@@ -237,6 +272,20 @@ export default function AchatDetail() {
           <Champ libelle={t('Montant')} requis aide={achat ? t('Reste à payer : {montant}', { montant: formaterMontant(achat.reste_a_payer) }) : undefined}><input className="champ" type="number" min={0.01} max={achat?.reste_a_payer} step="0.01" value={paye.montant} onChange={(e) => setPaye({ ...paye, montant: e.target.value })} required /></Champ>
           <Champ libelle={t('Mode de paiement')}><select className="champ" value={paye.mode} onChange={(e) => setPaye({ ...paye, mode: e.target.value })}><option value="">—</option>{modes.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}</select></Champ>
           <Champ libelle={t('Référence (chèque, virement…)')}><input className="champ" value={paye.reference} onChange={(e) => setPaye({ ...paye, reference: e.target.value })} /></Champ>
+        </form>
+      </Modale>
+
+      <Modale ouverte={modaleFournisseur} titre={t('Nouveau fournisseur')} onFermer={() => setModaleFournisseur(false)} largeur="petite"
+        pied={<>
+          <button className="btn-secondaire" onClick={() => setModaleFournisseur(false)}>{t('Annuler')}</button>
+          <button className="btn-primaire" type="submit" form="formulaire-nouveau-fournisseur" disabled={envoiFournisseur}>{envoiFournisseur ? t('Création…') : t('Créer')}</button>
+        </>}>
+        <form id="formulaire-nouveau-fournisseur" onSubmit={creerFournisseur} className="space-y-3">
+          <MessageErreur message={erreurFournisseur} />
+          <Champ libelle={t('Nom')} requis><input className="champ" value={nouveauFournisseur.nom} onChange={(e) => setNouveauFournisseur((f) => ({ ...f, nom: e.target.value }))} required autoFocus /></Champ>
+          <Champ libelle={t('Téléphone')}><input className="champ" value={nouveauFournisseur.telephone} onChange={(e) => setNouveauFournisseur((f) => ({ ...f, telephone: e.target.value }))} /></Champ>
+          <Champ libelle={t('Adresse')}><input className="champ" value={nouveauFournisseur.adresse} onChange={(e) => setNouveauFournisseur((f) => ({ ...f, adresse: e.target.value }))} /></Champ>
+          <Champ libelle={t('E-mail')}><input className="champ" type="email" value={nouveauFournisseur.email} onChange={(e) => setNouveauFournisseur((f) => ({ ...f, email: e.target.value }))} /></Champ>
         </form>
       </Modale>
     </div>

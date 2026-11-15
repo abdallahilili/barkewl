@@ -86,10 +86,10 @@ export default function DocumentVenteDetail() {
   })
 
   const verifier = () => {
-    if (!client || !depot) return 'Choisissez le client et le dépôt.'
-    if (lignes.some((l) => !l.medicament || !(Number(l.quantite_devis) > 0))) return 'Chaque ligne doit indiquer un médicament et une quantité.'
+    if (!client || !depot) return t('Choisissez le client et le dépôt.')
+    if (lignes.some((l) => !l.medicament || !(Number(l.quantite_devis) > 0))) return t('Chaque ligne doit indiquer un médicament et une quantité.')
     const ids = lignes.map((l) => l.medicament!.id)
-    if (new Set(ids).size !== ids.length) return 'Un même médicament ne peut apparaître que sur une seule ligne : regroupez les quantités.'
+    if (new Set(ids).size !== ids.length) return t('Un même médicament ne peut apparaître que sur une seule ligne : regroupez les quantités.')
     return null
   }
 

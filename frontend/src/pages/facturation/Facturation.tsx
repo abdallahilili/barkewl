@@ -29,13 +29,13 @@ export default function Facturation() {
       </BarreRecherche>
       <TableauDonnees<DocumentVente>
         colonnes={[
-          { cle: 'reference', titre: t('Référence'), tri: 'reference', rendu: (d) => <span className="font-medium">{d.reference}</span> },
-          { cle: 'client_nom', titre: t('Client'), tri: 'client__nom' },
-          { cle: 'date_devis', titre: t('Date'), tri: 'date_devis', rendu: (d) => formaterDate(d.date_devis), exportRendu: (d) => formaterDateExport(d.date_devis) },
-          { cle: 'total', titre: t('Total'), alignement: 'droite', tri: 'total', rendu: (d) => formaterMontant(d.total) },
-          { cle: 'reste_a_payer', titre: t('Reste à payer'), alignement: 'droite', rendu: (d) => (d.etape === 'FACTURE' && Number(d.reste_a_payer) > 0 ? <span className="font-semibold text-red-700">{formaterMontant(d.reste_a_payer)}</span> : '—') },
-          { cle: 'etape', titre: t('Étape'), rendu: (d) => <Badge ton={tonStatut(d.annule ? 'ANNULE' : d.etape)}>{d.annule ? t('Devis annulé') : d.etape_libelle}</Badge> },
-          { cle: 'paiement', titre: t('Paiement'), rendu: (d) => (d.etape === 'FACTURE' ? <Badge ton={Number(d.reste_a_payer) <= 0 ? 'vert' : 'rouge'}>{Number(d.reste_a_payer) <= 0 ? t('Payée') : t('Non payée')}</Badge> : '—') },
+          { cle: 'reference', titre: 'Référence', tri: 'reference', rendu: (d) => <span className="font-medium">{d.reference}</span> },
+          { cle: 'client_nom', titre: 'Client', tri: 'client__nom' },
+          { cle: 'date_devis', titre: 'Date', tri: 'date_devis', rendu: (d) => formaterDate(d.date_devis), exportRendu: (d) => formaterDateExport(d.date_devis) },
+          { cle: 'total', titre: 'Total', alignement: 'droite', tri: 'total', rendu: (d) => formaterMontant(d.total) },
+          { cle: 'reste_a_payer', titre: 'Reste à payer', alignement: 'droite', rendu: (d) => (d.etape === 'FACTURE' && Number(d.reste_a_payer) > 0 ? <span className="font-semibold text-red-700">{formaterMontant(d.reste_a_payer)}</span> : '—') },
+          { cle: 'etape', titre: 'Étape', rendu: (d) => <Badge ton={tonStatut(d.annule ? 'ANNULE' : d.etape)}>{d.annule ? t('Devis annulé') : d.etape_libelle}</Badge> },
+          { cle: 'paiement', titre: 'Paiement', rendu: (d) => (d.etape === 'FACTURE' ? <Badge ton={Number(d.reste_a_payer) <= 0 ? 'vert' : 'rouge'}>{Number(d.reste_a_payer) <= 0 ? t('Payée') : t('Non payée')}</Badge> : '—') },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(d) => d.id}

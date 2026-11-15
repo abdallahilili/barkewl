@@ -9,7 +9,7 @@ from .conditionnement import (
     PLAQUETTE, UNITE, decrire_quantite, detail_disponible, plaquette_disponible, prix_conditionnement,
     valider_conditionnement,
 )
-from .models import Categorie, Lot, Medicament
+from .models import Categorie, Dosage, Forme, Lot, Medicament
 from .services import changer_unites_par_boite
 
 
@@ -17,6 +17,18 @@ class CategorieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categorie
         fields = ["id", "nom", "description"]
+
+
+class FormeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Forme
+        fields = ["id", "nom", "actif"]
+
+
+class DosageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dosage
+        fields = ["id", "nom", "actif"]
 
 
 class MedicamentSerializer(MasquerPrixAchatMixin, serializers.ModelSerializer):

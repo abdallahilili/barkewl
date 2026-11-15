@@ -3,8 +3,8 @@ import { api } from '../services/api'
 import * as auth from '../services/auth'
 import type { Parametre, Utilisateur } from '../types'
 import {
-  definirAdressePharmacie, definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie,
-  definirTelephonePharmacie,
+  definirAdressePharmacie, definirCopyrightDocuments, definirDevise, definirGestionRayonnages, definirLogoPharmacie,
+  definirNomPharmacie, definirTelephonePharmacie,
 } from '../utilitaires/formatage'
 
 interface ContexteAuth {
@@ -26,6 +26,7 @@ async function chargerParametresGlobaux() {
     definirLogoPharmacie(data.find((p) => p.cle === 'logo_pharmacie')?.valeur ?? '')
     definirAdressePharmacie(data.find((p) => p.cle === 'adresse_pharmacie')?.valeur ?? '')
     definirTelephonePharmacie(data.find((p) => p.cle === 'telephone_pharmacie')?.valeur ?? '')
+    definirCopyrightDocuments(data.find((p) => p.cle === 'afficher_copyright_documents')?.valeur)
   } catch { /* les valeurs par défaut restent utilisées */ }
 }
 

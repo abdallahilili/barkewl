@@ -6,7 +6,7 @@ import type { Medicament, ReponsePaginee } from '../types'
 import { ModaleNouveauMedicament } from './ModaleNouveauMedicament'
 
 import { t } from '../i18n'
-export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Rechercher un médicament (nom, code, code-barres)…', depot }: {
+export function SelectionMedicament({ valeur, onChoisir, placeholder = t('Rechercher un médicament (nom, code, code-barres)…'), depot }: {
   valeur: { id: number; nom: string } | null
   onChoisir: (m: Medicament | null) => void
   placeholder?: string

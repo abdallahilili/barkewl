@@ -1,19 +1,21 @@
 import { Printer } from 'lucide-react'
 import type { Recu } from '../types'
-import { EDITEUR_PAR_DEFAUT, NOM_LOGICIEL } from '../services/licence'
 import { formaterDateHeure, formaterNombre } from '../utilitaires/formatage'
 import { EnTeteDocument, MessagePied } from './EnTeteDocument'
 import { Modale } from './Modale'
+import { t } from '../i18n'
+import { Bilingue } from './Bilingue'
+import { PiedLogiciel } from './PiedLogiciel'
 
 export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer: () => void }) {
   return (
-    <Modale ouverte={!!recu} titre={recu ? `Reçu ${recu.reference}` : 'Reçu'} onFermer={onFermer} largeur="grande"
+    <Modale ouverte={!!recu} titre={recu ? `${t('Reçu')} ${recu.reference}` : t('Reçu')} onFermer={onFermer} largeur="grande"
       pied={<>
-        <button className="btn-secondaire" onClick={onFermer}>Fermer</button>
-        <button className="btn-primaire" onClick={() => window.print()}><Printer size={16} /> Imprimer</button>
+        <button className="btn-secondaire" onClick={onFermer}>{t('Fermer')}</button>
+        <button className="btn-primaire" onClick={() => window.print()}><Printer size={16} /> {' '}{t('Imprimer')}</button>
       </>}>
       {recu && (
-        <div className="zone-impression w-full bg-white text-black">
+        <div className="zone-impression w-full bg-white text-black" dir="ltr">
           <style>{`
             @media print {
               @page {
@@ -31,27 +33,27 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
             {/* ── Outer frame = top half of A4 with rounded border ── */}
             <div className="recu-cadre">
 
-              <EnTeteDocument identite={recu.pharmacie} />
+              <EnTeteDocument identite={recu.pharmacie} traduire={(texte, fin) => <Bilingue texte={texte} fin={fin} />} />
 
               {/* ── Info grid: 2 columns, clean labels & values without dotted lines ── */}
               <div className="recu-info-grille">
                 <div className="recu-info-col">
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label">Reçu N° :</span>
+                    <span className="recu-info-label"><Bilingue texte="Reçu N° :" /></span>
                     <span className="recu-info-valeur">{recu.reference}</span>
                   </div>
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label">Client :</span>
+                    <span className="recu-info-label"><Bilingue texte="Client :" /></span>
                     <span className="recu-info-valeur">{recu.client ?? '—'}</span>
                   </div>
                 </div>
                 <div className="recu-info-col">
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label">Date :</span>
+                    <span className="recu-info-label"><Bilingue texte="Date :" /></span>
                     <span className="recu-info-valeur">{formaterDateHeure(recu.date_vente)}</span>
                   </div>
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label">Caissier :</span>
+                    <span className="recu-info-label"><Bilingue texte="Caissier :" /></span>
                     <span className="recu-info-valeur">{recu.caissier}</span>
                   </div>
                 </div>
@@ -59,17 +61,17 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
 
               {/* ── Cancelled banner ── */}
               {recu.statut === 'ANNULEE' && (
-                <div className="recu-annulee">★★★ VENTE ANNULÉE ★★★</div>
+                <div className="recu-annulee">★★★ <Bilingue texte="VENTE ANNULÉE" /> ★★★</div>
               )}
 
               {/* ── Items table with rounded corners ── */}
               <table className="recu-table">
                 <thead>
                   <tr>
-                    <th className="recu-th recu-th-gauche">Médicament</th>
-                    <th className="recu-th recu-th-centre">Qté</th>
-                    <th className="recu-th recu-th-droite">P.U.</th>
-                    <th className="recu-th recu-th-droite">Total</th>
+                    <th className="recu-th recu-th-gauche"><Bilingue texte="Médicament" /></th>
+                    <th className="recu-th recu-th-centre"><Bilingue texte="Qté" /></th>
+                    <th className="recu-th recu-th-droite"><Bilingue texte="P.U." /></th>
+                    <th className="recu-th recu-th-droite"><Bilingue texte="Total" /></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -89,7 +91,7 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
 
               {/* ── Total row ── */}
               <div className="recu-total-ligne">
-                <span className="recu-total-label">TOTAL À PAYER</span>
+                <span className="recu-total-label"><Bilingue texte="TOTAL À PAYER" /></span>
                 <span className="recu-total-montant">{formaterNombre(recu.total)} {recu.pharmacie.devise}</span>
               </div>
 
@@ -103,22 +105,20 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
                 ))}
                 {recu.montant_recu != null && (
                   <div className="recu-paiement-ligne">
-                    <span className="recu-paiement-mode">Reçu :</span>
+                    <span className="recu-paiement-mode"><Bilingue texte="Reçu :" /></span>
                     <span className="recu-paiement-montant">{formaterNombre(recu.montant_recu)} {recu.pharmacie.devise}</span>
                   </div>
                 )}
                 {recu.rendu != null && (
                   <div className="recu-paiement-ligne">
-                    <span className="recu-paiement-mode">Rendu :</span>
+                    <span className="recu-paiement-mode"><Bilingue texte="Rendu :" /></span>
                     <span className="recu-paiement-montant">{formaterNombre(recu.rendu)} {recu.pharmacie.devise}</span>
                   </div>
                 )}
               </div>
 
               <MessagePied message={recu.pharmacie.message} />
-              <p style={{ marginTop: 6, textAlign: 'center', fontSize: 9, color: '#94a3b8' }}>
-                Logiciel {NOM_LOGICIEL} — {EDITEUR_PAR_DEFAUT}
-              </p>
+              <PiedLogiciel />
 
             </div>
           </div>

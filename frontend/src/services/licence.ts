@@ -24,6 +24,7 @@ export interface EtatLicence {
 
 export const NOM_LOGICIEL = 'RAQEEM PHARMA'
 export const EDITEUR_PAR_DEFAUT = 'Rawafid Digital Services'
+export const TELEPHONE_EDITEUR = '31177008'
 
 /** Événement envoyé après une activation, pour que le bandeau se mette à jour sans recharger la page. */
 export const EVENEMENT_LICENCE = 'licence-modifiee'

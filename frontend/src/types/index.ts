@@ -24,6 +24,8 @@ export interface ReponsePaginee<T> {
 
 export interface Depot { id: number; nom: string; description: string; actif: boolean }
 export interface Categorie { id: number; nom: string; description: string }
+export interface Forme { id: number; nom: string; actif: boolean }
+export interface Dosage { id: number; nom: string; actif: boolean }
 export interface Fournisseur { id: number; nom: string; telephone: string; adresse: string; email: string; actif: boolean; solde: number }
 export interface Client { id: number; nom: string; telephone: string; adresse: string; notes: string; actif: boolean }
 export interface ModePaiement { id: number; nom: string; type: 'ESPECES' | 'MOBILE' | 'CARTE' | 'VIREMENT' | 'AUTRE'; actif: boolean }
@@ -322,6 +324,8 @@ export interface Vente {
 /** Coordonnées de la pharmacie imprimées en en-tête des reçus et documents de vente. */
 export interface IdentiteDocument {
   nom: string
+  /** Nom arabe de la pharmacie (imprimé sous le nom principal) ; vide = rien d'affiché. */
+  nom_ar?: string
   adresse: string
   telephone: string
   telephone_2?: string

@@ -14,7 +14,7 @@ import type { Depot, LigneStock, MouvementStock } from '../../types'
 import { erreursParChamp, extraireErreur } from '../../utilitaires/erreurs'
 import { formaterDate, formaterDateHeure, formaterDateHeureExport, libelleTypeMouvement } from '../../utilitaires/formatage'
 
-import { t } from '../../i18n'
+import { t, traduireServeur } from '../../i18n'
 type Mode = 'entree' | 'sortie' | 'tous'
 
 const motifsEntree = [{ v: 'RETOUR_CLIENT', l: t('Retour client') }, { v: 'CORRECTION', l: t('Correction de stock') }, { v: 'AUTRE', l: t('Autre entrée') }]
@@ -103,6 +103,9 @@ function FormulaireEntree({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
   )
 }
 
+/** Quantité maximale sortable d'un lot, dans l'unité courante (boîtes ou unités). */
+const quantiteMaxLot = (l: LigneStock, enBoites: boolean) => (enBoites && l.unites_par_boite > 1 ? Math.floor(l.quantite / l.unites_par_boite) : l.quantite)
+
 function FormulaireSortie({ ouvert, onFermer, apres }: { ouvert: boolean; onFermer: () => void; apres: () => void }) {
   const notifier = useNotifier()
   const depots = useOptions<Depot>('/depots/', { actif: 1 })
@@ -113,6 +116,20 @@ function FormulaireSortie({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
   const [motif, setMotif] = useState('PEREMPTION')
   const [note, setNote] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
+
+  // Produit périmé : on retire généralement tout le lot, donc la quantité est pré-remplie au maximum disponible.
+  const choisirLigne = (l: LigneStock) => {
+    setLigne(l)
+    if (motif === 'PEREMPTION') setQuantite(String(quantiteMaxLot(l, enBoites)))
+  }
+  const changerMotif = (nouveauMotif: string) => {
+    setMotif(nouveauMotif)
+    if (nouveauMotif === 'PEREMPTION' && ligne) setQuantite(String(quantiteMaxLot(ligne, enBoites)))
+  }
+  const changerUnite = (boites: boolean) => {
+    setEnBoites(boites)
+    if (motif === 'PEREMPTION' && ligne) setQuantite(String(quantiteMaxLot(ligne, boites)))
+  }
 
   const soumettre = async (e: FormEvent) => {
     e.preventDefault()
@@ -137,7 +154,7 @@ function FormulaireSortie({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
         <Champ libelle={t('Médicament et lot')} requis>
           {ligne ? (
             <div className="champ flex items-center justify-between"><span>{ligne.medicament} {' '}{t('— lot')}{' '}{ligne.numero_lot} ({ligne.quantite_texte ?? ligne.quantite} {' '}{t('en stock, péremption')}{' '}{formaterDate(ligne.date_peremption)})</span><button type="button" className="text-slate-400 hover:text-slate-700" onClick={() => setLigne(null)}>{t('Changer')}</button></div>
-          ) : <SelectionLotStock depot={depot ? Number(depot) : ''} onChoisir={setLigne} />}
+          ) : <SelectionLotStock depot={depot ? Number(depot) : ''} onChoisir={choisirLigne} />}
         </Champ>
         <div className="grid gap-4 sm:grid-cols-2">
           <Champ libelle={t('Quantité')} requis aide={ligne && ligne.unites_par_boite > 1 ? t('1 boîte = {unites} unités', { unites: ligne.unites_par_boite }) : undefined}>
@@ -145,13 +162,13 @@ function FormulaireSortie({ ouvert, onFermer, apres }: { ouvert: boolean; onFerm
               <input className="champ" type="number" min={1} max={ligne ? (enBoites && ligne.unites_par_boite > 1 ? Math.floor(ligne.quantite / ligne.unites_par_boite) : ligne.quantite) : undefined}
                 value={quantite} onChange={(e) => setQuantite(e.target.value)} required />
               {ligne && ligne.unites_par_boite > 1 && (
-                <select className="champ w-32" value={enBoites ? '1' : '0'} onChange={(e) => setEnBoites(e.target.value === '1')} aria-label={t('Unité de la quantité')}>
+                <select className="champ w-32" value={enBoites ? '1' : '0'} onChange={(e) => changerUnite(e.target.value === '1')} aria-label={t('Unité de la quantité')}>
                   <option value="0">{t('unités')}</option><option value="1">{t('boîtes')}</option>
                 </select>
               )}
             </div>
           </Champ>
-          <Champ libelle={t('Motif')} requis><select className="champ" value={motif} onChange={(e) => setMotif(e.target.value)}>{motifsSortie.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select></Champ>
+          <Champ libelle={t('Motif')} requis><select className="champ" value={motif} onChange={(e) => changerMotif(e.target.value)}>{motifsSortie.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}</select></Champ>
         </div>
         <Champ libelle={t('Note')}><input className="champ" value={note} onChange={(e) => setNote(e.target.value)} /></Champ>
       </form>
@@ -192,16 +209,16 @@ export default function MouvementsStock({ mode }: { mode: Mode }) {
       </BarreRecherche>
       <TableauDonnees<MouvementStock>
         colonnes={[
-          { cle: 'date_mouvement', titre: t('Date'), tri: 'date_mouvement', rendu: (m) => formaterDateHeure(m.date_mouvement), exportRendu: (m) => formaterDateHeureExport(m.date_mouvement) },
-          { cle: 'medicament_nom', titre: t('Médicament'), tri: 'medicament__nom', rendu: (m) => <span className="font-medium">{m.medicament_nom}</span> },
-          { cle: 'numero_lot', titre: t('Lot') },
-          { cle: 'depot_nom', titre: t('Dépôt') },
-          { cle: 'type_libelle', titre: t('Type'), rendu: (m) => <Badge ton={m.quantite > 0 ? 'vert' : 'orange'}>{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</Badge> },
-          { cle: 'quantite', titre: t('Quantité'), alignement: 'droite', tri: 'quantite', rendu: (m) => <span className={`font-semibold ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</span>, exportRendu: (m) => m.quantite_texte },
-          { cle: 'stock', titre: t('Stock avant → après'), alignement: 'droite', rendu: (m) => `${m.stock_avant} → ${m.stock_apres}`, exportRendu: (m) => `${m.stock_avant} -> ${m.stock_apres}` },
-          { cle: 'reference', titre: t('Référence') },
-          { cle: 'utilisateur_nom', titre: t('Utilisateur'), cacheParDefaut: true },
-          { cle: 'motif', titre: t('Motif'), cacheParDefaut: true },
+          { cle: 'date_mouvement', titre: 'Date', tri: 'date_mouvement', rendu: (m) => formaterDateHeure(m.date_mouvement), exportRendu: (m) => formaterDateHeureExport(m.date_mouvement) },
+          { cle: 'medicament_nom', titre: 'Médicament', tri: 'medicament__nom', rendu: (m) => <span className="font-medium">{m.medicament_nom}</span> },
+          { cle: 'numero_lot', titre: 'Lot' },
+          { cle: 'depot_nom', titre: 'Dépôt' },
+          { cle: 'type_libelle', titre: 'Type', rendu: (m) => <Badge ton={m.quantite > 0 ? 'vert' : 'orange'}>{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</Badge> },
+          { cle: 'quantite', titre: 'Quantité', alignement: 'droite', tri: 'quantite', rendu: (m) => <span className={`font-semibold ${m.quantite > 0 ? 'text-emerald-700' : 'text-red-700'}`}>{m.quantite > 0 ? '+' : ''}{m.quantite_texte ?? m.quantite}</span>, exportRendu: (m) => m.quantite_texte },
+          { cle: 'stock', titre: 'Stock avant → après', alignement: 'droite', rendu: (m) => `${m.stock_avant} → ${m.stock_apres}`, exportRendu: (m) => `${m.stock_avant} -> ${m.stock_apres}` },
+          { cle: 'reference', titre: 'Référence' },
+          { cle: 'utilisateur_nom', titre: 'Utilisateur', cacheParDefaut: true },
+          { cle: 'motif', titre: 'Motif', cacheParDefaut: true, rendu: (m) => traduireServeur(m.motif), exportRendu: (m) => traduireServeur(m.motif) },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(m) => m.id} messageVide={t('Aucun mouvement pour ces critères.')} titre={titres[mode]} idTableau={`mouvements-stock-${mode}`}

@@ -102,14 +102,14 @@ export default function Utilisateurs() {
         endpoint="/utilisateurs/" nomElement={t('Utilisateur')} libelleNouveau={t('Nouvel utilisateur')} placeholderRecherche={t('Nom ou identifiant…')}
         actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les comptes sélectionnés ?'), executer: desactiverEnMasse<Utilisateur>('/utilisateurs/', 'actif', (u) => u.nom_complet) }]}
         colonnes={[
-          { cle: 'nom_complet', titre: t('Nom'), tri: 'nom', rendu: (u) => <span className="font-medium">{u.nom_complet}</span> },
-          { cle: 'identifiant', titre: t('Identifiant'), tri: 'identifiant' },
-          { cle: 'role', titre: t('Rôle'), tri: 'role', rendu: (u) => <Badge ton={tonRole(u.role)}>{libelleRole(u.role)}</Badge> },
-          { cle: 'pin', titre: t('Code PIN'), rendu: (u) => (peutApprouver(u.role)
+          { cle: 'nom_complet', titre: 'Nom', tri: 'nom', rendu: (u) => <span className="font-medium">{u.nom_complet}</span> },
+          { cle: 'identifiant', titre: 'Identifiant', tri: 'identifiant' },
+          { cle: 'role', titre: 'Rôle', tri: 'role', rendu: (u) => <Badge ton={tonRole(u.role)}>{libelleRole(u.role)}</Badge> },
+          { cle: 'pin', titre: 'Code PIN', rendu: (u) => (peutApprouver(u.role)
             ? <Badge ton={u.pin_defini ? 'vert' : 'orange'}>{u.pin_defini ? t('Défini') : t('À définir')}</Badge>
             : <span className="text-slate-400">—</span>) },
-          { cle: 'telephone', titre: t('Téléphone'), cacheParDefaut: true },
-          { cle: 'actif', titre: t('État'), rendu: (u) => <Badge ton={u.actif ? 'vert' : 'gris'}>{u.actif ? t('Actif') : t('Désactivé')}</Badge> },
+          { cle: 'telephone', titre: 'Téléphone', cacheParDefaut: true },
+          { cle: 'actif', titre: 'État', rendu: (u) => <Badge ton={u.actif ? 'vert' : 'gris'}>{u.actif ? t('Actif') : t('Désactivé')}</Badge> },
         ]}
         champs={[
           { nom: 'identifiant', libelle: t('Identifiant'), type: 'texte', requis: true, desactiveEnEdition: true },

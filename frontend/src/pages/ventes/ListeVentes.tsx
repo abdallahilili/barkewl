@@ -65,13 +65,13 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
       </BarreRecherche>
       <TableauDonnees<Vente>
         colonnes={[
-          { cle: 'reference', titre: t('Reçu'), tri: 'reference', rendu: (v) => <span className="font-medium">{v.reference}</span> },
-          { cle: 'date_vente', titre: t('Date'), tri: 'date_vente', rendu: (v) => formaterDateHeure(v.date_vente), exportRendu: (v) => formaterDateHeureExport(v.date_vente) },
-          { cle: 'client_nom', titre: t('Client'), rendu: (v) => v.client_nom ?? '—' },
-          { cle: 'caissier_nom', titre: t('Caissier') },
-          { cle: 'modes_paiement', titre: t('Paiement') },
-          { cle: 'total', titre: t('Total'), alignement: 'droite', tri: 'total', rendu: (v) => formaterMontant(v.total) },
-          { cle: 'statut', titre: t('État'), rendu: (v) => <Badge ton={tonStatut(v.statut)}>{libelleStatut(v.statut)}</Badge> },
+          { cle: 'reference', titre: 'Reçu', tri: 'reference', rendu: (v) => <span className="font-medium">{v.reference}</span> },
+          { cle: 'date_vente', titre: 'Date', tri: 'date_vente', rendu: (v) => formaterDateHeure(v.date_vente), exportRendu: (v) => formaterDateHeureExport(v.date_vente) },
+          { cle: 'client_nom', titre: 'Client', rendu: (v) => v.client_nom ?? '—' },
+          { cle: 'caissier_nom', titre: 'Caissier' },
+          { cle: 'modes_paiement', titre: 'Paiement' },
+          { cle: 'total', titre: 'Total', alignement: 'droite', tri: 'total', rendu: (v) => formaterMontant(v.total) },
+          { cle: 'statut', titre: 'État', rendu: (v) => <Badge ton={tonStatut(v.statut)}>{libelleStatut(v.statut)}</Badge> },
           { cle: 'actions', titre: '', alignement: 'droite', rendu: (v) => <button className="btn-discret btn-petit" onClick={(e) => { e.stopPropagation(); voirRecu(v) }}><Printer size={14} /> {' '}{t('Reçu')}</button> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}

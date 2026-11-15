@@ -11,7 +11,7 @@ import { extraireErreur } from '../../utilitaires/erreurs'
 import { formaterDateHeure, formaterMontant, libelleTypeMouvement } from '../../utilitaires/formatage'
 import { ResumeSession } from '../../fonctionnalites/ResumeSession'
 
-import { t } from '../../i18n'
+import { t, traduireServeur } from '../../i18n'
 function OuvertureSession({ surOuverte }: { surOuverte: () => void }) {
   const notifier = useNotifier()
   const caisses = useOptions<Caisse>('/caisses/', { active: 1 })
@@ -144,7 +144,7 @@ export default function SessionActuelle() {
                       <td className="px-3 py-2">{formaterDateHeure(m.date_mouvement)}</td>
                       <td className="px-3 py-2"><Badge ton={negatif ? 'rouge' : 'vert'}>{libelleTypeMouvement(m.type_mouvement, m.type_libelle)}</Badge></td>
                       <td className="px-3 py-2">{m.mode_paiement_nom}</td>
-                      <td className="px-3 py-2 text-slate-600">{m.motif}</td>
+                      <td className="px-3 py-2 text-slate-600">{traduireServeur(m.motif)}</td>
                       <td className={`px-3 py-2 text-end font-medium ${negatif ? 'text-red-700' : 'text-emerald-700'}`}>{negatif ? '−' : '+'}{formaterMontant(m.montant)}</td>
                     </tr>
                   )

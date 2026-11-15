@@ -13,11 +13,11 @@ export default function Fournisseurs() {
       filtres={[{ nom: 'actif', libelle: t('Tous les états'), options: [{ valeur: 1, libelle: t('Actifs') }, { valeur: 0, libelle: t('Désactivés') }] }]}
       actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les fournisseurs sélectionnés ?'), executer: desactiverEnMasse<Fournisseur>('/fournisseurs/', 'actif', (f) => f.nom) }]}
       colonnes={[
-        { cle: 'nom', titre: t('Nom'), tri: 'nom', rendu: (f) => <span className="font-medium">{f.nom}</span> },
-        { cle: 'telephone', titre: t('Téléphone') },
-        { cle: 'email', titre: t('E-mail'), cacheParDefaut: true },
-        { cle: 'solde', titre: t('Solde dû'), alignement: 'droite', tri: 'solde', rendu: (f) => <span className={Number(f.solde) > 0 ? 'font-semibold text-red-700' : ''}>{formaterMontant(f.solde)}</span> },
-        { cle: 'actif', titre: t('État'), rendu: (f) => <Badge ton={f.actif ? 'vert' : 'gris'}>{f.actif ? t('Actif') : t('Désactivé')}</Badge> },
+        { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (f) => <span className="font-medium">{f.nom}</span> },
+        { cle: 'telephone', titre: 'Téléphone' },
+        { cle: 'email', titre: 'E-mail', cacheParDefaut: true },
+        { cle: 'solde', titre: 'Solde dû', alignement: 'droite', tri: 'solde', rendu: (f) => <span className={Number(f.solde) > 0 ? 'font-semibold text-red-700' : ''}>{formaterMontant(f.solde)}</span> },
+        { cle: 'actif', titre: 'État', rendu: (f) => <Badge ton={f.actif ? 'vert' : 'gris'}>{f.actif ? t('Actif') : t('Désactivé')}</Badge> },
       ]}
       champs={[
         { nom: 'nom', libelle: t('Nom'), type: 'texte', requis: true },

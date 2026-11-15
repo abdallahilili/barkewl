@@ -75,22 +75,21 @@ export default function NouvelleVente() {
     api.get<{ session: SessionCaisse | null }>('/sessions-caisse/actuelle/').then((r) => setSession(r.data.session)).finally(() => setChargement(false))
   }, [])
 
+  /** Recherche (ou, sans terme, affiche les médicaments les plus vendus). Appelée par l'effet de recherche
+   * et explicitement après l'ajout au panier, car `setTexte('')` ne redéclenche pas l'effet quand le champ
+   * était déjà vide (sélection depuis la liste par défaut) : sans cet appel direct, la liste resterait vide. */
+  const chargerResultats = useCallback((q: string) => {
+    if (!session) { setResultats([]); return }
+    setRecherche(true)
+    api.get<ResultatCaisse[]>('/medicaments/recherche-caisse/', { params: { ...(q ? { q } : {}), depot: session.depot } })
+      .then((r) => setResultats(r.data)).catch(() => setResultats([])).finally(() => setRecherche(false))
+  }, [session])
+
   useEffect(() => {
     if (!session) { setResultats([]); return }
-    if (!texte.trim()) {
-      // Pas de recherche en cours : on affiche les médicaments les plus vendus.
-      setRecherche(true)
-      api.get<ResultatCaisse[]>('/medicaments/recherche-caisse/', { params: { depot: session.depot } })
-        .then((r) => setResultats(r.data)).catch(() => setResultats([])).finally(() => setRecherche(false))
-      return
-    }
-    const t = setTimeout(() => {
-      setRecherche(true)
-      api.get<ResultatCaisse[]>('/medicaments/recherche-caisse/', { params: { q: texte.trim(), depot: session.depot } })
-        .then((r) => setResultats(r.data)).catch(() => setResultats([])).finally(() => setRecherche(false))
-    }, 200)
+    const t = setTimeout(() => chargerResultats(texte.trim()), texte.trim() ? 200 : 0)
     return () => clearTimeout(t)
-  }, [texte, session])
+  }, [texte, session, chargerResultats])
 
   const ajouter = useCallback((r: ResultatCaisse, conditionnement?: Conditionnement) => {
     if (r.stock_disponible <= 0) { notifier.erreur(t('« {nom} » n\'est pas disponible en stock (lots périmés exclus).', { nom: r.nom })); return }
@@ -108,9 +107,9 @@ export default function NouvelleVente() {
       return [...p, { cle, medicament: r.id, nom: r.nom, dosage: r.dosage, conditionnement: code, options: r.conditionnements,
         stockUnites: r.stock_disponible, prix: Number(o.prix), quantite: 1 }]
     })
-    setTexte(''); setResultats([])
+    setTexte(''); chargerResultats('')
     champRecherche.current?.focus()
-  }, [notifier])
+  }, [notifier, chargerResultats])
 
   const surEntree = (e: KeyboardEvent) => {
     if (e.key !== 'Enter' || resultats.length === 0) return

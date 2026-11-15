@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { t } from "../i18n";
 
 export function EnTetePage({
   titre,
@@ -44,7 +45,7 @@ export function EtatVide({
   );
 }
 
-export function Chargement({ texte = "Chargement…" }: { texte?: string }) {
+export function Chargement({ texte = t('Chargement…') }: { texte?: string }) {
   return (
     <div className="p-8 text-center text-sm text-slate-500" role="status">
       {texte}

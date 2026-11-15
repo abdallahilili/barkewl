@@ -1,8 +1,9 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { estArabe, t } from '../i18n'
+import { Langue, langueCourante, tVers } from '../i18n'
 import { api } from '../services/api'
 import type { ReponsePaginee } from '../types'
+import { texteCopyright } from './copyright'
 import {
   formaterDateHeureExport, lireAdressePharmacie, lireLogoPharmacie, lireNomPharmacie, lireTelephonePharmacie,
 } from './formatage'
@@ -15,6 +16,8 @@ interface OptionsExportDocument {
   entetes: string[]
   lignes: LigneExport[]
   imprimePar: string
+  /** Langue du document généré, choisie par l'utilisateur ; par défaut, la langue courante de l'interface. */
+  langue?: Langue
 }
 
 /** Les polices standard de jsPDF (WinAnsi) ne rendent pas correctement certains caractères (flèches, tirets longs…). */
@@ -53,11 +56,11 @@ export function exporterCsv(nomFichier: string, entetes: string[], lignes: Ligne
 }
 
 export function exporterPdf(options: OptionsExportDocument) {
-  const { titre, nomFichier, entetes, lignes } = options
+  const { titre, nomFichier, entetes, lignes, langue = langueCourante() } = options
   // jsPDF ne sait pas dessiner l'arabe (ni la liaison des lettres, ni le sens de lecture) :
   // dès qu'il y a de l'arabe, on passe par l'impression du navigateur (« Enregistrer au format PDF »).
   const ARABE = /[؀-ۿ]/
-  if (estArabe() || [titre, lireNomPharmacie(), ...entetes, ...lignes.flat().map((v) => String(v ?? ''))].some((v) => ARABE.test(v))) {
+  if (langue === 'ar' || [titre, lireNomPharmacie(), ...entetes, ...lignes.flat().map((v) => String(v ?? ''))].some((v) => ARABE.test(v))) {
     imprimerTableau(options)
     return
   }
@@ -90,8 +93,8 @@ export function exporterPdf(options: OptionsExportDocument) {
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
-  doc.text(`Imprimé par : ${nettoyerPourPdf(options.imprimePar)}`, margeGauche, y)
-  doc.text(`Date : ${formaterDateHeureExport(new Date().toISOString())}`, largeurPage - margeGauche, y, { align: 'right' })
+  doc.text(tVers(langue, 'Imprimé par : {nom}', { nom: nettoyerPourPdf(options.imprimePar) }), margeGauche, y)
+  doc.text(tVers(langue, 'Date : {date}', { date: formaterDateHeureExport(new Date().toISOString()) }), largeurPage - margeGauche, y, { align: 'right' })
   y += 3
 
   doc.setLineWidth(0.2)
@@ -106,11 +109,23 @@ export function exporterPdf(options: OptionsExportDocument) {
     headStyles: { fillColor: [16, 45, 70] },
   })
 
+  const copyright = texteCopyright()
+  if (copyright) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6)
+    doc.setTextColor(107, 114, 128)
+    const hauteurPage = doc.internal.pageSize.getHeight()
+    for (let page = 1; page <= doc.getNumberOfPages(); page++) {
+      doc.setPage(page)
+      doc.text(nettoyerPourPdf(copyright), largeurPage / 2, hauteurPage - 6, { align: 'center' })
+    }
+  }
+
   doc.save(nomFichier.endsWith('.pdf') ? nomFichier : `${nomFichier}.pdf`)
 }
 
 export async function exporterExcel(options: Omit<OptionsExportDocument, 'imprimePar'>) {
-  const { titre, nomFichier, entetes, lignes } = options
+  const { titre, nomFichier, entetes, lignes, langue = langueCourante() } = options
   const { default: ExcelJS } = await import('exceljs')
   const classeur = new ExcelJS.Workbook()
   classeur.creator = lireNomPharmacie()
@@ -122,7 +137,9 @@ export async function exporterExcel(options: Omit<OptionsExportDocument, 'imprim
   enTete.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } }
   enTete.alignment = { vertical: 'middle' }
   for (const ligne of lignes) feuille.addRow(ligne.map((v) => v ?? ''))
-  feuille.views = [{ state: 'frozen', ySplit: 1 }]
+  feuille.views = [{ state: 'frozen', ySplit: 1, rightToLeft: langue === 'ar' }]
+  const copyright = texteCopyright()
+  if (copyright) feuille.headerFooter = { oddFooter: `&C&7${copyright}` }
   const buffer = await classeur.xlsx.writeBuffer()
   telechargerBlob(
     new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
@@ -131,19 +148,22 @@ export async function exporterExcel(options: Omit<OptionsExportDocument, 'imprim
 }
 
 export async function exporterWord(options: Omit<OptionsExportDocument, 'imprimePar'>) {
-  const { titre, nomFichier, entetes, lignes } = options
+  const { titre, nomFichier, entetes, lignes, langue = langueCourante() } = options
+  const arabe = langue === 'ar'
   const {
-    AlignmentType, Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType,
+    AlignmentType, Document, Footer, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType,
   } = await import('docx')
+  const copyright = texteCopyright()
   const celluleEnTete = (texte: string) => new TableCell({
     shading: { fill: '1E40AF' },
-    children: [new Paragraph({ children: [new TextRun({ text: texte, bold: true, color: 'FFFFFFFF' })] })],
+    children: [new Paragraph({ bidirectional: arabe, children: [new TextRun({ text: texte, bold: true, color: 'FFFFFFFF', rightToLeft: arabe })] })],
   })
   const celluleDonnee = (valeur: string | number | null | undefined) => new TableCell({
-    children: [new Paragraph(String(valeur ?? ''))],
+    children: [new Paragraph({ bidirectional: arabe, children: [new TextRun({ text: String(valeur ?? ''), rightToLeft: arabe })] })],
   })
   const tableau = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
+    visuallyRightToLeft: arabe,
     rows: [
       new TableRow({ tableHeader: true, children: entetes.map(celluleEnTete) }),
       ...lignes.map((ligne) => new TableRow({ children: ligne.map(celluleDonnee) })),
@@ -151,12 +171,18 @@ export async function exporterWord(options: Omit<OptionsExportDocument, 'imprime
   })
   const doc = new Document({
     sections: [{
+      footers: copyright ? {
+        default: new Footer({
+          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: copyright, size: 12, color: '6B7280' })] })],
+        }),
+      } : undefined,
       children: [
-        new Paragraph({ text: lireNomPharmacie(), heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
-        new Paragraph({ text: titre, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER }),
+        new Paragraph({ text: lireNomPharmacie(), heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, bidirectional: arabe }),
+        new Paragraph({ text: titre, heading: HeadingLevel.HEADING_2, alignment: AlignmentType.CENTER, bidirectional: arabe }),
         new Paragraph({
-          alignment: AlignmentType.RIGHT,
-          children: [new TextRun({ text: `Exporté le ${formaterDateHeureExport(new Date().toISOString())}`, size: 18 })],
+          alignment: AlignmentType.END,
+          bidirectional: arabe,
+          children: [new TextRun({ text: tVers(langue, 'Exporté le {date}', { date: formaterDateHeureExport(new Date().toISOString()) }), size: 18, rightToLeft: arabe })],
         }),
         new Paragraph({ text: '' }),
         tableau,
@@ -184,13 +210,16 @@ export async function recupererTout<T>(endpoint: string, params: Record<string, 
 const echapperHtml = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /** Tableau imprimé par le navigateur (gère l'arabe et la lecture de droite à gauche). */
-function imprimerTableau(options: { titre: string; entetes: string[]; lignes: (string | number | null | undefined)[][]; imprimePar: string }) {
-  const sens = estArabe() ? 'rtl' : 'ltr'
+function imprimerTableau(options: { titre: string; entetes: string[]; lignes: (string | number | null | undefined)[][]; imprimePar: string; langue?: Langue }) {
+  const langue = options.langue ?? langueCourante()
+  const arabe = langue === 'ar'
+  const sens = arabe ? 'rtl' : 'ltr'
   const logo = lireLogoPharmacie()
-  const html = `<!doctype html><html lang="${estArabe() ? 'ar' : 'fr'}" dir="${sens}"><head><meta charset="utf-8"><title>${echapperHtml(options.titre)}</title>
+  const copyright = texteCopyright()
+  const html = `<!doctype html><html lang="${arabe ? 'ar' : 'fr'}" dir="${sens}"><head><meta charset="utf-8"><title>${echapperHtml(options.titre)}</title>
 <style>
   @page { size: A4 ${options.entetes.length > 6 ? 'landscape' : 'portrait'}; margin: 12mm; }
-  body { font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif; color: #102D46; font-size: 11px; margin: 0; }
+  body { font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; color: #102D46; font-size: 11px; margin: 0; }
   header { text-align: center; margin-bottom: 8px; }
   header img { height: 40px; }
   h1 { font-size: 16px; margin: 4px 0 0; } h2 { font-size: 13px; margin: 2px 0 6px; font-weight: 600; }
@@ -198,11 +227,13 @@ function imprimerTableau(options: { titre: string; entetes: string[]; lignes: (s
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th { background: #102D46; color: #fff; font-weight: 600; } th, td { padding: 5px 6px; text-align: start; border-bottom: 1px solid #E2E8F0; }
   tr:nth-child(even) td { background: #F3F6F8; }
+  footer { margin-top: 12px; text-align: center; font-size: 7px; color: #6b7280; }
 </style></head><body>
 <header>${logo ? `<img src="${logo}" alt="">` : ''}<h1>${echapperHtml(lireNomPharmacie())}</h1><h2>${echapperHtml(options.titre)}</h2></header>
-<div class="meta"><span>${echapperHtml(t('Imprimé par : {nom}', { nom: options.imprimePar }))}</span><span dir="ltr">${formaterDateHeureExport(new Date().toISOString())}</span></div>
+<div class="meta"><span>${echapperHtml(tVers(langue, 'Imprimé par : {nom}', { nom: options.imprimePar }))}</span><span dir="ltr">${formaterDateHeureExport(new Date().toISOString())}</span></div>
 <table><thead><tr>${options.entetes.map((e) => `<th>${echapperHtml(e)}</th>`).join('')}</tr></thead>
 <tbody>${options.lignes.map((l) => `<tr>${l.map((v) => `<td>${echapperHtml(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+${copyright ? `<footer dir="auto">${echapperHtml(copyright)}</footer>` : ''}
 </body></html>`
   const cadre = document.createElement('iframe')
   cadre.style.cssText = 'position:fixed;width:0;height:0;border:0;right:0;bottom:0'

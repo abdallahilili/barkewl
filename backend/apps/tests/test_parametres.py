@@ -43,6 +43,13 @@ class TestParametresDocuments(BaseTest):
         self.assertEqual(valeurs["whatsapp_pharmacie"], "22001122")
         self.assertEqual(valeurs["message_devis"], "<b>Valable 15 jours</b>")
 
+    def test_copyright_documents_actif_par_defaut_et_desactivable(self):
+        self.assertEqual(self.parametres()["afficher_copyright_documents"], "1")
+        r = self.client_pour(self.admin).put("/api/parametres/", {"afficher_copyright_documents": "0"}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        # Lisible par tous les rôles : le frontend l'applique à l'impression de chaque poste.
+        self.assertEqual(self.parametres(self.caissier)["afficher_copyright_documents"], "0")
+
     def test_seul_l_admin_modifie_les_parametres(self):
         for utilisateur in (self.caissier, self.magasinier):
             r = self.client_pour(utilisateur).put("/api/parametres/", {"email_pharmacie": "x@y.z"}, format="json")
@@ -66,6 +73,20 @@ class TestParametresDocuments(BaseTest):
         self.assertEqual(recu["entete_image"], IMAGE)
         self.assertEqual(recu["logo"], IMAGE)
         self.assertEqual(recu["message"], "<i>Merci</i>")
+
+    def test_nom_arabe_de_la_pharmacie_sur_le_recu_et_les_documents_de_vente(self):
+        self.assertEqual(self.parametres()["nom_pharmacie_ar"], "")  # vide par défaut : rien d'imprimé
+        r = self.client_pour(self.admin).put("/api/parametres/", {"nom_pharmacie_ar": "  صيدلية كيفة  "}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        vente = self.vendre_un()
+        recu = self.client_pour(self.caissier).get(f"/api/recus/{vente.pk}/").data["pharmacie"]
+        self.assertEqual(recu["nom_ar"], "صيدلية كيفة")
+        client = Client.objects.create(nom="Clinique Ennour")
+        document = DocumentVente.objects.create(reference="DEV-ARABE", client=client, depot=self.depot, personnel=self.magasinier)
+        LigneDocumentVente.objects.create(document=document, medicament=self.med, designation=self.med.nom,
+                                          quantite_devis=1, prix_unitaire=Decimal("100"), total=Decimal("100"))
+        pharmacie = self.client_pour(self.magasinier).get(f"/api/documents-vente/{document.pk}/").data["pharmacie"]
+        self.assertEqual(pharmacie["nom_ar"], "صيدلية كيفة")
 
     def test_logo_masque_sur_les_documents_si_desactive(self):
         self.client_pour(self.admin).put("/api/parametres/", {"logo_pharmacie": IMAGE, "afficher_logo_documents": "0"}, format="json")

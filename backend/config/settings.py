@@ -60,6 +60,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    # Langue de l'interface (en-tête Accept-Language envoyé par le frontend) : les messages natifs de Django et de
+    # Django REST Framework (champ obligatoire, valeur invalide…) sortent en arabe ; les messages métier restent en
+    # français et sont traduits par le frontend.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "apps.licence.middleware.LicenceMiddleware",
 ]
@@ -115,6 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LANGUAGE_CODE = "fr"
+LANGUAGES = [("fr", "Français"), ("ar", "العربية")]
 # Nouakchott est en UTC+0 toute l'année : on reste en UTC, ce qui évite d'avoir
 # à charger les tables de fuseaux horaires de MySQL.
 TIME_ZONE = "UTC"

@@ -13,8 +13,8 @@ from apps.commun.serializers import JournalAuditSerializer
 from apps.commun.vues_base import ViewSetGestion
 
 from .conditionnement import conditionnements_disponibles, decrire_quantite, libelle, multiplicateur, prix_conditionnement
-from .models import Categorie, Lot, Medicament
-from .serializers import CategorieSerializer, LotSerializer, MedicamentSerializer
+from .models import Categorie, Dosage, Forme, Lot, Medicament
+from .serializers import CategorieSerializer, DosageSerializer, FormeSerializer, LotSerializer, MedicamentSerializer
 
 
 class CategorieViewSet(ViewSetGestion):
@@ -25,13 +25,44 @@ class CategorieViewSet(ViewSetGestion):
     search_fields = ["nom"]
 
 
+class ReferentielActifViewSet(ViewSetGestion):
+    """Liste simple (nom + état) lue par tous les rôles, modifiée par l'administrateur ; ?actif=0|1 filtre par état."""
+    roles_lecture = TOUS_LES_ROLES
+    roles_ecriture = ()
+    search_fields = ["nom"]
+    ordering_fields = ["nom"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        actif = self.request.query_params.get("actif")
+        if actif in ("0", "1"):
+            qs = qs.filter(actif=(actif == "1"))
+        return qs
+
+
+class FormeViewSet(ReferentielActifViewSet):
+    queryset = Forme.objects.all()
+    serializer_class = FormeSerializer
+
+
+class DosageViewSet(ReferentielActifViewSet):
+    queryset = Dosage.objects.all()
+    serializer_class = DosageSerializer
+
+
 class MedicamentViewSet(ViewSetGestion):
     serializer_class = MedicamentSerializer
     roles_lecture = TOUS_LES_ROLES
     roles_ecriture = ()
     roles_par_action = {"historique": (MAGASINIER,)}
-    search_fields = ["nom", "nom_generique", "code", "code_barre"]
-    ordering_fields = ["nom", "code", "prix_vente", "prix_achat", "stock_total", "date_creation"]
+    search_fields = [
+        "nom", "nom_generique", "code", "code_barre", "forme", "dosage", "unite", "laboratoire",
+        "emplacement", "nom_unite_detail", "categorie__nom",
+    ]
+    ordering_fields = [
+        "nom", "nom_generique", "code", "forme", "dosage", "unite", "laboratoire", "emplacement",
+        "prix_vente", "prix_achat", "stock_total", "date_creation",
+    ]
     ordering = ["nom"]
 
     def get_queryset(self):
