@@ -6,11 +6,12 @@ import { t } from '../i18n'
 const TAILLES = [10, 12, 14, 16, 18, 22, 28]
 const POLICES = [
   { libelle: t('Police'), valeur: '' },
-  { libelle: t('Arial'), valeur: 'Arial, sans-serif' },
-  { libelle: t('Times'), valeur: "'Times New Roman', serif" },
-  { libelle: t('Courier'), valeur: "'Courier New', monospace" },
-  { libelle: t('Georgia'), valeur: 'Georgia, serif' },
-  { libelle: t('Verdana'), valeur: 'Verdana, sans-serif' },
+  // Noms de polices : identiques dans toutes les langues (pas de t()).
+  { libelle: 'Arial', valeur: 'Arial, sans-serif' },
+  { libelle: 'Times', valeur: "'Times New Roman', serif" },
+  { libelle: 'Courier', valeur: "'Courier New', monospace" },
+  { libelle: 'Georgia', valeur: 'Georgia, serif' },
+  { libelle: 'Verdana', valeur: 'Verdana, sans-serif' },
 ]
 
 interface Props {

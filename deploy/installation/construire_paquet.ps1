@@ -78,10 +78,10 @@ Write-Host "  OK composants Python ($((Get-ChildItem (Join-Path $sortie 'lib') -
 
 # 5. Scripts : en UTF-8 avec BOM pour que Windows PowerShell 5.1 lise correctement les accents.
 $avecBom = New-Object Text.UTF8Encoding $true
-foreach ($script in "installer.ps1", "mettre_a_jour.ps1") {
+foreach ($script in "installer.ps1", "mettre_a_jour.ps1", "commun.ps1", "desinstaller.ps1") {
     [IO.File]::WriteAllText((Join-Path $sortie $script), [IO.File]::ReadAllText((Join-Path $Ici $script)), $avecBom)
 }
-foreach ($fichier in "Installer.bat", "Mettre_a_jour.bat") {
+foreach ($fichier in "Installer.bat", "Mettre_a_jour.bat", "Desinstaller.bat") {
     $texte = [IO.File]::ReadAllText((Join-Path $Ici $fichier)) -replace "`r?`n", "`r`n"
     [IO.File]::WriteAllText((Join-Path $sortie $fichier), $texte, [Text.Encoding]::GetEncoding(1252))
 }

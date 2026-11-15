@@ -40,6 +40,12 @@ METTRE À JOUR (nouvelle version)
   La mise à jour fait d'abord une sauvegarde ; en cas de problème, l'ancienne version et les données
   sont remises en place automatiquement.
 
+DÉSINSTALLER
+  - Paramètres Windows > Applications > Applications installées > RAQEEM PHARMA > Désinstaller,
+    ou clic droit sur C:\RaqeemPharma\Desinstaller.bat > Exécuter en tant qu'administrateur.
+  - Taper OUI pour confirmer. Une dernière sauvegarde est faite et TOUTES les sauvegardes sont copiées
+    dans C:\RaqeemPharma_sauvegardes_<date> (ce dossier n'est jamais supprimé).
+
 EN CAS DE PROBLÈME
   - Journal du serveur : C:\RaqeemPharma\journaux\serveur.log
   - Le logiciel ne s'ouvre pas : vérifier que MySQL est démarré, puis redémarrer le PC.
