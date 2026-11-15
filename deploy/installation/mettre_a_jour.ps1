@@ -192,6 +192,15 @@ catch {
 # ---------------------------------------------------------------- 5. Redémarrage et vérification
 Titre "5/5  Redémarrage"
 Copy-Item (Join-Path $Paquet "VERSION.txt") (Join-Path $Dossier "VERSION.txt") -Force -ErrorAction Stop
+# Outil d'accès à la base (HeidiSQL), pour les installations avec le MySQL inclus.
+if ((Test-Path (Join-Path $Paquet "outils\HeidiSQL\heidisql.exe")) -and (Test-Path (Join-Path $Dossier "mysql_root.txt"))) {
+    try {
+        Copier (Join-Path $Paquet "outils") (Join-Path $Dossier "outils") @("/XF", "portable_settings.txt")
+        Copy-Item (Join-Path $Paquet "Base_de_donnees.bat") $Dossier -Force
+        if (-not $SansTache) { icacls (Join-Path $Dossier "outils") /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" | Out-Null }
+        Ok "Accès à la base : $Dossier\Base_de_donnees.bat (administrateurs)"
+    } catch { Write-Host "Outil d'accès à la base non installé : $($_.Exception.Message)" -ForegroundColor Yellow }
+}
 # Raccourci du bureau avec l'icône RAQEEM (les anciennes versions n'en avaient pas).
 if (-not $SansTache -and (Test-Path (Join-Path $Paquet "raqeem.ico"))) {
     try {
