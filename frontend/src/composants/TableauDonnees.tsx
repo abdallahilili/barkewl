@@ -1,8 +1,8 @@
 import {
-  ColumnOrderState, ColumnPinningState, ColumnSizingState, VisibilityState, flexRender, getCoreRowModel, useReactTable,
+  ColumnPinningState, ColumnSizingState, VisibilityState, flexRender, getCoreRowModel, useReactTable,
 } from '@tanstack/react-table'
 import {
-  ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Columns3, Download, GripVertical, Loader2, Maximize2, Minimize2, Pin, PinOff, X,
+  ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Columns3, Download, Loader2, Maximize2, Minimize2, Pin, PinOff, X,
 } from 'lucide-react'
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useConfirmer } from './Confirmation'
@@ -18,6 +18,8 @@ export interface Colonne<T> {
   titre: string
   rendu?: (ligne: T) => ReactNode
   exportRendu?: (ligne: T) => string | number | null
+  /** Montant additionné dans la ligne « Total » en bas des exports (0 pour une ligne à ne pas compter). */
+  somme?: (ligne: T) => number
   tri?: string
   alignement?: 'gauche' | 'droite' | 'centre'
   cacheParDefaut?: boolean
@@ -63,12 +65,18 @@ interface Props<T> {
   /** Endpoint + paramètres courants (recherche/tri/filtres, hors page), pour les portées d'export "filtré"/"tout". */
   endpoint?: string
   parametresRequete?: Record<string, unknown>
+  /** Texte affiché en bas du tableau à côté du nombre de résultats (ex. montant total du résultat filtré). */
+  resume?: ReactNode
+  /** Texte français de la ligne de total ajoutée aux exports quand une colonne a une `somme` (défaut : « Total »). */
+  libelleTotal?: string
 }
 
 const alignements = { gauche: 'text-start', droite: 'text-end', centre: 'text-center' }
+// Le contenu d'un en-tête est un conteneur flex : `text-align` n'y agit pas, il faut aligner avec `justify`.
+const alignementsEnTete = { gauche: 'justify-start', droite: 'justify-end', centre: 'justify-center' }
 const CLE_SELECTION = '_selection'
 
-interface EtatColonnes { ordre: string[]; tailles: Record<string, number>; cachees: string[]; epinglage: ColumnPinningState }
+interface EtatColonnes { tailles: Record<string, number>; cachees: string[]; epinglage: ColumnPinningState }
 
 function chargerEtat(idTableau?: string): EtatColonnes | null {
   if (!idTableau) return null
@@ -86,7 +94,7 @@ function sauverEtat(idTableau: string | undefined, etat: EtatColonnes) {
 export function TableauDonnees<T>({
   colonnes, lignes, chargement, erreur, total, page, nombrePages, onPage, tri, onTri, cleLigne, onClicLigne,
   messageVide = t('Aucun résultat.'), choixColonnes = true, titre = t('Export'), exporter = true, idTableau,
-  actionsMasse, filtresColonnes = {}, onFiltreColonne, endpoint, parametresRequete,
+  actionsMasse, filtresColonnes = {}, onFiltreColonne, endpoint, parametresRequete, resume, libelleTotal,
 }: Props<T>) {
   const notifier = useNotifier()
   const confirmer = useConfirmer()
@@ -96,18 +104,12 @@ export function TableauDonnees<T>({
   const [menuOuvert, setMenuOuvert] = useState(false)
   const [modaleExport, setModaleExport] = useState(false)
   const [pleinEcran, setPleinEcran] = useState(false)
-  const [glissee, setGlissee] = useState<string | null>(null)
   const [executionMasse, setExecutionMasse] = useState(false)
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     const v: VisibilityState = {}
     for (const c of colonnes) v[c.cle] = etatInitial ? !etatInitial.cachees.includes(c.cle) : !c.cacheParDefaut
     return v
-  })
-  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(() => {
-    const defaut = colonnes.map((c) => c.cle)
-    if (etatInitial && etatInitial.ordre.length === defaut.length && defaut.every((c) => etatInitial.ordre.includes(c))) return etatInitial.ordre
-    return defaut
   })
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() => {
     const tailles: ColumnSizingState = {}
@@ -118,8 +120,8 @@ export function TableauDonnees<T>({
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    sauverEtat(idTableau, { ordre: columnOrder, tailles: columnSizing, cachees: Object.keys(columnVisibility).filter((k) => !columnVisibility[k]), epinglage: columnPinning })
-  }, [idTableau, columnOrder, columnSizing, columnVisibility, columnPinning])
+    sauverEtat(idTableau, { tailles: columnSizing, cachees: Object.keys(columnVisibility).filter((k) => !columnVisibility[k]), epinglage: columnPinning })
+  }, [idTableau, columnSizing, columnVisibility, columnPinning])
 
   useEffect(() => {
     const surChangement = () => setPleinEcran(!!document.fullscreenElement)
@@ -151,13 +153,12 @@ export function TableauDonnees<T>({
   const table = useReactTable({
     data: lignes,
     columns: colonnesTanStack,
-    state: { columnVisibility, columnOrder, columnSizing, columnPinning, rowSelection },
+    state: { columnVisibility, columnSizing, columnPinning, rowSelection },
     columnResizeMode: 'onChange',
     columnResizeDirection: estArabe() ? 'rtl' : 'ltr',
     enableRowSelection: !!actionsMasse,
     getRowId: (row) => String(cleLigne(row)),
     onColumnVisibilityChange: setColumnVisibility,
-    onColumnOrderChange: setColumnOrder,
     onColumnSizingChange: setColumnSizing,
     onColumnPinningChange: setColumnPinning,
     onRowSelectionChange: setRowSelection,
@@ -254,7 +255,9 @@ export function TableauDonnees<T>({
       </div>
       <MessageErreur message={erreur ?? null} />
       <div className={`overflow-auto ${pleinEcran ? 'flex-1' : ''}`}>
-        <table className="w-full table-fixed text-sm" style={{ width: table.getTotalSize() }}>
+        {/* Largeur : au moins la somme des colonnes (défilement horizontal au-delà), mais jamais moins que le conteneur,
+            sinon le tableau reste collé à un seul bord et laisse un vide de l'autre côté (à gauche en arabe). */}
+        <table className="w-full table-fixed text-sm" style={{ minWidth: table.getTotalSize() }}>
           <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
             <tr>
               {table.getHeaderGroups()[0].headers.map((header) => {
@@ -262,29 +265,15 @@ export function TableauDonnees<T>({
                 const epingle = header.column.getIsPinned()
                 const estActions = header.column.id !== CLE_SELECTION && colonne?.titre === ''
                 const estSelection = header.column.id === CLE_SELECTION
+                const alignement = colonne?.alignement ?? 'gauche'
+                // Épinglage « logique » : la colonne figée reste du côté du début de ligne (à droite en arabe).
                 return (
-                  <th key={header.id} style={{ width: header.getSize(), left: epingle === 'left' ? header.column.getStart('left') : undefined, right: epingle === 'right' ? header.column.getAfter('right') : undefined }}
-                    className={`relative whitespace-nowrap px-3 py-2.5 font-medium ${alignements[colonne?.alignement ?? 'gauche']} ${epingle ? 'sticky z-10 bg-slate-50' : ''}`}
-                    draggable={!estActions && !estSelection}
-                    onDragStart={() => setGlissee(header.column.id)}
-                    onDragOver={(e) => { if (!estActions && !estSelection) e.preventDefault() }}
-                    onDrop={() => {
-                      if (!glissee || glissee === header.column.id) return
-                      const ordreActuel = table.getState().columnOrder
-                      const depuis = ordreActuel.indexOf(glissee)
-                      const vers = ordreActuel.indexOf(header.column.id)
-                      if (depuis === -1 || vers === -1) return
-                      const nouveau = [...ordreActuel]
-                      nouveau.splice(depuis, 1)
-                      nouveau.splice(vers, 0, glissee)
-                      setColumnOrder(nouveau)
-                      setGlissee(null)
-                    }}>
+                  <th key={header.id} style={{ width: header.getSize(), insetInlineStart: epingle === 'left' ? header.column.getStart('left') : undefined, insetInlineEnd: epingle === 'right' ? header.column.getAfter('right') : undefined }}
+                    className={`relative whitespace-nowrap px-3 py-2.5 font-medium ${alignements[alignement]} ${epingle ? 'sticky z-10 bg-slate-50' : ''}`}>
                     {estSelection ? (
                       <input type="checkbox" checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} aria-label={t('Tout sélectionner')} />
                     ) : (
-                      <div className="flex items-center gap-1">
-                        {!estActions && <GripVertical size={12} className="shrink-0 cursor-grab text-slate-300" />}
+                      <div className={`flex items-center gap-1 ${alignementsEnTete[alignement]}`}>
                         {colonne?.tri && onTri ? (
                           <button type="button" className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => basculerTri(colonne.tri!)}>
                             {header.column.columnDef.header as string}
@@ -293,8 +282,8 @@ export function TableauDonnees<T>({
                           </button>
                         ) : <span>{header.column.columnDef.header as string}</span>}
                         {!estActions && (
-                          <button type="button" className="ms-auto shrink-0 text-slate-300 hover:text-marque-600" onClick={() => basculerEpingle(header.column.id)}
-                            aria-label={t(epingle ? 'Détacher la colonne' : 'Figer la colonne')} title={t(epingle ? 'Détacher' : 'Figer à gauche')}>
+                          <button type="button" className={`${alignement === 'gauche' ? 'ms-auto ' : ''}shrink-0 text-slate-300 hover:text-marque-600`} onClick={() => basculerEpingle(header.column.id)}
+                            aria-label={t(epingle ? 'Détacher la colonne' : 'Figer la colonne')} title={t(epingle ? 'Détacher' : 'Figer la colonne')}>
                             {epingle ? <PinOff size={12} /> : <Pin size={12} />}
                           </button>
                         )}
@@ -342,7 +331,7 @@ export function TableauDonnees<T>({
                   const colonne = colonnesParCle[cell.column.id]
                   const epingle = cell.column.getIsPinned()
                   return (
-                    <td key={cell.id} style={{ width: cell.column.getSize(), left: epingle === 'left' ? cell.column.getStart('left') : undefined, right: epingle === 'right' ? cell.column.getAfter('right') : undefined }}
+                    <td key={cell.id} style={{ width: cell.column.getSize(), insetInlineStart: epingle === 'left' ? cell.column.getStart('left') : undefined, insetInlineEnd: epingle === 'right' ? cell.column.getAfter('right') : undefined }}
                       className={`overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5 align-middle ${alignements[colonne?.alignement ?? 'gauche']} ${epingle ? 'sticky z-[5] bg-white' : ''}`}
                       onClick={cell.column.id === CLE_SELECTION ? (e) => e.stopPropagation() : undefined}>
                       {cell.column.id === CLE_SELECTION
@@ -359,7 +348,10 @@ export function TableauDonnees<T>({
       {chargement && lignes.length === 0 && <Chargement />}
       {!chargement && lignes.length === 0 && !erreur && <EtatVide titre={messageVide} />}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-3 py-2 text-xs text-slate-500 sans-impression">
-        <span>{total} {' '}{t(total > 1 ? 'résultats' : 'résultat')}{chargement && lignes.length > 0 ? t(' — mise à jour…') : ''}</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span>{total} {' '}{t(total > 1 ? 'résultats' : 'résultat')}{chargement && lignes.length > 0 ? t(' — mise à jour…') : ''}</span>
+          {resume}
+        </div>
         {nombrePages > 1 && (
           <div className="flex items-center gap-1">
             <button className="btn-discret btn-petit" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label={t('Page précédente')}><ChevronLeft size={14} className="rtl:-scale-x-100" /></button>
@@ -371,7 +363,7 @@ export function TableauDonnees<T>({
       {exporter && (
         <ModaleExport ouverte={modaleExport} onFermer={() => setModaleExport(false)} titre={titre}
           colonnes={colonnesExportables} colonnesVisibles={colonnesVisiblesExport}
-          lignesPage={lignes} lignesSelection={lignesSelectionnees} endpoint={endpoint} parametresRequete={parametresRequete} />
+          lignesPage={lignes} lignesSelection={lignesSelectionnees} endpoint={endpoint} parametresRequete={parametresRequete} libelleTotal={libelleTotal} />
       )}
     </div>
   )

@@ -28,3 +28,11 @@ Technique : Django 5.2 LTS + Django REST Framework, React + TypeScript + Tailwin
 - Dépôt privé ; le partager avec dex, el adel
 - Création d'un fournisseur au cours d'un achat
 - Dettes clients (sur demande)
+
+----------------------------------
+- correction de traduire ![alt text](image.png)
+dash board
+
+- ajouter filtrage par type de Wollet avec total dans le table et l'exportation![alt text](image-1.png)
+
+- devise en arabe : MRU (أوقية)

@@ -1,4 +1,6 @@
-from django.db.models import Q
+from decimal import Decimal
+
+from django.db.models import Q, Sum
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -12,7 +14,7 @@ from apps.utilisateurs.approbation import verifier_approbation
 from apps.medicaments.conditionnement import libelle
 
 from . import services
-from .models import Client, Vente
+from .models import Client, PaiementVente, StatutVente, Vente
 from .serializers import (
     AnnulerVenteSerializer, ApercuVenteSerializer, ClientSerializer, CreerVenteSerializer,
     VenteListeSerializer, VenteSerializer, construire_recu,
@@ -63,7 +65,30 @@ class VenteViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(date_vente__date__gte=debut)
         if fin:
             qs = qs.filter(date_vente__date__lte=fin)
+        if p.get("mode_paiement"):
+            # Ventes réglées (au moins en partie) avec ce mode de paiement : espèces, Bankily, Masrvi…
+            qs = qs.filter(paiements__mode_paiement_id=p["mode_paiement"]).distinct()
         return qs
+
+    def get_serializer_context(self):
+        contexte = super().get_serializer_context()
+        if self.action == "list" and self.request.query_params.get("mode_paiement"):
+            contexte["mode_paiement"] = self.request.query_params["mode_paiement"]
+        return contexte
+
+    def list(self, request, *args, **kwargs):
+        """Liste paginée + `montant_total` : somme des ventes validées de TOUTES les pages du résultat filtré
+        (les ventes annulées restent listées mais ne comptent pas). Filtré par mode de paiement, c'est la somme
+        des montants réglés avec ce mode ; sinon la somme des totaux de vente."""
+        reponse = super().list(request, *args, **kwargs)
+        ventes = self.filter_queryset(self.get_queryset()).filter(statut=StatutVente.VALIDEE).order_by().values("pk")
+        mode = request.query_params.get("mode_paiement")
+        if mode:
+            somme = PaiementVente.objects.filter(vente__in=ventes, mode_paiement_id=mode).aggregate(s=Sum("montant"))["s"]
+        else:
+            somme = Vente.objects.filter(pk__in=ventes).aggregate(s=Sum("total"))["s"]
+        reponse.data["montant_total"] = somme or Decimal("0")
+        return reponse
 
     def create(self, request):
         serializer = CreerVenteSerializer(data=request.data)

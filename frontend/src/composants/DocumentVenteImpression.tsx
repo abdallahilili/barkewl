@@ -1,7 +1,7 @@
 import { Printer } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { DocumentVente, EtapeDocumentVente } from '../types'
-import { formaterDate, formaterDateHeure, formaterNombre } from '../utilitaires/formatage'
+import { formaterDate, formaterDateHeure, formaterNombre, libelleDeviseVers } from '../utilitaires/formatage'
 import { EnTeteDocument, MessagePied } from './EnTeteDocument'
 import { Modale } from './Modale'
 import { PiedLogiciel } from './PiedLogiciel'
@@ -20,7 +20,7 @@ export function DocumentVenteImpression({ document, type, onFermer }: {
 
   const numero = document ? (type === 'FACTURE' ? document.numero_facture : type === 'BON_LIVRAISON' ? document.numero_bl : document.reference) : ''
   const date = document ? (type === 'FACTURE' ? document.date_facture : type === 'BON_LIVRAISON' ? document.date_bl : document.date_devis) : null
-  const devise = document?.pharmacie?.devise ?? 'MRU'
+  const devise = libelleDeviseVers(document?.pharmacie?.devise ?? 'MRU', langueDoc)
   const titre = td(TITRES[type])
   // Le bon de livraison n'affiche prix et total que si le paramètre l'autorise.
   const sansPrix = type === 'BON_LIVRAISON' && document?.pharmacie?.bl_afficher_prix === false
@@ -40,16 +40,15 @@ export function DocumentVenteImpression({ document, type, onFermer }: {
               <button type="button" onClick={() => setLangueDoc('ar')} className={`px-3 py-1.5 ${langueDoc === 'ar' ? 'bg-marque-600 font-medium text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>العربية</button>
             </div>
           </div>
-          <div className="zone-impression w-full bg-white text-black" dir={langueDoc === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="zone-impression impression-multipage w-full bg-white text-black" dir={langueDoc === 'ar' ? 'rtl' : 'ltr'}>
           <style>{`
             @media print {
               @page { size: A4 portrait; margin: 8mm; }
-              html, body { height: 100% !important; max-height: 100% !important; overflow: hidden !important; }
             }
           `}</style>
           <div className="recu-conteneur">
             <div className="recu-cadre recu-cadre--pleine-page">
-              <EnTeteDocument identite={document.pharmacie} traduire={(texte, fin = '') => td(texte) + fin} />
+              <EnTeteDocument identite={document.pharmacie} />
 
               <div className="recu-info-grille">
                 <div className="recu-info-col">

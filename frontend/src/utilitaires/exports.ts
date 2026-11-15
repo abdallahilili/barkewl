@@ -37,6 +37,8 @@ export interface ColonneExportable<T> {
   cle: string
   titre: string
   exportRendu?: (ligne: T) => string | number | null
+  /** Montant à additionner pour la ligne « Total » ajoutée en bas de l'export (0 pour une ligne à ne pas compter). */
+  somme?: (ligne: T) => number
 }
 
 export function valeurExport<T>(colonne: ColonneExportable<T>, ligne: T): string | number {

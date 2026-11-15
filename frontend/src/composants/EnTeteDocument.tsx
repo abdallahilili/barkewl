@@ -1,27 +1,33 @@
 import type { ReactNode } from 'react'
 import type { IdentiteDocument } from '../types'
-import { t } from '../i18n'
+import { tVers } from '../i18n'
+import type { Langue } from '../i18n'
 import { htmlSur, texteVide } from '../utilitaires/texteRiche'
 
-/** Libellé d'une ligne de l'en-tête : `fin` (« : », « 1 : »…) est ajouté au texte traduit. */
-export type TraduireEntete = (texte: string, fin?: string) => ReactNode
-
-function Ligne({ libelle, valeur }: { libelle: ReactNode; valeur: string }) {
-  return <div className="recu-entete-ligne"><span className="recu-entete-label">{libelle}</span><span className="recu-entete-valeur">{valeur}</span></div>
+function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
+  // <bdi> isole la valeur (téléphone, adresse…) : elle garde son propre sens de lecture dans le bloc arabe.
+  return <div className="recu-entete-ligne"><span className="recu-entete-label">{libelle} :</span><bdi className="recu-entete-valeur">{valeur}</bdi></div>
 }
 
-/** Libellé numéroté seulement s'il y a plusieurs valeurs (« Tél : » ou « Tél 1 : », « Tél 2 : »). */
-const numerote = (traduire: TraduireEntete, libelle: string, valeurs: (string | undefined)[]) =>
-  valeurs.filter(Boolean).map((valeur, i, tout) => (
-    <Ligne key={`${libelle}${i}`} libelle={traduire(libelle, tout.length === 1 ? ' :' : ` ${i + 1} :`)} valeur={valeur!} />
-  ))
+/** Coordonnées de la pharmacie, avec les libellés dans la langue du bloc. « Tél 1 », « Tél 2 »… seulement s'il y a plusieurs numéros. */
+function Contacts({ identite, langue }: { identite: IdentiteDocument; langue: Langue }) {
+  const libelle = (texte: string) => tVers(langue, texte)
+  const numerote = (texte: string, valeurs: (string | undefined)[]) =>
+    valeurs.filter(Boolean).map((valeur, i, tout) => <Ligne key={`${texte}${i}`} libelle={tout.length === 1 ? libelle(texte) : `${libelle(texte)} ${i + 1}`} valeur={valeur!} />)
+  return (
+    <div className="recu-contacts">
+      {identite.adresse && <Ligne libelle={libelle('Adresse')} valeur={identite.adresse} />}
+      {numerote('Tél', [identite.telephone, identite.telephone_2, identite.telephone_3])}
+      {numerote('WhatsApp', [identite.whatsapp, identite.whatsapp_2])}
+      {identite.email && <Ligne libelle={libelle('Email')} valeur={identite.email} />}
+      {identite.nif && <Ligne libelle={libelle('NIF')} valeur={identite.nif} />}
+    </div>
+  )
+}
 
-const traduireSimple: TraduireEntete = (texte, fin = '') => t(texte) + fin
-
-/** En-tête commun des reçus, devis, bons de livraison et factures : image personnalisée si elle est
- * définie dans les paramètres, sinon logo, nom (arabe au-dessus, plus grand ; français dessous) et coordonnées.
- * `traduire` permet d'imposer une langue (ou les deux à la fois) indépendamment de l'interface courante. */
-export function EnTeteDocument({ identite, traduire = traduireSimple }: { identite: IdentiteDocument; traduire?: TraduireEntete }) {
+/** En-tête commun des reçus, devis, bons de livraison et factures : image personnalisée si elle est définie dans les
+ * paramètres ; sinon le logo au milieu, le nom et les coordonnées en français à gauche, en arabe à droite. */
+export function EnTeteDocument({ identite }: { identite: IdentiteDocument }) {
   if (identite.entete_image) {
     return (
       <div className="recu-entete-personnalise">
@@ -29,29 +35,26 @@ export function EnTeteDocument({ identite, traduire = traduireSimple }: { identi
       </div>
     )
   }
+  const logo: ReactNode = identite.logo ? (
+    <img src={identite.logo} alt="" className="recu-logo" />
+  ) : (
+    <div className="recu-icone-pharmacie">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v20M2 12h20" />
+      </svg>
+    </div>
+  )
+  // dir="ltr" sur l'en-tête : le français reste à gauche et l'arabe à droite, quelle que soit la langue du document.
   return (
-    <div className="recu-entete">
-      <div className="recu-entete-gauche">
-        {identite.logo ? (
-          <img src={identite.logo} alt="" className="recu-logo" />
-        ) : (
-          <div className="recu-icone-pharmacie">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2v20M2 12h20" />
-            </svg>
-          </div>
-        )}
-        <div className={identite.nom_ar ? 'recu-pharmacie-noms recu-pharmacie-noms--bi' : 'recu-pharmacie-noms'}>
-          {identite.nom_ar && <p className="recu-pharmacie-nom-ar" dir="rtl" lang="ar">{identite.nom_ar}</p>}
-          <h1 className="recu-pharmacie-nom">{identite.nom}</h1>
-        </div>
+    <div className="recu-entete" dir="ltr">
+      <div className="recu-entete-bloc recu-entete-bloc--fr" dir="ltr" lang="fr">
+        <h1 className="recu-pharmacie-nom">{identite.nom}</h1>
+        <Contacts identite={identite} langue="fr" />
       </div>
-      <div className="recu-entete-droite">
-        {identite.adresse && <Ligne libelle={traduire('Adresse', ' :')} valeur={identite.adresse} />}
-        {numerote(traduire, 'Tél', [identite.telephone, identite.telephone_2, identite.telephone_3])}
-        {numerote(traduire, 'WhatsApp', [identite.whatsapp, identite.whatsapp_2])}
-        {identite.email && <Ligne libelle={traduire('Email', ' :')} valeur={identite.email} />}
-        {identite.nif && <Ligne libelle={traduire('NIF', ' :')} valeur={identite.nif} />}
+      <div className="recu-entete-centre">{logo}</div>
+      <div className="recu-entete-bloc recu-entete-bloc--ar" dir="rtl" lang="ar">
+        {identite.nom_ar && <p className="recu-pharmacie-nom-ar">{identite.nom_ar}</p>}
+        <Contacts identite={identite} langue="ar" />
       </div>
     </div>
   )

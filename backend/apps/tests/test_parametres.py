@@ -95,6 +95,19 @@ class TestParametresDocuments(BaseTest):
         self.assertEqual(recu["logo"], "")
         self.assertEqual(self.parametres()["logo_pharmacie"], IMAGE)  # le logo reste enregistré (barre latérale)
 
+    def test_adresse_masquee_sur_les_documents_si_desactivee(self):
+        admin = self.client_pour(self.admin)
+        admin.put("/api/parametres/", {"adresse_pharmacie": "Avenue de l'Indépendance, Kiffa"}, format="json")
+        self.assertEqual(self.parametres()["afficher_adresse_documents"], "1")  # affichée par défaut
+        vente = self.vendre_un()
+        recu = self.client_pour(self.caissier).get(f"/api/recus/{vente.pk}/").data["pharmacie"]
+        self.assertEqual(recu["adresse"], "Avenue de l'Indépendance, Kiffa")
+        admin.put("/api/parametres/", {"afficher_adresse_documents": "0"}, format="json")
+        recu = self.client_pour(self.caissier).get(f"/api/recus/{vente.pk}/").data["pharmacie"]
+        self.assertEqual(recu["adresse"], "")
+        # L'adresse reste enregistrée : seul l'affichage sur les documents change.
+        self.assertEqual(self.parametres()["adresse_pharmacie"], "Avenue de l'Indépendance, Kiffa")
+
     def test_document_de_vente_messages_par_type_et_repli_facture(self):
         self.client_pour(self.admin).put("/api/parametres/", {
             "message_recu": "Merci", "message_bl": "Vérifiez la livraison", "message_facture": "<div><br></div>", "bl_afficher_prix": "0",

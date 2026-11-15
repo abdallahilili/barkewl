@@ -20,6 +20,8 @@ export interface ReponsePaginee<T> {
   taille_page: number
   nombre_pages: number
   resultats: T[]
+  /** Historique des ventes : somme des ventes validées de toutes les pages du résultat filtré. */
+  montant_total?: number | string
 }
 
 export interface Depot { id: number; nom: string; description: string; actif: boolean }
@@ -314,6 +316,8 @@ export interface Vente {
   total: number
   statut: 'VALIDEE' | 'ANNULEE'
   modes_paiement: string
+  /** Montant réglé avec le mode de paiement filtré ; absent quand la liste n'est pas filtrée par mode. */
+  montant_mode?: number | string | null
   montant_recu?: number | null
   motif_annulation?: string
   annulation_approuvee_par_nom?: string | null

@@ -27,7 +27,7 @@ const CLES_SECTION: Record<Section, string[]> = {
     'telephone_pharmacie_3', 'whatsapp_pharmacie', 'whatsapp_pharmacie_2', 'email_pharmacie', 'nif_pharmacie',
   ],
   documents: [
-    'devise', 'afficher_logo_documents', 'afficher_copyright_documents', 'bl_afficher_prix', 'message_recu', 'message_devis', 'message_bl', 'message_facture',
+    'devise', 'afficher_logo_documents', 'afficher_adresse_documents', 'afficher_copyright_documents', 'bl_afficher_prix', 'message_recu', 'message_devis', 'message_bl', 'message_facture',
   ],
   medicaments: ['jours_alerte_peremption', 'stock_negatif_autorise', 'gestion_rayonnages_active'],
 }
@@ -170,6 +170,9 @@ function ParametresSection({ section }: { section: Section }) {
                 onChange={(c) => maj('afficher_logo_documents', c ? '1' : '0')} />
             </div>
           </div>
+          <CaseACocher libelle={t('Afficher l\'adresse sur les documents imprimés')} valeur={v('afficher_adresse_documents') !== '0'}
+            aide={t('Décochez pour ne pas imprimer l\'adresse dans l\'en-tête des reçus, devis, bons de livraison et factures.')}
+            onChange={(c) => maj('afficher_adresse_documents', c ? '1' : '0')} />
           <CaseACocher libelle={t('Afficher le copyright en bas des documents')} valeur={v('afficher_copyright_documents') !== '0'}
             aide={t('Ligne très petite en bas des reçus, factures, rapports et exports : « Développé par : Rawafid Digital Services ».')}
             onChange={(c) => maj('afficher_copyright_documents', c ? '1' : '0')} />

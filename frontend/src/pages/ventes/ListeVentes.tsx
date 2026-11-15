@@ -9,9 +9,9 @@ import { RecuImpression } from '../../composants/RecuImpression'
 import { BarreRecherche } from '../../composants/BarreRecherche'
 import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useAuth } from '../../hooks/useAuth'
-import { useListe } from '../../hooks/useListe'
+import { useListe, useOptions } from '../../hooks/useListe'
 import { api } from '../../services/api'
-import type { Recu, Vente } from '../../types'
+import type { ModePaiement, Recu, Vente } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { aujourdhui, formaterDateHeure, formaterDateHeureExport, formaterMontant, libelleStatut } from '../../utilitaires/formatage'
 
@@ -22,7 +22,11 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
   const [debut, setDebut] = useState(modeRecus ? '' : aujourdhui())
   const [fin, setFin] = useState(modeRecus ? '' : aujourdhui())
   const [statut, setStatut] = useState('')
-  const liste = useListe<Vente>(modeRecus ? '/recus/' : '/ventes/', { filtres: modeRecus ? {} : { date_debut: debut, date_fin: fin, statut }, triInitial: '-date_vente' })
+  // Filtre par mode de paiement (espèces, Bankily, Masrvi…) : la liste affiche alors le montant réglé avec ce mode.
+  const [modePaiement, setModePaiement] = useState('')
+  const modes = useOptions<ModePaiement>('/modes-paiement/', {}, !modeRecus)
+  const nomMode = modes.find((m) => String(m.id) === modePaiement)?.nom
+  const liste = useListe<Vente>(modeRecus ? '/recus/' : '/ventes/', { filtres: modeRecus ? {} : { date_debut: debut, date_fin: fin, statut, mode_paiement: modePaiement }, triInitial: '-date_vente' })
   const [detail, setDetail] = useState<Vente | null>(null)
   const [recu, setRecu] = useState<Recu | null>(null)
   const [motif, setMotif] = useState('')
@@ -61,6 +65,10 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
           <input type="date" className="champ w-auto" value={debut} onChange={(e) => setDebut(e.target.value)} aria-label={t('Du')} />
           <input type="date" className="champ w-auto" value={fin} onChange={(e) => setFin(e.target.value)} aria-label={t('Au')} />
           <select className="champ w-auto" value={statut} onChange={(e) => setStatut(e.target.value)} aria-label={t('État')}><option value="">{t('Toutes')}</option><option value="VALIDEE">{t('Validées')}</option><option value="ANNULEE">{t('Annulées')}</option></select>
+          <select className="champ w-auto" value={modePaiement} onChange={(e) => setModePaiement(e.target.value)} aria-label={t('Mode de paiement')}>
+            <option value="">{t('Tous les modes')}</option>
+            {modes.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
+          </select>
         </>}
       </BarreRecherche>
       <TableauDonnees<Vente>
@@ -70,7 +78,14 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
           { cle: 'client_nom', titre: 'Client', rendu: (v) => v.client_nom ?? '—' },
           { cle: 'caissier_nom', titre: 'Caissier' },
           { cle: 'modes_paiement', titre: 'Paiement' },
-          { cle: 'total', titre: 'Total', alignement: 'droite', tri: 'total', rendu: (v) => formaterMontant(v.total) },
+          ...(!modeRecus && modePaiement ? [{
+            cle: 'montant_mode', titre: 'Montant du mode', alignement: 'droite' as const,
+            rendu: (v: Vente) => formaterMontant(v.montant_mode),
+            exportRendu: (v: Vente) => (v.montant_mode == null ? null : Number(v.montant_mode)),
+            somme: (v: Vente) => (v.statut === 'VALIDEE' ? Number(v.montant_mode ?? 0) : 0),   // une vente annulée ne compte pas
+          }] : []),
+          { cle: 'total', titre: 'Total', alignement: 'droite', tri: 'total', rendu: (v) => formaterMontant(v.total),
+            somme: modeRecus ? undefined : (v) => (v.statut === 'VALIDEE' ? Number(v.total) : 0) },
           { cle: 'statut', titre: 'État', rendu: (v) => <Badge ton={tonStatut(v.statut)}>{libelleStatut(v.statut)}</Badge> },
           { cle: 'actions', titre: '', alignement: 'droite', rendu: (v) => <button className="btn-discret btn-petit" onClick={(e) => { e.stopPropagation(); voirRecu(v) }}><Printer size={14} /> {' '}{t('Reçu')}</button> },
         ]}
@@ -78,7 +93,13 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(v) => v.id} onClicLigne={ouvrirDetail} messageVide={t('Aucune vente trouvée.')}
         titre={modeRecus ? t('Reçus') : t('Historique des ventes')} idTableau={modeRecus ? 'recus' : 'ventes'}
         endpoint={modeRecus ? '/recus/' : '/ventes/'}
-        parametresRequete={{ ...(modeRecus ? {} : { date_debut: debut, date_fin: fin, statut }), ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
+        libelleTotal="Total (ventes validées)"
+        resume={!modeRecus && liste.montantTotal != null ? (
+          <span className="font-semibold text-slate-700">
+            {nomMode ? t('Total encaissé en {mode}', { mode: nomMode }) : t('Total (ventes validées)')}{' : '}{formaterMontant(liste.montantTotal)}
+          </span>
+        ) : undefined}
+        parametresRequete={{ ...(modeRecus ? {} : { date_debut: debut, date_fin: fin, statut, mode_paiement: modePaiement }), ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
 
       <Modale ouverte={!!detail} titre={detail ? t('Vente {reference}', { reference: detail.reference }) : ''} onFermer={() => setDetail(null)} largeur="grande"
         pied={<>

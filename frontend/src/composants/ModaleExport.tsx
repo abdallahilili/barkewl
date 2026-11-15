@@ -18,11 +18,13 @@ const FORMATS: { cle: Format; libelle: string }[] = [
 ]
 
 export function ModaleExport<T>({
-  ouverte, onFermer, titre, colonnes, colonnesVisibles, lignesPage, lignesSelection, endpoint, parametresRequete,
+  ouverte, onFermer, titre, colonnes, colonnesVisibles, lignesPage, lignesSelection, endpoint, parametresRequete, libelleTotal = 'Total',
 }: {
   ouverte: boolean
   onFermer: () => void
   titre: string
+  /** Texte français de la ligne de total (colonnes avec `somme`) ; traduit dans la langue choisie pour l'export. */
+  libelleTotal?: string
   colonnes: ColonneExportable<T>[]
   colonnesVisibles: string[]
   lignesPage: T[]
@@ -53,6 +55,12 @@ export function ModaleExport<T>({
       const colonnesFinales = colonnes.filter((c) => colonnesChoisies.includes(c.cle))
       const entetes = colonnesFinales.map((c) => tVers(langueExport, c.titre))
       const lignes = source.map((l) => colonnesFinales.map((c) => valeurExport(c, l)))
+      // Colonnes de montants : une dernière ligne donne le total des lignes exportées.
+      if (colonnesFinales.some((c) => c.somme)) {
+        lignes.push(colonnesFinales.map((c, i) => (c.somme
+          ? Math.round(source.reduce((s, l) => s + c.somme!(l), 0) * 100) / 100
+          : i === 0 ? tVers(langueExport, libelleTotal) : '')))
+      }
       const nomFichier = genererNomFichier(titre)
 
       if (format === 'csv') exporterCsv(`${nomFichier}.csv`, entetes, lignes)

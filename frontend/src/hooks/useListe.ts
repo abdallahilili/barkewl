@@ -15,6 +15,7 @@ export function useListe<T>(endpoint: string, options: OptionsListe = {}) {
   const { taillePage = 25, filtres = {}, triInitial, actif = true } = options
   const [lignes, setLignes] = useState<T[]>([])
   const [total, setTotal] = useState(0)
+  const [montantTotal, setMontantTotal] = useState<number | null>(null)
   const [nombrePages, setNombrePages] = useState(1)
   const [page, setPage] = useState(1)
   const [recherche, setRecherche] = useState('')
@@ -47,13 +48,14 @@ export function useListe<T>(endpoint: string, options: OptionsListe = {}) {
       .then((r) => {
         if (numero !== numeroRequete.current) return
         setLignes(r.data.resultats); setTotal(r.data.total); setNombrePages(r.data.nombre_pages); setErreur(null)
+        setMontantTotal(r.data.montant_total == null ? null : Number(r.data.montant_total))
       })
       .catch((e) => { if (numero === numeroRequete.current) setErreur(extraireErreur(e)) })
       .finally(() => { if (numero === numeroRequete.current) setChargement(false) })
   }, [endpoint, page, taillePage, rechercheEffective, tri, cleFiltres, version, actif])
 
   const recharger = useCallback(() => setVersion((v) => v + 1), [])
-  return { lignes, total, nombrePages, page, setPage, recherche, setRecherche, tri, setTri, chargement, erreur, recharger }
+  return { lignes, total, montantTotal, nombrePages, page, setPage, recherche, setRecherche, tri, setTri, chargement, erreur, recharger }
 }
 
 const cache: Record<string, unknown[]> = {}

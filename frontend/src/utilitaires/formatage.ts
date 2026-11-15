@@ -1,8 +1,15 @@
 
-import { estArabe, t } from '../i18n'
+import { estArabe, Langue, t } from '../i18n'
 let devise = 'MRU'
 export const definirDevise = (valeur: string) => { devise = valeur || 'MRU' }
 export const lireDevise = () => devise
+
+/** Nom de la devise en arabe (ex. MRU → أوقية) ; si la langue est le français ou que la devise est inconnue, renvoie le code tel quel. */
+const NOMS_DEVISES_AR: Record<string, string> = { MRU: 'أوقية' }
+export const libelleDeviseVers = (code: string, langue: Langue) => (langue === 'ar' && NOMS_DEVISES_AR[code] ? NOMS_DEVISES_AR[code] : code)
+export const libelleDevise = (code: string) => libelleDeviseVers(code, estArabe() ? 'ar' : 'fr')
+/** Pour les documents toujours bilingues (reçu de caisse) : « MRU / أوقية », ou juste le code si pas de traduction. */
+export const libelleDeviseBilingue = (code: string) => (NOMS_DEVISES_AR[code] ? `${code} / ${NOMS_DEVISES_AR[code]}` : code)
 
 let rayonnagesActifs = false
 export const definirGestionRayonnages = (active: boolean) => { rayonnagesActifs = active }
@@ -37,7 +44,7 @@ const isolerNegatif = (texte: string) => (estArabe() && /^[-−]/.test(texte) ? 
 
 export const formaterNombre = (n: number | null | undefined) => (n == null ? '—' : isolerNegatif(formatNombre.format(Number(n))))
 export const formaterMontant = (n: number | string | null | undefined) =>
-  n == null || n === '' ? '—' : isolerNegatif(`${formatMontant.format(Number(n))} ${devise}`)
+  n == null || n === '' ? '—' : isolerNegatif(`${formatMontant.format(Number(n))} ${libelleDevise(devise)}`)
 
 export function formaterDate(iso: string | null | undefined) {
   if (!iso) return '—'

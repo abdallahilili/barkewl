@@ -23,6 +23,7 @@ DEFAUTS = {
     "logo_pharmacie": ("", "Logo affiché sur les reçus (image encodée en base64)"),
     "entete_image": ("", "En-tête personnalisé des documents (image encodée en base64) ; vide = en-tête par défaut"),
     "afficher_logo_documents": ("1", "Afficher le logo sur les documents imprimés [1 = oui, 0 = non]"),
+    "afficher_adresse_documents": ("1", "Afficher l'adresse sur les documents imprimés [1 = oui, 0 = non]"),
     "bl_afficher_prix": ("1", "Afficher les colonnes Prix et Total sur le bon de livraison [1 = oui, 0 = non]"),
     "afficher_copyright_documents": ("1", "Afficher le copyright et le contact de l'éditeur en bas des documents [1 = oui, 0 = non]"),
     "gestion_rayonnages_active": ("0", "Activer la gestion des rayonnages (emplacement des médicaments) [1 = oui, 0 = non]"),
@@ -64,9 +65,10 @@ def message_vide(texte):
 def identite_documents():
     """Coordonnées de la pharmacie imprimées sur les reçus, devis, bons de livraison et factures."""
     logo = obtenir_parametre("logo_pharmacie") if obtenir_booleen("afficher_logo_documents") else ""
+    adresse = obtenir_parametre("adresse_pharmacie") if obtenir_booleen("afficher_adresse_documents") else ""
     return {
         "nom": obtenir_parametre("nom_pharmacie"), "nom_ar": obtenir_parametre("nom_pharmacie_ar").strip(),
-        "adresse": obtenir_parametre("adresse_pharmacie"),
+        "adresse": adresse,
         "telephone": obtenir_parametre("telephone_pharmacie"),
         "telephone_2": obtenir_parametre("telephone_pharmacie_2"),
         "telephone_3": obtenir_parametre("telephone_pharmacie_3"),

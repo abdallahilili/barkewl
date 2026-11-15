@@ -46,16 +46,24 @@ class VenteListeSerializer(serializers.ModelSerializer):
     caissier_nom = serializers.CharField(source="caissier.nom_complet", read_only=True)
     depot_nom = serializers.CharField(source="depot.nom", read_only=True)
     modes_paiement = serializers.SerializerMethodField()
+    montant_mode = serializers.SerializerMethodField()
 
     class Meta:
         model = Vente
         fields = [
             "id", "reference", "date_vente", "client", "client_nom", "caissier_nom", "depot_nom", "session",
-            "total", "statut", "modes_paiement",
+            "total", "statut", "modes_paiement", "montant_mode",
         ]
 
     def get_modes_paiement(self, obj):
         return ", ".join(p.mode_paiement.nom for p in obj.paiements.all())
+
+    def get_montant_mode(self, obj):
+        """Montant réglé avec le mode de paiement filtré (?mode_paiement=) ; absent quand la liste n'est pas filtrée par mode."""
+        mode = self.context.get("mode_paiement")
+        if not mode:
+            return None
+        return sum((p.montant for p in obj.paiements.all() if str(p.mode_paiement_id) == str(mode)), Decimal("0"))
 
 
 class VenteSerializer(VenteListeSerializer):
