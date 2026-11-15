@@ -1,5 +1,6 @@
 """Configuration Django de l'application de gestion de pharmacie."""
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -14,12 +15,28 @@ def env(cle, defaut=None):
     return os.environ.get(cle, defaut)
 
 
-DEBUG = env("DEBUG", "1") == "1"
+# Sûr par défaut : sans configuration, le mode production s'applique (aucun détail technique affiché en cas
+# d'erreur). Le PC de développement active le mode debug explicitement (DEBUG=1 dans son .env).
+DEBUG = env("DEBUG", "0") == "1"
 SECRET_KEY = env("CLE_SECRETE", "cle-de-developpement-a-changer")
 if not DEBUG and SECRET_KEY == "cle-de-developpement-a-changer":
-    raise ImproperlyConfigured("CLE_SECRETE doit être définie en production.")
+    raise ImproperlyConfigured(
+        "CLE_SECRETE doit être définie en production (fichier .env). En développement, mettez DEBUG=1 dans le .env."
+    )
 
-ALLOWED_HOSTS = ['*']
+# Noms sous lesquels le serveur répond : le PC lui-même par défaut. L'installation ajoute le nom du PC
+# (et ses adresses en mode plusieurs postes).
+ALLOWED_HOSTS = [h.strip() for h in env("HOTES_AUTORISES", "localhost,127.0.0.1").split(",") if h.strip()]
+if env("HOTES_RESEAU_LOCAL", "0") == "1":
+    # Plusieurs postes : les caisses joignent ce PC par son nom ou par son adresse IP. L'adresse (DHCP) peut
+    # changer ; elle est relue à chaque démarrage du serveur, au lieu d'accepter n'importe quel nom (« * »).
+    import socket
+
+    try:
+        _nom, _alias, _adresses = socket.gethostbyname_ex(socket.gethostname())
+        ALLOWED_HOSTS += [_nom, socket.gethostname(), *_alias, *_adresses]
+    except OSError:
+        ALLOWED_HOSTS.append(socket.gethostname())
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
@@ -37,13 +54,19 @@ INSTALLED_APPS = [
     "apps.caisse",
     "apps.facturation",
     "apps.rapports",
+    "apps.licence",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "apps.licence.middleware.LicenceMiddleware",
 ]
+
+# Licence Rawafid Digital Services : toujours exigée, sauf pendant les tests automatiques
+# (les tests de licence l'activent eux-mêmes). Volontairement non réglable par le fichier .env.
+LICENCE_OBLIGATOIRE = not (len(sys.argv) > 1 and sys.argv[1] == "test")
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
@@ -52,6 +75,16 @@ AUTH_USER_MODEL = "utilisateurs.Utilisateur"
 if env("UTILISER_SQLITE", "0") == "1":
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 else:
+    # mysqlclient (pilote C) est privilégié. S'il ne peut pas être chargé — par exemple quand
+    # Windows (Smart App Control) bloque sa DLL — on bascule sur PyMySQL (pur Python).
+    try:
+        import MySQLdb  # noqa: F401
+    except ImportError:
+        import pymysql
+
+        pymysql.version_info = (2, 2, 1, "final", 0)  # Django exige mysqlclient >= 2.2.1
+        pymysql.install_as_MySQLdb()
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
@@ -62,10 +95,22 @@ else:
             "PORT": env("BD_PORT", "3306"),
             "OPTIONS": {
                 "charset": "utf8mb4",
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                # InnoDB obligatoire : transactions (« tout ou rien ») et verrous de ligne. Certains MySQL
+                # (WampServer notamment) créent par défaut des tables MyISAM, qui ignorent les deux sans prévenir.
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES', default_storage_engine=INNODB",
             },
         }
     }
+
+# Mots de passe des comptes : 8 caractères minimum, ni trop courants, ni uniquement des chiffres, ni proches
+# de l'identifiant ou du nom.
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+     "OPTIONS": {"user_attributes": ("identifiant", "nom", "prenom", "email")}},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -98,7 +143,23 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": False,
 }
 
-CORS_ALLOWED_ORIGINS = [o.strip() for o in env("ORIGINES_CORS", "http://localhost:5173").split(",") if o.strip()]
+DOSSIER_JOURNAUX = BASE_DIR / "logs"
+DOSSIER_JOURNAUX.mkdir(exist_ok=True)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"simple": {"format": "%(asctime)s %(levelname)s %(name)s : %(message)s"}},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+        "fichier": {
+            "class": "logging.handlers.RotatingFileHandler", "filename": DOSSIER_JOURNAUX / "raqeem.log",
+            "maxBytes": 2 * 1024 * 1024, "backupCount": 5, "encoding": "utf-8", "formatter": "simple",
+        },
+    },
+    "loggers": {"raqeem": {"handlers": ["console", "fichier"], "level": "INFO"}},
+}
+
+CORS_ALLOWED_ORIGINS =[o.strip() for o in env("ORIGINES_CORS", "http://localhost:5173").split(",") if o.strip()]
 
 if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True

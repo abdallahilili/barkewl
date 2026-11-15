@@ -1,6 +1,7 @@
 import type { SessionCaisse } from '../types'
 import { formaterMontant } from '../utilitaires/formatage'
 
+import { t } from '../i18n'
 function Carte({ titre, valeur, ton = '' }: { titre: string; valeur: string; ton?: string }) {
   return (
     <div className="carte p-3">
@@ -16,17 +17,17 @@ export function ResumeSession({ session }: { session: SessionCaisse }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Carte titre="Fond de caisse" valeur={formaterMontant(session.montant_initial)} />
-        <Carte titre={`Ventes (${r.nombre_ventes})`} valeur={formaterMontant(r.total_ventes)} />
-        <Carte titre="Encaissé en espèces" valeur={formaterMontant(r.total_especes)} />
-        <Carte titre="Autres paiements" valeur={formaterMontant(r.total_autres_paiements)} />
-        <Carte titre="Remboursements (espèces)" valeur={formaterMontant(r.remboursements_especes)} />
-        <Carte titre="Entrées manuelles" valeur={formaterMontant(r.entrees_manuelles)} />
-        <Carte titre="Sorties manuelles" valeur={formaterMontant(r.sorties_manuelles)} />
-        <Carte titre="Espèces attendues" valeur={formaterMontant(r.montant_attendu)} ton="text-marque-700" />
-        {ferme && <Carte titre="Espèces comptées" valeur={formaterMontant(session.montant_reel)} />}
+        <Carte titre={t('Fond de caisse')} valeur={formaterMontant(session.montant_initial)} />
+        <Carte titre={t('Ventes ({nombre})', { nombre: r.nombre_ventes })} valeur={formaterMontant(r.total_ventes)} />
+        <Carte titre={t('Encaissé en espèces')} valeur={formaterMontant(r.total_especes)} />
+        <Carte titre={t('Autres paiements')} valeur={formaterMontant(r.total_autres_paiements)} />
+        <Carte titre={t('Remboursements (espèces)')} valeur={formaterMontant(r.remboursements_especes)} />
+        <Carte titre={t('Entrées manuelles')} valeur={formaterMontant(r.entrees_manuelles)} />
+        <Carte titre={t('Sorties manuelles')} valeur={formaterMontant(r.sorties_manuelles)} />
+        <Carte titre={t('Espèces attendues')} valeur={formaterMontant(r.montant_attendu)} ton="text-marque-700" />
+        {ferme && <Carte titre={t('Espèces comptées')} valeur={formaterMontant(session.montant_reel)} />}
         {ferme && (
-          <Carte titre="Écart" valeur={`${(session.ecart ?? 0) > 0 ? '+' : ''}${formaterMontant(session.ecart)}`}
+          <Carte titre={t('Écart')} valeur={`${(session.ecart ?? 0) > 0 ? '+' : ''}${formaterMontant(session.ecart)}`}
             ton={session.ecart === 0 ? 'text-emerald-700' : 'text-red-700'} />
         )}
       </div>
@@ -35,10 +36,10 @@ export function ResumeSession({ session }: { session: SessionCaisse }) {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
               <tr>
-                <th className="px-3 py-2">Mode de paiement</th>
-                <th className="px-3 py-2 text-right">Ventes</th>
-                <th className="px-3 py-2 text-right">Remboursements</th>
-                <th className="px-3 py-2 text-right">Net</th>
+                <th className="px-3 py-2">{t('Mode de paiement')}</th>
+                <th className="px-3 py-2 text-right">{t('Ventes')}</th>
+                <th className="px-3 py-2 text-right">{t('Remboursements')}</th>
+                <th className="px-3 py-2 text-right">{t('Net')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

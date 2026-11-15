@@ -1,5 +1,6 @@
 import { Printer } from 'lucide-react'
 import type { Recu } from '../types'
+import { EDITEUR_PAR_DEFAUT, NOM_LOGICIEL } from '../services/licence'
 import { formaterDateHeure, formaterNombre } from '../utilitaires/formatage'
 import { EnTeteDocument, MessagePied } from './EnTeteDocument'
 import { Modale } from './Modale'
@@ -78,7 +79,7 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
                         <span className="recu-med-nom">{l.medicament}</span>
                         {l.dosage && <span className="recu-med-dosage"> ({l.dosage})</span>}
                       </td>
-                      <td className="recu-td recu-td-centre">{l.quantite}</td>
+                      <td className="recu-td recu-td-centre">{l.quantite}{l.conditionnement_libelle && <span className="recu-med-dosage"> {l.conditionnement_libelle}</span>}</td>
                       <td className="recu-td recu-td-droite">{formaterNombre(l.prix_unitaire)}</td>
                       <td className="recu-td recu-td-droite recu-td-gras">{formaterNombre(l.total)}</td>
                     </tr>
@@ -115,6 +116,9 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
               </div>
 
               <MessagePied message={recu.pharmacie.message} />
+              <p style={{ marginTop: 6, textAlign: 'center', fontSize: 9, color: '#94a3b8' }}>
+                Logiciel {NOM_LOGICIEL} — {EDITEUR_PAR_DEFAUT}
+              </p>
 
             </div>
           </div>

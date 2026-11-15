@@ -7,6 +7,7 @@ import { Champ } from './Champ'
 import { MessageErreur } from './EnTetePage'
 import { Modale } from './Modale'
 
+import { t } from '../i18n'
 export function SelectionClient({ valeur, onChoisir }: {
   valeur: { id: number; nom: string } | null
   onChoisir: (c: Client | null) => void
@@ -65,7 +66,7 @@ export function SelectionClient({ valeur, onChoisir }: {
     return (
       <div className="champ flex items-center justify-between">
         <span className="truncate">{valeur.nom}</span>
-        <button type="button" className="ml-2 text-slate-400 hover:text-slate-700" onClick={() => onChoisir(null)} aria-label="Changer de client"><X size={14} /></button>
+        <button type="button" className="ms-2 text-slate-400 hover:text-slate-700" onClick={() => onChoisir(null)} aria-label={t('Changer de client')}><X size={14} /></button>
       </div>
     )
   }
@@ -73,15 +74,15 @@ export function SelectionClient({ valeur, onChoisir }: {
   return (
     <>
       <div className="relative" ref={conteneur}>
-        <input className="champ" value={texte} placeholder="Client de passage" onChange={(e) => setTexte(e.target.value)} onKeyDown={surTouche}
-          onFocus={() => texte.trim() && setOuvert(true)} aria-label="Rechercher ou ajouter un client" />
+        <input className="champ" value={texte} placeholder={t('Client de passage')} onChange={(e) => setTexte(e.target.value)} onKeyDown={surTouche}
+          onFocus={() => texte.trim() && setOuvert(true)} aria-label={t('Rechercher ou ajouter un client')} />
         {ouvert && (
           <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
-            {resultats.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">Aucun client trouvé.</li>}
+            {resultats.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">{t('Aucun client trouvé.')}</li>}
             {resultats.map((c, i) => (
               <li key={c.id}>
                 <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => choisir(c)}
-                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${i === actif ? 'bg-marque-50' : 'hover:bg-slate-50'}`}>
+                  className={`flex w-full items-center justify-between px-3 py-2 text-start text-sm ${i === actif ? 'bg-marque-50' : 'hover:bg-slate-50'}`}>
                   <span>{c.nom}</span>
                   {c.telephone && <span className="text-xs text-slate-400">{c.telephone}</span>}
                 </button>
@@ -89,22 +90,22 @@ export function SelectionClient({ valeur, onChoisir }: {
             ))}
             <li className="border-t border-slate-100">
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={ouvrirCreation}
-                className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium text-marque-700 hover:bg-marque-50">
-                <Plus size={14} /> Ajouter{texte.trim() ? ` « ${texte.trim()} »` : ' un client'}
+                className="flex w-full items-center gap-1.5 px-3 py-2 text-start text-sm font-medium text-marque-700 hover:bg-marque-50">
+                <Plus size={14} /> {' '}{t('Ajouter')}{texte.trim() ? ` « ${texte.trim()} »` : t(' un client')}
               </button>
             </li>
           </ul>
         )}
       </div>
-      <Modale ouverte={modaleCreation} titre="Nouveau client" onFermer={() => setModaleCreation(false)} largeur="petite"
+      <Modale ouverte={modaleCreation} titre={t('Nouveau client')} onFermer={() => setModaleCreation(false)} largeur="petite"
         pied={<>
-          <button className="btn-secondaire" onClick={() => setModaleCreation(false)}>Annuler</button>
-          <button className="btn-primaire" type="submit" form="formulaire-nouveau-client" disabled={envoi}>{envoi ? 'Création…' : 'Créer'}</button>
+          <button className="btn-secondaire" onClick={() => setModaleCreation(false)}>{t('Annuler')}</button>
+          <button className="btn-primaire" type="submit" form="formulaire-nouveau-client" disabled={envoi}>{envoi ? t('Création…') : t('Créer')}</button>
         </>}>
         <form id="formulaire-nouveau-client" onSubmit={creer} className="space-y-3">
           <MessageErreur message={erreurCreation} />
-          <Champ libelle="Nom" requis><input className="champ" value={nouveauNom} onChange={(e) => setNouveauNom(e.target.value)} required autoFocus /></Champ>
-          <Champ libelle="Téléphone"><input className="champ" value={nouveauTelephone} onChange={(e) => setNouveauTelephone(e.target.value)} /></Champ>
+          <Champ libelle={t('Nom')} requis><input className="champ" value={nouveauNom} onChange={(e) => setNouveauNom(e.target.value)} required autoFocus /></Champ>
+          <Champ libelle={t('Téléphone')}><input className="champ" value={nouveauTelephone} onChange={(e) => setNouveauTelephone(e.target.value)} /></Champ>
         </form>
       </Modale>
     </>

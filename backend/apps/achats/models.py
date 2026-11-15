@@ -42,7 +42,9 @@ class LigneAchat(models.Model):
     numero_lot = models.CharField(max_length=60)
     date_fabrication = models.DateField(null=True, blank=True)
     date_peremption = models.DateField()
-    quantite = models.PositiveIntegerField()
+    quantite = models.PositiveIntegerField(help_text="En boîtes")
+    # Unités par boîte au moment de la validation (entrée en stock = quantite × ce nombre).
+    unites_par_boite = models.PositiveIntegerField(default=1)
     prix_achat = models.DecimalField(max_digits=12, decimal_places=2)
     prix_vente = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)

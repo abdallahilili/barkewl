@@ -1,7 +1,11 @@
-import { KeyRound, LogOut, Menu, Pill, X } from "lucide-react";
+import { KeyRound, LogOut, Menu, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { BandeauLicence } from "../composants/BandeauLicence";
+import { ChoixLangue } from "../composants/ChoixLangue";
+import { LogoRaqeem } from "../composants/LogoRaqeem";
 import { Champ } from "../composants/Champ";
+import { EDITEUR_PAR_DEFAUT, NOM_LOGICIEL } from "../services/licence";
 import { MessageErreur } from "../composants/EnTetePage";
 import { Modale } from "../composants/Modale";
 import { useNotifier } from "../composants/Notifications";
@@ -11,6 +15,7 @@ import { extraireErreur } from "../utilitaires/erreurs";
 import { libelleRole, lireLogoPharmacie, lireNomPharmacie } from "../utilitaires/formatage";
 import { menu } from "./menu";
 
+import { t } from '../i18n'
 function ModaleMotDePasse({
   ouverte,
   onFermer,
@@ -27,12 +32,12 @@ function ModaleMotDePasse({
   const soumettre = async (e: FormEvent) => {
     e.preventDefault();
     if (nouveau !== confirmation) {
-      setErreur("Les deux mots de passe ne correspondent pas.");
+      setErreur(t('Les deux mots de passe ne correspondent pas.'));
       return;
     }
     try {
       await changerMotDePasse(ancien, nouveau);
-      notifier.succes("Mot de passe modifié.");
+      notifier.succes(t('Mot de passe modifié.'));
       setAncien("");
       setNouveau("");
       setConfirmation("");
@@ -46,23 +51,25 @@ function ModaleMotDePasse({
   return (
     <Modale
       ouverte={ouverte}
-      titre="Changer mon mot de passe"
+      titre={t('Changer mon mot de passe')}
       onFermer={onFermer}
       largeur="petite"
       pied={
         <>
           <button className="btn-secondaire" onClick={onFermer}>
-            Annuler
+            
+            {t('Annuler')}
           </button>
           <button className="btn-primaire" form="formulaire-mdp" type="submit">
-            Enregistrer
+            
+            {t('Enregistrer')}
           </button>
         </>
       }
     >
       <form id="formulaire-mdp" onSubmit={soumettre} className="space-y-3">
         <MessageErreur message={erreur} />
-        <Champ libelle="Mot de passe actuel">
+        <Champ libelle={t('Mot de passe actuel')}>
           <input
             className="champ"
             type="password"
@@ -72,7 +79,7 @@ function ModaleMotDePasse({
             required
           />
         </Champ>
-        <Champ libelle="Nouveau mot de passe" aide="8 caractères minimum.">
+        <Champ libelle={t('Nouveau mot de passe')} aide={t('8 caractères minimum.')}>
           <input
             className="champ"
             type="password"
@@ -83,7 +90,7 @@ function ModaleMotDePasse({
             required
           />
         </Champ>
-        <Champ libelle="Confirmer le nouveau mot de passe">
+        <Champ libelle={t('Confirmer le nouveau mot de passe')}>
           <input
             className="champ"
             type="password"
@@ -111,7 +118,7 @@ export function MiseEnPagePrincipale() {
   const navigation = (
     <nav
       className="flex-1 space-y-4 overflow-y-auto px-3 py-4"
-      aria-label="Navigation principale"
+      aria-label={t('Navigation principale')}
     >
       {menu.map((groupe, i) => {
         const elements = groupe.elements.filter((e) => peut(e.module));
@@ -144,27 +151,39 @@ export function MiseEnPagePrincipale() {
     </nav>
   );
 
-  const logo = lireLogoPharmacie();
+  // En haut du menu : la marque du logiciel, RAQEEM PHARMA, sur bandeau bleu nuit.
   const marque = (
-    <div className="flex h-14 items-center gap-2 border-b border-slate-200 px-4">
-      {logo ? (
-        <img src={logo} alt="Logo" className="h-8 w-10 shrink-0 object-contain" />
-      ) : (
-        <span className="flex h-8 w-10 items-center justify-center rounded-md bg-marque-600 text-white">
-          <Pill size={18} />
-        </span>
-      )}
-      <span className="truncate whitespace-nowrap text-xl font-semibold text-slate-900">
-        {lireNomPharmacie()}
-      </span>
+    <div className="flex h-16 shrink-0 items-center bg-nuit-800 px-4">
+      <LogoRaqeem taille={42} fond="sombre" compact />
+    </div>
+  );
+
+  // En haut de page : la pharmacie du client (son logo et son nom).
+  const logo = lireLogoPharmacie();
+  const pharmacie = (
+    <div className="flex min-w-0 items-center gap-2.5">
+      {logo && <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-md object-contain" />}
+      <div className="min-w-0 leading-tight">
+        <p className="hidden text-[11px] font-medium uppercase tracking-wider text-slate-500 sm:block">{t('Pharmacie')}</p>
+        <p className="truncate text-base font-semibold text-nuit-800">{lireNomPharmacie()}</p>
+      </div>
+    </div>
+  );
+
+  // Signature de l'éditeur en bas du menu.
+  const signature = (
+    <div className="shrink-0 border-t border-slate-100 px-4 py-3 text-xs leading-tight text-slate-500">
+      
+      {t('par')}{' '}<span className="font-medium text-nuit-800">{EDITEUR_PAR_DEFAUT}</span>
     </div>
   );
 
   return (
-    <div className="min-h-screen lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex sans-impression">
+    <div className="min-h-screen lg:ps-64">
+      <aside className="fixed inset-y-0 start-0 z-30 hidden w-64 flex-col border-e border-slate-200 bg-white lg:flex sans-impression">
         {marque}
         {navigation}
+        {signature}
       </aside>
 
       {menuOuvert && (
@@ -173,24 +192,28 @@ export function MiseEnPagePrincipale() {
             className="absolute inset-0 bg-slate-900/40"
             onClick={() => setMenuOuvert(false)}
           />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
+          <aside className="absolute inset-y-0 start-0 flex w-64 flex-col bg-white shadow-xl">
             {marque}
             {navigation}
+            {signature}
           </aside>
         </div>
       )}
 
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 sans-impression">
-        <button
-          className="btn-discret lg:hidden"
-          onClick={() => setMenuOuvert(!menuOuvert)}
-          aria-label="Ouvrir le menu"
-        >
-          {menuOuvert ? <X size={20} /> : <Menu size={20} />}
-        </button>
-        <div className="hidden lg:block" />
-        <div className="flex items-center gap-3">
-          <div className="text-right leading-tight">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sans-impression">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            className="btn-discret lg:hidden"
+            onClick={() => setMenuOuvert(!menuOuvert)}
+            aria-label={t('Ouvrir le menu')}
+          >
+            {menuOuvert ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          {pharmacie}
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <ChoixLangue />
+          <div className="hidden text-end leading-tight sm:block">
             <p className="text-sm font-medium">{utilisateur?.nom_complet}</p>
             <p className="text-xs text-slate-500">
               {utilisateur ? libelleRole(utilisateur.role) : ""}
@@ -199,16 +222,17 @@ export function MiseEnPagePrincipale() {
           <button
             className="btn-discret btn-petit"
             onClick={() => setModaleMdp(true)}
-            title="Changer mon mot de passe"
+            title={t('Changer mon mot de passe')}
           >
             <KeyRound size={16} />
           </button>
           <button className="btn-secondaire btn-petit" onClick={deconnecter}>
-            <LogOut size={14} /> Déconnexion
+            <LogOut size={14} className="rtl:-scale-x-100" /> <span className="hidden md:inline">{t('Déconnexion')}</span>
           </button>
         </div>
       </header>
 
+      <BandeauLicence />
       <main className="mx-auto max-w-[1400px] p-4 sm:p-6">
         <Outlet />
       </main>

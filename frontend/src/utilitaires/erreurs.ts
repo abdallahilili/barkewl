@@ -1,4 +1,5 @@
 import { isAxiosError } from 'axios'
+import { t } from '../i18n'
 
 /** Transforme une erreur de l'API (format Django REST) en message lisible en français. */
 export function extraireErreur(erreur: unknown): string {
@@ -15,12 +16,12 @@ export function extraireErreur(erreur: unknown): string {
     if (erreur.response.status === 404) return 'Élément introuvable.'
     if (erreur.response.status >= 500) return 'Erreur du serveur. Réessayez plus tard.'
   }
-  return 'Une erreur est survenue.'
+  return t('Une erreur est survenue.')
 }
 
 function aplatir(valeur: unknown, prefixe = ''): string[] {
   if (Array.isArray(valeur)) {
-    return valeur.flatMap((v, i) => (typeof v === 'string' ? [prefixe ? `${prefixe} : ${v}` : v] : aplatir(v, prefixe ? `${prefixe} (ligne ${i + 1})` : '')))
+    return valeur.flatMap((v, i) => (typeof v === 'string' ? [prefixe ? `${prefixe} : ${v}` : v] : aplatir(v, prefixe ? t('{champ} (ligne {n})', { champ: prefixe, n: i + 1 }) : '')))
   }
   if (valeur && typeof valeur === 'object') {
     return Object.entries(valeur as Record<string, unknown>).flatMap(([cle, v]) => aplatir(v, cle === 'non_field_errors' ? '' : cle))

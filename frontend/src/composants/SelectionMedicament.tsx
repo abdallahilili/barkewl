@@ -5,6 +5,7 @@ import { api } from '../services/api'
 import type { Medicament, ReponsePaginee } from '../types'
 import { ModaleNouveauMedicament } from './ModaleNouveauMedicament'
 
+import { t } from '../i18n'
 export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Rechercher un médicament (nom, code, code-barres)…', depot }: {
   valeur: { id: number; nom: string } | null
   onChoisir: (m: Medicament | null) => void
@@ -74,7 +75,7 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Recherch
     return (
       <div className="champ flex items-center justify-between">
         <span className="truncate">{valeur.nom}</span>
-        <button type="button" className="ml-2 text-slate-400 hover:text-slate-700" onClick={() => onChoisir(null)} aria-label="Changer de médicament"><X size={14} /></button>
+        <button type="button" className="ms-2 text-slate-400 hover:text-slate-700" onClick={() => onChoisir(null)} aria-label={t('Changer de médicament')}><X size={14} /></button>
       </div>
     )
   }
@@ -85,21 +86,21 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Recherch
       {ouvert && position && createPortal(
         <ul ref={listeRef} style={{ position: 'absolute', top: position.top, left: position.left, width: position.width }}
           className="z-50 mt-1 max-h-64 overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
-          {resultats.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">Aucun médicament trouvé.</li>}
+          {resultats.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">{t('Aucun médicament trouvé.')}</li>}
           {resultats.map((m, i) => {
             const rupture = enRupture(m)
             return (
               <li key={m.id}>
                 <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => choisir(m)} disabled={rupture}
-                  title={rupture ? 'Aucun stock disponible dans ce dépôt' : undefined}
-                  className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm ${rupture ? 'cursor-not-allowed opacity-50' : i === actif ? 'bg-marque-50' : 'hover:bg-slate-50'}`}>
+                  title={rupture ? t('Aucun stock disponible dans ce dépôt') : undefined}
+                  className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-start text-sm ${rupture ? 'cursor-not-allowed opacity-50' : i === actif ? 'bg-marque-50' : 'hover:bg-slate-50'}`}>
                   <span className="w-full truncate font-medium">{m.nom}</span>
                   <span className="flex w-full items-center justify-between gap-2 text-xs text-slate-500">
                     <span className="truncate">{m.dosage} {m.forme}</span>
                     <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                       {depot != null && m.stock_depot != null && (
                         <span className={rupture ? 'font-medium text-red-600' : 'font-medium text-emerald-600'}>
-                          {rupture ? 'Rupture' : `${m.stock_depot} en stock`}
+                          {rupture ? t('Rupture') : t('{n} en stock', { n: m.stock_depot })}
                         </span>
                       )}
                       <span className="text-slate-400">{m.code}</span>
@@ -112,8 +113,8 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = 'Recherch
           <li className="border-t border-slate-100">
             <button type="button" onMouseDown={(e) => e.preventDefault()}
               onClick={() => { setAjoutOuvert(true); setOuvert(false) }}
-              className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium text-marque-700 hover:bg-marque-50">
-              <Plus size={14} /> {texte.trim() ? `Ajouter « ${texte.trim()} » comme nouveau médicament` : 'Ajouter un nouveau médicament'}
+              className="flex w-full items-center gap-1.5 px-3 py-2 text-start text-sm font-medium text-marque-700 hover:bg-marque-50">
+              <Plus size={14} /> {texte.trim() ? t('Ajouter « {nom} » comme nouveau médicament', { nom: texte.trim() }) : t('Ajouter un nouveau médicament')}
             </button>
           </li>
         </ul>,

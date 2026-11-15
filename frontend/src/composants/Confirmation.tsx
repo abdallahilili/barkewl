@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useRef, useState } from 'react'
 import { Modale } from './Modale'
 
+import { t } from '../i18n'
 interface Options { titre: string; message: string; libelle?: string; danger?: boolean }
 type Confirmer = (options: Options) => Promise<boolean>
 
@@ -27,8 +28,8 @@ export function FournisseurConfirmation({ children }: { children: ReactNode }) {
       <Modale
         ouverte={!!options} titre={options?.titre ?? ''} onFermer={() => fermer(false)} largeur="petite"
         pied={<>
-          <button className="btn-secondaire" onClick={() => fermer(false)}>Annuler</button>
-          <button className={options?.danger ? 'btn-danger' : 'btn-primaire'} onClick={() => fermer(true)}>{options?.libelle ?? 'Confirmer'}</button>
+          <button className="btn-secondaire" onClick={() => fermer(false)}>{t('Annuler')}</button>
+          <button className={options?.danger ? 'btn-danger' : 'btn-primaire'} onClick={() => fermer(true)}>{options?.libelle ?? t('Confirmer')}</button>
         </>}
       >
         <p className="text-sm text-slate-700">{options?.message}</p>

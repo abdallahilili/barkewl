@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'CAISSIER' | 'MAGASINIER'
+export type Role = 'ADMIN' | 'PHARMACIEN' | 'CAISSIER' | 'MAGASINIER'
 
 export interface Utilisateur {
   id: number
@@ -11,6 +11,7 @@ export interface Utilisateur {
   role: Role
   actif: boolean
   modules: string[]
+  pin_defini?: boolean
 }
 
 export interface ReponsePaginee<T> {
@@ -43,6 +44,15 @@ export interface Medicament {
   emplacement: string
   prix_achat?: number
   prix_vente: number
+  /** Conditionnement : le stock est compté en unités (comprimés…) ; 1 = vente à la boîte uniquement. */
+  unites_par_boite: number
+  unites_par_plaquette: number | null
+  nom_unite_detail: string
+  prix_vente_plaquette: number | null
+  prix_vente_unite: number | null
+  prix_plaquette_effectif: number | null
+  prix_unite_effectif: number | null
+  stock_texte: string | null
   stock_minimum: number
   actif: boolean
   stock_total: number
@@ -61,6 +71,8 @@ export interface Lot {
   prix_vente: number | null
   quantite_initiale: number
   quantite_actuelle: number
+  quantite_texte: string | null
+  unites_par_boite: number
   jours_restants: number
   perime: boolean
 }
@@ -79,6 +91,8 @@ export interface LigneStock {
   depot: number
   depot_nom: string
   quantite: number
+  quantite_texte: string
+  unites_par_boite: number
   prix_achat?: number
   prix_vente: number
   valeur_stock?: number
@@ -108,6 +122,7 @@ export interface MouvementStock {
   type_mouvement: string
   type_libelle: string
   quantite: number
+  quantite_texte: string
   stock_avant: number
   stock_apres: number
   motif: string
@@ -137,6 +152,7 @@ export interface LigneInventaire {
   medicament_nom: string
   numero_lot: string
   date_peremption: string
+  unites_par_boite: number
   quantite_theorique: number
   quantite_physique: number | null
   ecart: number | null
@@ -298,7 +314,8 @@ export interface Vente {
   modes_paiement: string
   montant_recu?: number | null
   motif_annulation?: string
-  lignes?: { id: number; medicament_nom: string; numero_lot: string; quantite: number; prix_unitaire: number; total: number }[]
+  annulation_approuvee_par_nom?: string | null
+  lignes?: { id: number; medicament_nom: string; numero_lot: string; conditionnement: Conditionnement; conditionnement_libelle: string; quantite: number; prix_unitaire: number; total: number }[]
   paiements?: { id: number; mode_paiement_nom: string; montant: number }[]
 }
 
@@ -337,7 +354,7 @@ export interface Recu {
   client: string | null
   caissier: string
   depot: string
-  lignes: { medicament: string; dosage: string; quantite: number; prix_unitaire: number; total: number }[]
+  lignes: { medicament: string; dosage: string; conditionnement: Conditionnement; conditionnement_libelle: string; quantite: number; prix_unitaire: number; total: number }[]
   total: number
   paiements: { mode_paiement: string; montant: number }[]
   montant_recu: number | null
@@ -355,8 +372,23 @@ export interface ResultatCaisse {
   emplacement: string
   prix_vente: number
   stock_disponible: number
+  stock_texte: string
+  unites_par_boite: number
+  conditionnements: OptionConditionnement[]
   prochaine_peremption: string | null
   frequence_vente: number
+}
+
+export type Conditionnement = 'BOITE' | 'PLAQUETTE' | 'UNITE'
+
+/** Une façon de vendre un médicament (boîte, plaquette, unité) avec son prix et la quantité vendable. */
+export interface OptionConditionnement {
+  code: Conditionnement
+  libelle: string
+  libelle_pluriel: string
+  unites: number
+  prix: number
+  disponible: number
 }
 
 export interface Parametre { cle: string; valeur: string; description: string }

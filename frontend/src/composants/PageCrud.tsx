@@ -10,6 +10,7 @@ import { Modale } from './Modale'
 import { useNotifier } from './Notifications'
 import { ActionMasse, Colonne, TableauDonnees } from './TableauDonnees'
 
+import { t } from '../i18n'
 type Valeur = string | number | boolean | null | undefined
 export type Formulaire = Record<string, Valeur>
 
@@ -40,7 +41,7 @@ function SelectSource({ source, valeur, onChange, vide, disabled }: {
   const options = useOptions<{ id: number }>(source.endpoint, source.params)
   return (
     <select className="champ" value={String(valeur ?? '')} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-      <option value="">{vide ?? source.vide ?? '— Choisir —'}</option>
+      <option value="">{vide ?? source.vide ?? t('— Choisir —')}</option>
       {options.map((o) => <option key={o.id} value={o.id}>{source.libelle(o)}</option>)}
     </select>
   )
@@ -55,7 +56,7 @@ export function ChampFormulaire({ def, formulaire, maj, erreur, enEdition }: {
   if (def.type === 'case') {
     entree = (
       <label className="flex items-center gap-2 pt-1 text-sm">
-        <input type="checkbox" checked={!!valeur} onChange={(e) => maj(def.nom, e.target.checked)} /> {def.aide ?? 'Oui'}
+        <input type="checkbox" checked={!!valeur} onChange={(e) => maj(def.nom, e.target.checked)} /> {def.aide ?? t('Oui')}
       </label>
     )
   } else if (def.type === 'select' && def.source) {
@@ -63,7 +64,7 @@ export function ChampFormulaire({ def, formulaire, maj, erreur, enEdition }: {
   } else if (def.type === 'select') {
     entree = (
       <select className="champ" value={String(valeur ?? '')} onChange={(e) => maj(def.nom, e.target.value)} disabled={desactive}>
-        {!def.requis && <option value="">— Aucun —</option>}
+        {!def.requis && <option value="">{t('— Aucun —')}</option>}
         {def.options?.map((o) => <option key={o.valeur} value={o.valeur}>{o.libelle}</option>)}
       </select>
     )
@@ -159,7 +160,7 @@ export function PageCrud<T extends { id: number }>({
       if (enEdition) await api.patch(`${endpoint}${enEdition.id}/`, charge)
       else await api.post(endpoint, charge)
       viderCacheOptions()
-      notifier.succes(`${nomElement} enregistré${nomElement.endsWith('e') || nomElement.endsWith('ie') ? 'e' : ''}.`)
+      notifier.succes(t('Enregistré : {element}.', { element: nomElement }))
       setOuvert(false)
       liste.recharger()
     } catch (err) {
@@ -180,7 +181,7 @@ export function PageCrud<T extends { id: number }>({
       rendu: (ligne: T) => (
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           {actionsLigne?.(ligne, liste.recharger)}
-          {peutModifier && <button className="btn-discret btn-petit" onClick={() => ouvrirEdition(ligne)} aria-label="Modifier"><Pencil size={14} /> Modifier</button>}
+          {peutModifier && <button className="btn-discret btn-petit" onClick={() => ouvrirEdition(ligne)} aria-label={t('Modifier')}><Pencil size={14} /> {' '}{t('Modifier')}</button>}
         </div>
       ),
     }] : []),
@@ -191,11 +192,11 @@ export function PageCrud<T extends { id: number }>({
       {!sansEntete && (
         <EnTetePage titre={titre} description={description} actions={<>
           {actionsEntete}
-          {peutCreer && <button className="btn-primaire" onClick={ouvrirCreation}><Plus size={16} /> {libelleNouveau ?? 'Ajouter'}</button>}
+          {peutCreer && <button className="btn-primaire" onClick={ouvrirCreation}><Plus size={16} /> {libelleNouveau ?? t('Ajouter')}</button>}
         </>} />
       )}
-      {sansEntete && peutCreer && <div className="mb-3 flex justify-end"><button className="btn-primaire" onClick={ouvrirCreation}><Plus size={16} /> {libelleNouveau ?? 'Ajouter'}</button></div>}
-      <BarreRecherche valeur={liste.recherche} onChange={liste.setRecherche} placeholder={placeholderRecherche ?? 'Rechercher…'}>
+      {sansEntete && peutCreer && <div className="mb-3 flex justify-end"><button className="btn-primaire" onClick={ouvrirCreation}><Plus size={16} /> {libelleNouveau ?? t('Ajouter')}</button></div>}
+      <BarreRecherche valeur={liste.recherche} onChange={liste.setRecherche} placeholder={placeholderRecherche ?? t('Rechercher…')}>
         {filtres.map((f) => (
           <select key={f.nom} className="champ w-auto" aria-label={f.libelle} value={valeursFiltres[f.nom] ?? ''}
             onChange={(e) => setValeursFiltres((v) => ({ ...v, [f.nom]: e.target.value }))}>
@@ -211,10 +212,10 @@ export function PageCrud<T extends { id: number }>({
         endpoint={endpoint} parametresRequete={{ ...valeursFiltres, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
 
       <Modale ouverte={ouvert} onFermer={() => setOuvert(false)} largeur={largeurModale}
-        titre={enEdition ? `Modifier — ${nomElement.toLowerCase()}` : (libelleNouveau ?? 'Ajouter')}
+        titre={enEdition ? t('Modifier — {element}', { element: nomElement.toLowerCase() }) : (libelleNouveau ?? t('Ajouter'))}
         pied={<>
-          <button type="button" className="btn-secondaire" onClick={() => setOuvert(false)}>Annuler</button>
-          <button type="submit" form="formulaire-crud" className="btn-primaire" disabled={envoi}>{envoi ? 'Enregistrement…' : 'Enregistrer'}</button>
+          <button type="button" className="btn-secondaire" onClick={() => setOuvert(false)}>{t('Annuler')}</button>
+          <button type="submit" form="formulaire-crud" className="btn-primaire" disabled={envoi}>{envoi ? t('Enregistrement…') : t('Enregistrer')}</button>
         </>}>
         <form id="formulaire-crud" onSubmit={soumettre}>
           <MessageErreur message={erreurGlobale} />

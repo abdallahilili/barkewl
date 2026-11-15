@@ -1,8 +1,10 @@
+from django.http import FileResponse
 from rest_framework import serializers, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import sauvegarde
 from .audit import enregistrer_audit
 from .constantes import TOUS_LES_ROLES
 from .exceptions import ErreurMetier
@@ -53,6 +55,33 @@ class ParametresView(APIView):
                     ancienne={"valeur": resume_ancienne}, nouvelle={"valeur": resume},
                 )
         return self.get(request)
+
+
+class SauvegardesView(APIView):
+    """GET : état et liste des sauvegardes. POST : sauvegarder maintenant. Administrateur uniquement."""
+
+    roles_lecture = ()
+    roles_ecriture = ()
+
+    def get(self, request):
+        return Response({**sauvegarde.etat_sauvegardes(), "fichiers": sauvegarde.lister_sauvegardes()})
+
+    def post(self, request):
+        infos = sauvegarde.creer_sauvegarde(origine="manuelle")
+        enregistrer_audit(request.user, "SAUVEGARDE", "Base de données", reference=infos["nom"],
+                          description=f"Sauvegarde manuelle ({infos['taille'] // 1024} Ko)")
+        return Response(infos, status=201)
+
+
+class TelechargerSauvegardeView(APIView):
+    """Téléchargement d'une sauvegarde (pour la copier sur une clé USB). Administrateur uniquement."""
+
+    roles_lecture = ()
+
+    def get(self, request, nom):
+        chemin = sauvegarde.chemin_sauvegarde(nom)
+        enregistrer_audit(request.user, "TELECHARGEMENT", "Base de données", reference=nom, description="Téléchargement d'une sauvegarde")
+        return FileResponse(open(chemin, "rb"), as_attachment=True, filename=nom, content_type="application/gzip")
 
 
 class JournalAuditViewSet(ViewSetLecture):

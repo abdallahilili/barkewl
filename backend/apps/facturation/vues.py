@@ -7,12 +7,17 @@ from apps.commun.constantes import ADMIN, CAISSIER, MAGASINIER, TOUS_LES_ROLES
 from . import services
 from .models import DocumentVente
 from .serializers import DocumentVenteListeSerializer, DocumentVenteSerializer, PayerDocumentSerializer, ValiderBLSerializer
+from apps.licence import offres
 
 
 class DocumentVenteViewSet(viewsets.ModelViewSet):
     """Devis (brouillon, modifiable) -> Bon de livraison -> Facture -> Paiement.
     Création/modification du devis : requête standard (POST/PUT/PATCH). Les transitions
     d'étape passent par des actions dédiées, chacune déléguée à services.py (tout ou rien)."""
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        offres.exiger_fonction("facturation")   # inclus dans les offres Professionnel et Réseau
+
 
     roles_lecture = TOUS_LES_ROLES
     roles_ecriture = (ADMIN, MAGASINIER, CAISSIER)

@@ -4,28 +4,29 @@ import type { Fournisseur } from '../../types'
 import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
 import { formaterMontant } from '../../utilitaires/formatage'
 
+import { t } from '../../i18n'
 export default function Fournisseurs() {
   return (
     <PageCrud<Fournisseur>
-      titre="Fournisseurs" description="Grossistes et laboratoires. Le solde indique ce qui reste à payer sur les achats validés."
-      endpoint="/fournisseurs/" nomElement="Fournisseur" libelleNouveau="Nouveau fournisseur" placeholderRecherche="Nom, téléphone, e-mail…"
-      filtres={[{ nom: 'actif', libelle: 'Tous les états', options: [{ valeur: 1, libelle: 'Actifs' }, { valeur: 0, libelle: 'Désactivés' }] }]}
-      actionsMasse={[{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les fournisseurs sélectionnés ?', executer: desactiverEnMasse<Fournisseur>('/fournisseurs/', 'actif', (f) => f.nom) }]}
+      titre={t('Fournisseurs')} description={t('Grossistes et laboratoires. Le solde indique ce qui reste à payer sur les achats validés.')}
+      endpoint="/fournisseurs/" nomElement={t('Fournisseur')} libelleNouveau={t('Nouveau fournisseur')} placeholderRecherche={t('Nom, téléphone, e-mail…')}
+      filtres={[{ nom: 'actif', libelle: t('Tous les états'), options: [{ valeur: 1, libelle: t('Actifs') }, { valeur: 0, libelle: t('Désactivés') }] }]}
+      actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les fournisseurs sélectionnés ?'), executer: desactiverEnMasse<Fournisseur>('/fournisseurs/', 'actif', (f) => f.nom) }]}
       colonnes={[
-        { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (f) => <span className="font-medium">{f.nom}</span> },
-        { cle: 'telephone', titre: 'Téléphone' },
-        { cle: 'email', titre: 'E-mail', cacheParDefaut: true },
-        { cle: 'solde', titre: 'Solde dû', alignement: 'droite', tri: 'solde', rendu: (f) => <span className={Number(f.solde) > 0 ? 'font-semibold text-red-700' : ''}>{formaterMontant(f.solde)}</span> },
-        { cle: 'actif', titre: 'État', rendu: (f) => <Badge ton={f.actif ? 'vert' : 'gris'}>{f.actif ? 'Actif' : 'Désactivé'}</Badge> },
+        { cle: 'nom', titre: t('Nom'), tri: 'nom', rendu: (f) => <span className="font-medium">{f.nom}</span> },
+        { cle: 'telephone', titre: t('Téléphone') },
+        { cle: 'email', titre: t('E-mail'), cacheParDefaut: true },
+        { cle: 'solde', titre: t('Solde dû'), alignement: 'droite', tri: 'solde', rendu: (f) => <span className={Number(f.solde) > 0 ? 'font-semibold text-red-700' : ''}>{formaterMontant(f.solde)}</span> },
+        { cle: 'actif', titre: t('État'), rendu: (f) => <Badge ton={f.actif ? 'vert' : 'gris'}>{f.actif ? t('Actif') : t('Désactivé')}</Badge> },
       ]}
       champs={[
-        { nom: 'nom', libelle: 'Nom', type: 'texte', requis: true },
-        { nom: 'telephone', libelle: 'Téléphone', type: 'texte' },
-        { nom: 'email', libelle: 'E-mail', type: 'email' },
-        { nom: 'adresse', libelle: 'Adresse', type: 'texte' },
-        { nom: 'identifiant_fiscal', libelle: 'Identifiant fiscal', type: 'texte' },
-        { nom: 'actif', libelle: 'État', type: 'case', aide: 'Fournisseur actif', defaut: true },
-        { nom: 'notes', libelle: 'Notes', type: 'zone' },
+        { nom: 'nom', libelle: t('Nom'), type: 'texte', requis: true },
+        { nom: 'telephone', libelle: t('Téléphone'), type: 'texte' },
+        { nom: 'email', libelle: t('E-mail'), type: 'email' },
+        { nom: 'adresse', libelle: t('Adresse'), type: 'texte' },
+        { nom: 'identifiant_fiscal', libelle: t('Identifiant fiscal'), type: 'texte' },
+        { nom: 'actif', libelle: t('État'), type: 'case', aide: t('Fournisseur actif'), defaut: true },
+        { nom: 'notes', libelle: t('Notes'), type: 'zone' },
       ]}
     />
   )

@@ -8,11 +8,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.commun.constantes import ADMIN, MAGASINIER, TOUS_LES_ROLES, StatutDocument
+from apps.commun.constantes import ADMIN, MAGASINIER, ROLES_SANS_PRIX_ACHAT, TOUS_LES_ROLES, StatutDocument
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.parametres import obtenir_entier
 from apps.commun.utilitaires import lire_date
 from apps.commun.vues_base import ViewSetLecture
+from apps.licence import offres
 
 from . import alertes, services
 from .models import Inventaire, MouvementStock, Stock, Transfert
@@ -60,7 +61,7 @@ class StockViewSet(ViewSetLecture):
             qs = qs.filter(quantite__gt=0)
         if p.get("stock_faible") == "1":
             qs = qs.filter(quantite__gt=0, lot__medicament__stock_minimum__gt=0,
-                           total_medicament_depot__lte=F("lot__medicament__stock_minimum"))
+                           total_medicament_depot__lte=F("lot__medicament__stock_minimum") * F("lot__medicament__unites_par_boite"))
         if p.get("proche_peremption") == "1":
             qs = qs.filter(quantite__gt=0, lot__date_peremption__gte=aujourdhui, lot__date_peremption__lte=limite)
         if p.get("perime") == "1":
@@ -72,7 +73,10 @@ class StockViewSet(ViewSetLecture):
         depot = request.query_params.get("depot") or None
         from apps.depots.models import Depot
 
-        return Response(alertes.calculer_synthese(Depot.objects.filter(pk=depot).first() if depot else None))
+        synthese = alertes.calculer_synthese(Depot.objects.filter(pk=depot).first() if depot else None)
+        if request.user.role in ROLES_SANS_PRIX_ACHAT:
+            synthese.pop("valeur_totale", None)   # valeur au prix d'achat : réservée au propriétaire
+        return Response(synthese)
 
     @action(detail=False, methods=["post"], url_path="entree")
     def entree(self, request):
@@ -81,7 +85,8 @@ class StockViewSet(ViewSetLecture):
         d = serializer.validated_data
         mouvement = services.enregistrer_entree(
             utilisateur=request.user, medicament=d["medicament"], numero_lot=d["numero_lot"].strip(),
-            date_peremption=d["date_peremption"], depot=d["depot"], quantite=d["quantite"], motif_code=d["motif"],
+            date_peremption=d["date_peremption"], depot=d["depot"],
+            quantite=d["quantite"] * (d["medicament"].unites_par_boite if d["en_boites"] else 1), motif_code=d["motif"],
             date_fabrication=d.get("date_fabrication"), prix_achat=d.get("prix_achat"),
             prix_vente=d.get("prix_vente"), note=d.get("note", ""),
         )
@@ -93,7 +98,8 @@ class StockViewSet(ViewSetLecture):
         serializer.is_valid(raise_exception=True)
         d = serializer.validated_data
         mouvement = services.enregistrer_sortie(
-            utilisateur=request.user, lot=d["lot"], depot=d["depot"], quantite=d["quantite"],
+            utilisateur=request.user, lot=d["lot"], depot=d["depot"],
+            quantite=d["quantite"] * (d["lot"].medicament.unites_par_boite if d["en_boites"] else 1),
             motif_code=d["motif"], note=d.get("note", ""),
         )
         return Response(MouvementStockSerializer(mouvement).data, status=201)
@@ -130,6 +136,10 @@ class MouvementStockViewSet(ViewSetLecture):
 
 
 class TransfertViewSet(viewsets.ModelViewSet):
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        offres.exiger_fonction("transferts")   # inclus dans les offres Professionnel et Réseau
+
     serializer_class = TransfertSerializer
     roles_lecture = (MAGASINIER,)
     roles_ecriture = (MAGASINIER,)

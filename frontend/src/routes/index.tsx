@@ -37,7 +37,7 @@ export const routesProtegees: RouteProtegee[] = [
   { chemin: '/stock/entrees', module: 'stock_gestion', element: <MouvementsStock mode="entree" /> },
   { chemin: '/stock/sorties', module: 'stock_gestion', element: <MouvementsStock mode="sortie" /> },
   { chemin: '/stock/historique', module: 'stock_gestion', element: <MouvementsStock mode="tous" /> },
-  { chemin: '/stock/transferts', module: 'stock_gestion', element: <Transferts /> },
+  { chemin: '/stock/transferts', module: 'transferts', element: <Transferts /> },
   { chemin: '/stock/inventaires', module: 'stock_gestion', element: <Inventaires /> },
   { chemin: '/stock/inventaires/:id', module: 'stock_gestion', element: <InventaireDetail /> },
   { chemin: '/medicaments', module: 'medicaments', element: <Medicaments /> },

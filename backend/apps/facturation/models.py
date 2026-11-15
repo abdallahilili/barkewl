@@ -49,8 +49,10 @@ class LigneDocumentVente(models.Model):
     document = models.ForeignKey(DocumentVente, on_delete=models.CASCADE, related_name="lignes")
     medicament = models.ForeignKey("medicaments.Medicament", on_delete=models.PROTECT, related_name="+")
     designation = models.CharField(max_length=200, blank=True)
+    # Quantités en boîtes ; unites_par_boite est figé à la validation du bon de livraison.
     quantite_devis = models.PositiveIntegerField()
     quantite_livree = models.PositiveIntegerField(default=0)
+    unites_par_boite = models.PositiveIntegerField(default=1)
     prix_unitaire = models.DecimalField(max_digits=12, decimal_places=2)
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 

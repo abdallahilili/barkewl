@@ -1,6 +1,20 @@
-Django>=5.2,<7.0
-djangorestframework>=3.16
-djangorestframework-simplejwt>=5.5
-django-cors-headers>=4.6
-mysqlclient>=2.2
-python-dotenv>=1.0
+# Versions EXACTES : le PC de développement utilise les mêmes composants que les clients
+# (deploy/installation/requirements-installation.txt, verrouillé avec empreintes SHA-256).
+# Pour changer de version : modifier ici ET requirements-installation.in, puis
+# python deploy/installation/verrouiller_dependances.py, et relancer tous les tests (SQLite + MySQL).
+#
+# Django 5.2 LTS (supporté jusqu'en avril 2028) : compatible MySQL 8.0.11+ et MariaDB 10.5+, donc avec les
+# WampServer répandus chez les clients. Django 6 exige MySQL 8.4+ (refusé par un WampServer en MySQL 8.0).
+Django==5.2.19
+djangorestframework==3.18.3
+djangorestframework-simplejwt==5.5.1
+django-cors-headers==4.9.0
+PyMySQL==1.2.4        # repli automatique si mysqlclient ne peut pas être chargé (ex. Windows)
+mysqlclient==2.3.1    # développement uniquement (non livré aux clients)
+python-dotenv==1.2.4
+waitress==3.0.2
+# Dépendances indirectes, figées elles aussi
+asgiref==3.13.0
+sqlparse==0.6.1
+PyJWT==2.15.1
+tzdata==2026.6

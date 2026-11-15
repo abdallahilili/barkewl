@@ -1,17 +1,17 @@
 from rest_framework import serializers
 
-from .constantes import CAISSIER
+from .constantes import ROLES_SANS_PRIX_ACHAT
 
 
 class MasquerPrixAchatMixin:
-    """Le caissier ne voit pas les prix d'achat ni les valeurs de stock."""
+    """Le vendeur et le pharmacien ne voient ni les prix d'achat ni les valeurs de stock."""
 
     champs_prix_achat = ("prix_achat", "valeur_stock")
 
     def to_representation(self, instance):
         donnees = super().to_representation(instance)
         requete = self.context.get("request")
-        if requete and getattr(requete.user, "role", None) == CAISSIER:
+        if requete and getattr(requete.user, "role", None) in ROLES_SANS_PRIX_ACHAT:
             for champ in self.champs_prix_achat:
                 donnees.pop(champ, None)
         return donnees

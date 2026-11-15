@@ -3,9 +3,17 @@
 @tailwind utilities;
 
 @layer base {
-  html { @apply text-slate-800; }
-  body { @apply bg-slate-50 antialiased; }
-  h1, h2, h3 { @apply text-slate-900; }
+  html { @apply text-slate-800; font-feature-settings: "cv11", "ss01"; }
+  body { @apply antialiased; background-color: #F3F6F8; }
+  h1, h2, h3 { @apply text-nuit-800; }
+  /* Barres de défilement fines et discrètes (Windows les affiche épaisses par défaut). */
+  * { scrollbar-width: thin; scrollbar-color: #CBD5E1 transparent; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+  *::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  /* Chiffres alignés dans les tableaux et montants. */
+  table, .chiffres { font-variant-numeric: tabular-nums; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-marque-600; }
 }
 

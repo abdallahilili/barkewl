@@ -7,7 +7,7 @@ REM ---- A ADAPTER avant de lancer ----
 set NSSM=C:\nssm\nssm.exe
 set BACKEND_DIR=C:\Users\hpi7\Desktop\Rawafid\Barkewl\backend
 set VENV_WAITRESS=%BACKEND_DIR%\venv\Scripts\waitress-serve.exe
-set SERVICE_NAME=BarkewlBackend
+set SERVICE_NAME=RaqeemBackend
 REM ------------------------------------
 
 if not exist "%NSSM%" (

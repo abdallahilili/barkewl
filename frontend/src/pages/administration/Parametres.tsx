@@ -1,4 +1,7 @@
-import { Building2, FileText, Pill, Trash2, Upload } from 'lucide-react'
+import { Building2, DatabaseBackup, FileText, KeyRound, Pill, Trash2, Upload } from 'lucide-react'
+import { Licence } from '../../fonctionnalites/Licence'
+import { useLocation } from 'react-router-dom'
+import { Sauvegardes } from '../../fonctionnalites/Sauvegardes'
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react'
 import { Badge } from '../../composants/Badge'
 import { EditeurTexteRiche } from '../../composants/EditeurTexteRiche'
@@ -15,8 +18,9 @@ import { definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirN
 import { lireEntete, lireLogo } from '../../utilitaires/images'
 import type { Depot } from '../../types'
 
+import { t } from '../../i18n'
 type Section = 'pharmacie' | 'documents' | 'medicaments'
-type Onglet = Section | 'caisses' | 'paiements' | 'audit'
+type Onglet = Section | 'caisses' | 'paiements' | 'sauvegardes' | 'licence' | 'audit'
 type Valeurs = Record<string, string>
 
 // Paramètres enregistrés par chaque section (chaque onglet n'envoie que les siens).
@@ -70,7 +74,7 @@ function ParametresSection({ section }: { section: Section }) {
     api.get<Parametre[]>('/parametres/').then((r) => setValeurs(Object.fromEntries(r.data.map((p) => [p.cle, p.valeur])))).catch((e) => setErreur(extraireErreur(e)))
   }, [])
 
-  if (!valeurs) return erreur ? <MessageErreur message={erreur} /> : <p className="text-sm text-slate-500">Chargement…</p>
+  if (!valeurs) return erreur ? <MessageErreur message={erreur} /> : <p className="text-sm text-slate-500">{t('Chargement…')}</p>
 
   const v = (cle: string) => valeurs[cle] ?? ''
   const maj = (cle: string, valeur: string) => setValeurs((x) => ({ ...(x ?? {}), [cle]: valeur }))
@@ -80,7 +84,7 @@ function ParametresSection({ section }: { section: Section }) {
     const fichier = e.target.files?.[0]
     e.target.value = ''
     if (!fichier) return
-    if (!fichier.type.startsWith('image/')) { notifier.erreur('Choisissez un fichier image (PNG, JPG, SVG…).'); return }
+    if (!fichier.type.startsWith('image/')) { notifier.erreur(t('Choisissez un fichier image (PNG, JPG, SVG…).')); return }
     try { maj(cle, await lire(fichier)) } catch (err) { notifier.erreur(extraireErreur(err)) }
   }
 
@@ -92,7 +96,7 @@ function ParametresSection({ section }: { section: Section }) {
       const enregistres = Object.fromEntries(data.map((p) => [p.cle, p.valeur]))
       setValeurs(enregistres)
       appliquerGlobaux(enregistres)
-      notifier.succes('Paramètres enregistrés.')
+      notifier.succes(t('Paramètres enregistrés.'))
     } catch (err) { setErreur(extraireErreur(err)) }
     finally { setEnvoi(false) }
   }
@@ -106,52 +110,52 @@ function ParametresSection({ section }: { section: Section }) {
           <div className="flex items-center gap-4">
             <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-dashed border-slate-300 bg-white">
               {v('logo_pharmacie')
-                ? <img src={v('logo_pharmacie')} alt="Logo de la pharmacie" className="max-h-full max-w-full object-contain" />
-                : <span className="px-1 text-center text-xs text-slate-500">Aucun logo</span>}
+                ? <img src={v('logo_pharmacie')} alt={t('Logo de la pharmacie')} className="max-h-full max-w-full object-contain" />
+                : <span className="px-1 text-center text-xs text-slate-500">{t('Aucun logo')}</span>}
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Logo</p>
-              <p className="text-xs text-slate-500">Affiché dans la barre latérale et sur les reçus, devis, bons de livraison et factures.</p>
+              <p className="text-sm font-medium">{t('Logo')}</p>
+              <p className="text-xs text-slate-500">{t('Affiché dans la barre latérale et sur les reçus, devis, bons de livraison et factures.')}</p>
               <div className="flex gap-2">
                 <input ref={entreeLogo} type="file" accept="image/*" className="hidden" onChange={choisirImage('logo_pharmacie', lireLogo)} />
-                <button type="button" className="btn-secondaire btn-petit" onClick={() => entreeLogo.current?.click()}><Upload size={15} /> Choisir une image</button>
+                <button type="button" className="btn-secondaire btn-petit" onClick={() => entreeLogo.current?.click()}><Upload size={15} /> {' '}{t('Choisir une image')}</button>
                 {v('logo_pharmacie') && (
-                  <button type="button" className="btn-discret btn-petit text-red-600" onClick={() => maj('logo_pharmacie', '')}><Trash2 size={15} /> Retirer</button>
+                  <button type="button" className="btn-discret btn-petit text-red-600" onClick={() => maj('logo_pharmacie', '')}><Trash2 size={15} /> {' '}{t('Retirer')}</button>
                 )}
               </div>
             </div>
           </div>
 
           <div className="space-y-2 rounded border border-slate-200 p-3">
-            <p className="text-sm font-medium">En-tête des documents (reçus, devis, bons de livraison, factures)</p>
+            <p className="text-sm font-medium">{t('En-tête des documents (reçus, devis, bons de livraison, factures)')}</p>
             <p className="text-xs text-slate-500">
-              Téléversez une image d'en-tête (largeur conseillée 1400 px) : elle remplace l'en-tête par défaut.
-              Sans image, l'en-tête par défaut affiche le logo, le nom, les téléphones et les numéros WhatsApp ci-dessous.
+              
+              {t('Téléversez une image d\'en-tête (largeur conseillée 1400 px) : elle remplace l\'en-tête par défaut. Sans image, l\'en-tête par défaut affiche le logo, le nom, les téléphones et les numéros WhatsApp ci-dessous.')}
             </p>
             <div className="overflow-hidden rounded border border-dashed border-slate-300 bg-white p-2">
               {v('entete_image')
-                ? <img src={v('entete_image')} alt="En-tête" className="mx-auto max-h-32 object-contain" />
-                : <p className="py-3 text-center text-xs text-slate-500">En-tête par défaut (logo, nom, téléphones, WhatsApp)</p>}
+                ? <img src={v('entete_image')} alt={t('En-tête')} className="mx-auto max-h-32 object-contain" />
+                : <p className="py-3 text-center text-xs text-slate-500">{t('En-tête par défaut (logo, nom, téléphones, WhatsApp)')}</p>}
             </div>
             <div className="flex gap-2">
               <input ref={entreeEntete} type="file" accept="image/*" className="hidden" onChange={choisirImage('entete_image', lireEntete)} />
-              <button type="button" className="btn-secondaire btn-petit" onClick={() => entreeEntete.current?.click()}><Upload size={15} /> Téléverser un en-tête</button>
+              <button type="button" className="btn-secondaire btn-petit" onClick={() => entreeEntete.current?.click()}><Upload size={15} /> {' '}{t('Téléverser un en-tête')}</button>
               {v('entete_image') && (
-                <button type="button" className="btn-discret btn-petit text-red-600" onClick={() => maj('entete_image', '')}><Trash2 size={15} /> Revenir à l'en-tête par défaut</button>
+                <button type="button" className="btn-discret btn-petit text-red-600" onClick={() => maj('entete_image', '')}><Trash2 size={15} /> {' '}{t('Revenir à l\'en-tête par défaut')}</button>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Champ libelle="Nom de la pharmacie" pleine>{texte('nom_pharmacie')}</Champ>
-            <Champ libelle="Téléphone 1">{texte('telephone_pharmacie')}</Champ>
-            <Champ libelle="Téléphone 2">{texte('telephone_pharmacie_2')}</Champ>
-            <Champ libelle="Téléphone 3">{texte('telephone_pharmacie_3')}</Champ>
-            <Champ libelle="WhatsApp 1">{texte('whatsapp_pharmacie')}</Champ>
-            <Champ libelle="WhatsApp 2">{texte('whatsapp_pharmacie_2')}</Champ>
-            <Champ libelle="Adresse" pleine>{texte('adresse_pharmacie')}</Champ>
-            <Champ libelle="Email">{texte('email_pharmacie', 'email')}</Champ>
-            <Champ libelle="NIF / registre de commerce">{texte('nif_pharmacie')}</Champ>
+            <Champ libelle={t('Nom de la pharmacie')} pleine>{texte('nom_pharmacie')}</Champ>
+            <Champ libelle={t('Téléphone 1')}>{texte('telephone_pharmacie')}</Champ>
+            <Champ libelle={t('Téléphone 2')}>{texte('telephone_pharmacie_2')}</Champ>
+            <Champ libelle={t('Téléphone 3')}>{texte('telephone_pharmacie_3')}</Champ>
+            <Champ libelle={t('WhatsApp 1')}>{texte('whatsapp_pharmacie')}</Champ>
+            <Champ libelle={t('WhatsApp 2')}>{texte('whatsapp_pharmacie_2')}</Champ>
+            <Champ libelle={t('Adresse')} pleine>{texte('adresse_pharmacie')}</Champ>
+            <Champ libelle={t('Email')}>{texte('email_pharmacie', 'email')}</Champ>
+            <Champ libelle={t('NIF / registre de commerce')}>{texte('nif_pharmacie')}</Champ>
           </div>
         </>
       )}
@@ -159,22 +163,23 @@ function ParametresSection({ section }: { section: Section }) {
       {section === 'documents' && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Champ libelle="Devise" aide="Affichée sur tous les montants (ex : MRU, MAD, EUR).">{texte('devise')}</Champ>
+            <Champ libelle={t('Devise')} aide={t('Affichée sur tous les montants (ex : MRU, MAD, EUR).')}>{texte('devise')}</Champ>
             <div className="self-end pb-2">
-              <CaseACocher libelle="Afficher le logo sur les documents imprimés" valeur={v('afficher_logo_documents') !== '0'}
+              <CaseACocher libelle={t('Afficher le logo sur les documents imprimés')} valeur={v('afficher_logo_documents') !== '0'}
                 onChange={(c) => maj('afficher_logo_documents', c ? '1' : '0')} />
             </div>
           </div>
-          <CaseACocher libelle="Afficher les colonnes Prix et Total sur le bon de livraison" valeur={v('bl_afficher_prix') === '1'}
-            aide="Désactivé : le bon de livraison ne contient alors ni prix ni total."
+          <CaseACocher libelle={t('Afficher les colonnes Prix et Total sur le bon de livraison')} valeur={v('bl_afficher_prix') === '1'}
+            aide={t('Désactivé : le bon de livraison ne contient alors ni prix ni total.')}
             onChange={(c) => maj('bl_afficher_prix', c ? '1' : '0')} />
           <p className="text-xs text-slate-500">
-            Messages du pied de page : les retours à la ligne sont respectés. Sélectionnez un mot ou une ligne pour changer sa taille ou sa police.
+            
+            {t('Messages du pied de page : les retours à la ligne sont respectés. Sélectionnez un mot ou une ligne pour changer sa taille ou sa police.')}
           </p>
-          <Champ libelle="Message sur le reçu (ticket de caisse)"><EditeurTexteRiche valeur={v('message_recu')} onChange={(h) => maj('message_recu', h)} /></Champ>
-          <Champ libelle="Message sur le bon de livraison (BL)"><EditeurTexteRiche valeur={v('message_bl')} onChange={(h) => maj('message_bl', h)} /></Champ>
-          <Champ libelle="Message sur le devis"><EditeurTexteRiche valeur={v('message_devis')} onChange={(h) => maj('message_devis', h)} /></Champ>
-          <Champ libelle="Message sur la facture" aide="Laisser vide pour reprendre le message du reçu.">
+          <Champ libelle={t('Message sur le reçu (ticket de caisse)')}><EditeurTexteRiche valeur={v('message_recu')} onChange={(h) => maj('message_recu', h)} /></Champ>
+          <Champ libelle={t('Message sur le bon de livraison (BL)')}><EditeurTexteRiche valeur={v('message_bl')} onChange={(h) => maj('message_bl', h)} /></Champ>
+          <Champ libelle={t('Message sur le devis')}><EditeurTexteRiche valeur={v('message_devis')} onChange={(h) => maj('message_devis', h)} /></Champ>
+          <Champ libelle={t('Message sur la facture')} aide={t('Laisser vide pour reprendre le message du reçu.')}>
             <EditeurTexteRiche valeur={v('message_facture')} onChange={(h) => maj('message_facture', h)} />
           </Champ>
         </>
@@ -182,19 +187,19 @@ function ParametresSection({ section }: { section: Section }) {
 
       {section === 'medicaments' && (
         <>
-          <Champ libelle="Alerte « bientôt périmé » (jours avant péremption)" aide="Un lot dont la date de péremption est dans ce délai est signalé comme bientôt périmé.">
+          <Champ libelle={t('Alerte « bientôt périmé » (jours avant péremption)')} aide={t('Un lot dont la date de péremption est dans ce délai est signalé comme bientôt périmé.')}>
             <input className="champ max-w-xs" type="number" min={1} value={v('jours_alerte_peremption')} onChange={(e) => maj('jours_alerte_peremption', e.target.value)} />
           </Champ>
-          <CaseACocher libelle="Autoriser un stock négatif" valeur={v('stock_negatif_autorise') === '1'}
-            aide="Déconseillé : une vente ne devrait jamais dépasser le stock réel."
+          <CaseACocher libelle={t('Autoriser un stock négatif')} valeur={v('stock_negatif_autorise') === '1'}
+            aide={t('Déconseillé : une vente ne devrait jamais dépasser le stock réel.')}
             onChange={(c) => maj('stock_negatif_autorise', c ? '1' : '0')} />
-          <CaseACocher libelle="Gestion des rayonnages" valeur={v('gestion_rayonnages_active') === '1'}
-            aide="Affiche l'emplacement en rayon du médicament à la caisse et permet de le renseigner sur sa fiche."
+          <CaseACocher libelle={t('Gestion des rayonnages')} valeur={v('gestion_rayonnages_active') === '1'}
+            aide={t('Affiche l\'emplacement en rayon du médicament à la caisse et permet de le renseigner sur sa fiche.')}
             onChange={(c) => maj('gestion_rayonnages_active', c ? '1' : '0')} />
         </>
       )}
 
-      <button className="btn-primaire" disabled={envoi}>{envoi ? 'Enregistrement…' : 'Enregistrer'}</button>
+      <button className="btn-primaire" disabled={envoi}>{envoi ? t('Enregistrement…') : t('Enregistrer')}</button>
     </form>
   )
 }
@@ -206,31 +211,34 @@ function JournalAudit() {
   return (
     <TableauDonnees<EntreeAudit>
       colonnes={[
-        { cle: 'date_action', titre: 'Date', rendu: (a) => formaterDateHeure(a.date_action), exportRendu: (a) => formaterDateHeureExport(a.date_action) },
-        { cle: 'utilisateur', titre: 'Utilisateur' },
-        { cle: 'action', titre: 'Action', rendu: (a) => <Badge ton="bleu">{a.action}</Badge> },
-        { cle: 'entite', titre: 'Objet' },
-        { cle: 'reference', titre: 'Référence' },
-        { cle: 'detail', titre: 'Détail', rendu: (a) => (
+        { cle: 'date_action', titre: t('Date'), rendu: (a) => formaterDateHeure(a.date_action), exportRendu: (a) => formaterDateHeureExport(a.date_action) },
+        { cle: 'utilisateur', titre: t('Utilisateur') },
+        { cle: 'action', titre: t('Action'), rendu: (a) => <Badge ton="bleu">{a.action}</Badge> },
+        { cle: 'entite', titre: t('Objet') },
+        { cle: 'reference', titre: t('Référence') },
+        { cle: 'detail', titre: t('Détail'), rendu: (a) => (
           <span className="text-xs text-slate-600">{a.description || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} → ${JSON.stringify(a.nouvelle_valeur)}` : '')}</span>
         ), exportRendu: (a) => a.description || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} -> ${JSON.stringify(a.nouvelle_valeur)}` : '') },
       ]}
-      titre="Journal d'audit"
+      titre={t('Journal d\'audit')}
       lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
-      nombrePages={liste.nombrePages} onPage={liste.setPage} cleLigne={(a) => a.id} messageVide="Aucune opération enregistrée." idTableau="journal-audit" endpoint="/journal-audit/" />
+      nombrePages={liste.nombrePages} onPage={liste.setPage} cleLigne={(a) => a.id} messageVide={t('Aucune opération enregistrée.')} idTableau="journal-audit" endpoint="/journal-audit/" />
   )
 }
 
 export default function Parametres() {
-  const [onglet, setOnglet] = useState<Onglet>('pharmacie')
+  const etatNavigation = useLocation().state as { onglet?: Onglet } | null
+  const [onglet, setOnglet] = useState<Onglet>(etatNavigation?.onglet ?? 'pharmacie')
   const onglets: { cle: Onglet; libelle: string; icone?: typeof Building2 }[] = [
-    { cle: 'pharmacie', libelle: 'Pharmacie', icone: Building2 }, { cle: 'documents', libelle: 'Reçus et documents', icone: FileText },
-    { cle: 'medicaments', libelle: 'Médicaments et stock', icone: Pill }, { cle: 'caisses', libelle: 'Caisses' },
-    { cle: 'paiements', libelle: 'Modes de paiement' }, { cle: 'audit', libelle: "Journal d'audit" },
+    { cle: 'pharmacie', libelle: t('Pharmacie'), icone: Building2 }, { cle: 'documents', libelle: t('Reçus et documents'), icone: FileText },
+    { cle: 'medicaments', libelle: t('Médicaments et stock'), icone: Pill }, { cle: 'caisses', libelle: t('Caisses') },
+    { cle: 'paiements', libelle: t('Modes de paiement') }, { cle: 'sauvegardes', libelle: t('Sauvegardes'), icone: DatabaseBackup },
+    { cle: 'licence', libelle: t('Licence'), icone: KeyRound },
+    { cle: 'audit', libelle: t('Journal d\'audit') },
   ]
   return (
     <div>
-      <EnTetePage titre="Paramètres" description="Pharmacie, reçus et documents, médicaments et stock, caisses et modes de paiement." />
+      <EnTetePage titre={t('Paramètres')} description={t('Pharmacie, reçus et documents, médicaments et stock, caisses et modes de paiement.')} />
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
         {onglets.map((o) => (
           <button key={o.cle} onClick={() => setOnglet(o.cle)}
@@ -241,34 +249,36 @@ export default function Parametres() {
       </div>
       {(onglet === 'pharmacie' || onglet === 'documents' || onglet === 'medicaments') && <ParametresSection key={onglet} section={onglet} />}
       {onglet === 'caisses' && (
-        <PageCrud<Caisse> sansEntete titre="Caisses" endpoint="/caisses/" nomElement="Caisse" libelleNouveau="Nouvelle caisse" placeholderRecherche="Rechercher une caisse…"
-          actionsMasse={[{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les caisses sélectionnées ?', executer: desactiverEnMasse<Caisse>('/caisses/', 'active', (c) => c.nom) }]}
+        <PageCrud<Caisse> sansEntete titre={t('Caisses')} endpoint="/caisses/" nomElement={t('Caisse')} libelleNouveau={t('Nouvelle caisse')} placeholderRecherche={t('Rechercher une caisse…')}
+          actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les caisses sélectionnées ?'), executer: desactiverEnMasse<Caisse>('/caisses/', 'active', (c) => c.nom) }]}
           colonnes={[
-            { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (c) => <span className="font-medium">{c.nom}</span> },
-            { cle: 'depot_nom', titre: 'Dépôt de vente' },
-            { cle: 'active', titre: 'État', rendu: (c) => <Badge ton={c.active ? 'vert' : 'gris'}>{c.active ? 'Active' : 'Désactivée'}</Badge> },
+            { cle: 'nom', titre: t('Nom'), tri: 'nom', rendu: (c) => <span className="font-medium">{c.nom}</span> },
+            { cle: 'depot_nom', titre: t('Dépôt de vente') },
+            { cle: 'active', titre: t('État'), rendu: (c) => <Badge ton={c.active ? 'vert' : 'gris'}>{c.active ? t('Active') : t('Désactivée')}</Badge> },
           ]}
           champs={[
-            { nom: 'nom', libelle: 'Nom', type: 'texte', requis: true },
-            { nom: 'depot', libelle: 'Dépôt de vente', type: 'select', requis: true, source: { endpoint: '/depots/', libelle: (d: Depot) => d.nom } },
-            { nom: 'active', libelle: 'État', type: 'case', aide: 'Caisse active', defaut: true },
+            { nom: 'nom', libelle: t('Nom'), type: 'texte', requis: true },
+            { nom: 'depot', libelle: t('Dépôt de vente'), type: 'select', requis: true, source: { endpoint: '/depots/', libelle: (d: Depot) => d.nom } },
+            { nom: 'active', libelle: t('État'), type: 'case', aide: t('Caisse active'), defaut: true },
           ]} />
       )}
       {onglet === 'paiements' && (
-        <PageCrud<ModePaiement> sansEntete titre="Modes de paiement" endpoint="/modes-paiement/" nomElement="Mode de paiement" libelleNouveau="Nouveau mode de paiement" placeholderRecherche="Rechercher…"
-          actionsMasse={[{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les modes de paiement sélectionnés ?', executer: desactiverEnMasse<ModePaiement>('/modes-paiement/', 'actif', (m) => m.nom) }]}
+        <PageCrud<ModePaiement> sansEntete titre={t('Modes de paiement')} endpoint="/modes-paiement/" nomElement={t('Mode de paiement')} libelleNouveau={t('Nouveau mode de paiement')} placeholderRecherche={t('Rechercher…')}
+          actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les modes de paiement sélectionnés ?'), executer: desactiverEnMasse<ModePaiement>('/modes-paiement/', 'actif', (m) => m.nom) }]}
           colonnes={[
-            { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (m) => <span className="font-medium">{m.nom}</span> },
-            { cle: 'type', titre: 'Type', rendu: (m) => ({ ESPECES: 'Espèces', MOBILE: 'Paiement mobile', CARTE: 'Carte', VIREMENT: 'Virement', AUTRE: 'Autre' }[m.type]) },
-            { cle: 'actif', titre: 'État', rendu: (m) => <Badge ton={m.actif ? 'vert' : 'gris'}>{m.actif ? 'Actif' : 'Désactivé'}</Badge> },
+            { cle: 'nom', titre: t('Nom'), tri: 'nom', rendu: (m) => <span className="font-medium">{m.nom}</span> },
+            { cle: 'type', titre: t('Type'), rendu: (m) => ({ ESPECES: t('Espèces'), MOBILE: t('Paiement mobile'), CARTE: t('Carte'), VIREMENT: t('Virement'), AUTRE: t('Autre') }[m.type]) },
+            { cle: 'actif', titre: t('État'), rendu: (m) => <Badge ton={m.actif ? 'vert' : 'gris'}>{m.actif ? t('Actif') : t('Désactivé')}</Badge> },
           ]}
           champs={[
-            { nom: 'nom', libelle: 'Nom', type: 'texte', requis: true },
-            { nom: 'type', libelle: 'Type', type: 'select', requis: true, defaut: 'ESPECES',
-              options: [{ valeur: 'ESPECES', libelle: 'Espèces' }, { valeur: 'MOBILE', libelle: 'Paiement mobile' }, { valeur: 'CARTE', libelle: 'Carte bancaire' }, { valeur: 'VIREMENT', libelle: 'Virement' }, { valeur: 'AUTRE', libelle: 'Autre' }] },
-            { nom: 'actif', libelle: 'État', type: 'case', aide: 'Mode de paiement actif', defaut: true },
+            { nom: 'nom', libelle: t('Nom'), type: 'texte', requis: true },
+            { nom: 'type', libelle: t('Type'), type: 'select', requis: true, defaut: 'ESPECES',
+              options: [{ valeur: 'ESPECES', libelle: t('Espèces') }, { valeur: 'MOBILE', libelle: t('Paiement mobile') }, { valeur: 'CARTE', libelle: t('Carte bancaire') }, { valeur: 'VIREMENT', libelle: t('Virement') }, { valeur: 'AUTRE', libelle: t('Autre') }] },
+            { nom: 'actif', libelle: t('État'), type: 'case', aide: t('Mode de paiement actif'), defaut: true },
           ]} />
       )}
+      {onglet === 'sauvegardes' && <Sauvegardes />}
+      {onglet === 'licence' && <Licence />}
       {onglet === 'audit' && <JournalAudit />}
     </div>
   )

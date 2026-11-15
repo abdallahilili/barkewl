@@ -27,9 +27,20 @@ class Medicament(models.Model):
     unite = models.CharField(max_length=60, blank=True)
     laboratoire = models.CharField(max_length=120, blank=True)
     emplacement = models.CharField(max_length=60, blank=True, help_text="Emplacement en rayon (ex. Rayon A3)")
+    # Prix d'achat et de vente : toujours pour une BOÎTE entière (comme sur la facture du fournisseur).
     prix_achat = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     prix_vente = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    stock_minimum = models.PositiveIntegerField(default=0)
+    # Conditionnement : le stock est compté dans la plus petite unité (comprimé, gélule, sachet…).
+    # 1 = vendu uniquement à la boîte (comportement d'origine).
+    unites_par_boite = models.PositiveIntegerField(default=1, help_text="Nombre d'unités (comprimés…) dans une boîte")
+    unites_par_plaquette = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Nombre d'unités dans une plaquette ; vide = pas de vente à la plaquette")
+    nom_unite_detail = models.CharField(max_length=30, blank=True, help_text="Ex. comprimé, gélule, sachet")
+    prix_vente_plaquette = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
+                                               help_text="Vide = calculé à partir du prix de la boîte")
+    prix_vente_unite = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
+                                           help_text="Vide = calculé à partir du prix de la boîte")
+    stock_minimum = models.PositiveIntegerField(default=0, help_text="Seuil d'alerte, en boîtes")
     frequence_vente = models.PositiveIntegerField(
         default=0, help_text="Quantité totale vendue (cumulée à chaque vente, utilisée pour le classement des médicaments les plus vendus)."
     )

@@ -10,6 +10,7 @@ import { Chargement, EtatVide, MessageErreur } from './EnTetePage'
 import { ModaleExport } from './ModaleExport'
 import { useNotifier } from './Notifications'
 
+import { t } from '../i18n'
 export interface Colonne<T> {
   cle: string
   titre: string
@@ -208,7 +209,7 @@ export function TableauDonnees<T>({
         <div>
           {actionsMasse && Object.keys(rowSelection).length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-slate-600">{Object.keys(rowSelection).length} sélectionnée(s)</span>
+              <span className="text-xs font-medium text-slate-600">{Object.keys(rowSelection).length} {' '}{t('sélectionnée(s)')}</span>
               {actionsMasse.map((a) => (
                 <button key={a.libelle} type="button" disabled={executionMasse} className={a.danger ? 'btn-danger btn-petit' : 'btn-secondaire btn-petit'}
                   onClick={() => executerActionMasse(a)}>
@@ -227,10 +228,10 @@ export function TableauDonnees<T>({
           {choixColonnes && colonnes.length > 3 && (
             <div className="relative">
               <button type="button" className="btn-discret btn-petit" onClick={() => setMenuOuvert(!menuOuvert)}>
-                <Columns3 size={14} /> Colonnes
+                <Columns3 size={14} /> {' '}{t('Colonnes')}
               </button>
               {menuOuvert && (
-                <div className="absolute right-0 top-10 z-20 w-56 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                <div className="absolute end-0 top-10 z-20 w-56 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
                   {colonnes.filter((c) => c.titre !== '').map((c) => (
                     <label key={c.cle} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
                       <input type="checkbox" checked={columnVisibility[c.cle] !== false}
@@ -354,12 +355,12 @@ export function TableauDonnees<T>({
       {chargement && lignes.length === 0 && <Chargement />}
       {!chargement && lignes.length === 0 && !erreur && <EtatVide titre={messageVide} />}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-3 py-2 text-xs text-slate-500 sans-impression">
-        <span>{total} résultat{total > 1 ? 's' : ''}{chargement && lignes.length > 0 ? ' — mise à jour…' : ''}</span>
+        <span>{total} {' '}{t('résultat')}{total > 1 ? 's' : ''}{chargement && lignes.length > 0 ? t(' — mise à jour…') : ''}</span>
         {nombrePages > 1 && (
           <div className="flex items-center gap-1">
-            <button className="btn-discret btn-petit" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Page précédente"><ChevronLeft size={14} /></button>
-            <span>Page {page} / {nombrePages}</span>
-            <button className="btn-discret btn-petit" disabled={page >= nombrePages} onClick={() => onPage(page + 1)} aria-label="Page suivante"><ChevronRight size={14} /></button>
+            <button className="btn-discret btn-petit" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label={t('Page précédente')}><ChevronLeft size={14} className="rtl:-scale-x-100" /></button>
+            <span>{t('Page')}{' '}{page} / {nombrePages}</span>
+            <button className="btn-discret btn-petit" disabled={page >= nombrePages} onClick={() => onPage(page + 1)} aria-label={t('Page suivante')}><ChevronRight size={14} className="rtl:-scale-x-100" /></button>
           </div>
         )}
       </div>

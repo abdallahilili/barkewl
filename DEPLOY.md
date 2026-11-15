@@ -1,4 +1,22 @@
-# Déploiement de Barkewl sur Windows (sans Docker, avec WampServer)
+# Déploiement de RAQEEM PHARMA sur Windows
+
+> ## ★ Méthode recommandée : le paquet d'installation (depuis la version 1.0.0)
+>
+> 1. **Chez Rawafid** : `powershell -ExecutionPolicy Bypass -File deploy\installation\construire_paquet.ps1`
+>    → `dist-installation\RaqeemPharma-<version>.zip` (serveur, interface déjà construite, composants Python,
+>    installateur Python officiel). Aucune connexion Internet n'est nécessaire chez le client.
+> 2. **Chez le client** (MySQL/WampServer démarré) : dézipper, clic droit sur **`Installer.bat`** > Exécuter en
+>    tant qu'administrateur. Option plusieurs postes : `Installer.bat -Reseau`.
+> 3. **Mises à jour** : nouveau paquet, **`Mettre_a_jour.bat`** (sauvegarde, puis retour automatique à
+>    l'ancienne version et aux données d'avant si une étape échoue).
+>
+> Détails : `deploy/installation/LISEZMOI.txt`. Le serveur sert lui-même l'interface : plus besoin d'Apache.
+> Le serveur est lancé par `python -m waitress` (le lanceur `waitress-serve.exe`, non signé, est bloqué
+> par Smart App Control sur certains PC).
+>
+> La suite de ce document décrit l'ancienne installation manuelle (WampServer + Apache), conservée pour référence.
+
+---
 
 Architecture retenue : usage **local uniquement** (ce PC), backend démarré
 **automatiquement avec Windows** via un service.
@@ -29,7 +47,7 @@ npm --version
 
 ## 2. Copier le projet
 
-Copier tout le dossier `Barkewl` sur le nouveau PC (clé USB, partage réseau, ou zip).
+Copier tout le dossier `RAQEEM PHARMA` sur le nouveau PC (clé USB, partage réseau, ou zip).
 **Ne pas copier** `backend\venv`, `frontend\node_modules`, `frontend\dist` — ils seront
 recréés proprement sur le nouveau PC (les chemins absolus de l'ancien `venv` ne
 fonctionneraient pas ailleurs).
@@ -49,7 +67,7 @@ CREATE DATABASE pharmacie CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ## 4. Backend Django
 
 ```powershell
-cd Barkewl\backend
+cd RaqeemPharma\backend
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
@@ -102,16 +120,16 @@ Ouvrir http://127.0.0.1:8000/api/ dans le navigateur, puis `Ctrl+C` pour arrête
    vérifier http://127.0.0.1:8000/api/, puis fermer la fenêtre (`Ctrl+C`).
 2. Exécuter `deploy\install_task_scheduler.bat` **en Administrateur**
    (clic droit > "Exécuter en tant qu'administrateur").
-3. La tâche `BarkewlBackend` est créée : elle démarre Waitress automatiquement à
+3. La tâche `RaqeemBackend` est créée : elle démarre Waitress automatiquement à
    chaque démarrage de Windows (compte SYSTEM, même sans session ouverte).
 
 Commandes utiles ensuite (terminal admin) :
 
 ```powershell
-schtasks /run /tn "BarkewlBackend"       REM démarrer tout de suite
-schtasks /end /tn "BarkewlBackend"       REM arrêter
-schtasks /query /tn "BarkewlBackend"     REM statut
-schtasks /delete /tn "BarkewlBackend" /f REM supprimer
+schtasks /run /tn "RaqeemBackend"       REM démarrer tout de suite
+schtasks /end /tn "RaqeemBackend"       REM arrêter
+schtasks /query /tn "RaqeemBackend"     REM statut
+schtasks /delete /tn "RaqeemBackend" /f REM supprimer
 ```
 
 > **Alternative** si tu préfères un vrai service Windows (logs dédiés, redémarrage
@@ -133,7 +151,7 @@ VITE_URL_API=/api
 Puis build :
 
 ```powershell
-cd Barkewl\frontend
+cd RaqeemPharma\frontend
 npm install
 npm run build
 ```
@@ -158,7 +176,7 @@ Listen 8080
 
 3. Ouvrir `httpd-vhosts.conf` (menu Wamp > Apache > httpd-vhosts.conf) et y coller
    le contenu de `deploy\apache-vhost.conf`, **en adaptant le chemin**
-   `DocumentRoot`/`Directory` vers `.../Barkewl/frontend/dist` sur ce PC.
+   `DocumentRoot`/`Directory` vers `.../RaqeemPharma/frontend/dist` sur ce PC.
 4. Redémarrer tous les services Wamp (menu Wamp > "Redémarrer tous les services").
 
 Le port 8080 (au lieu de 80) évite de toucher au vhost `localhost` par défaut de
@@ -170,21 +188,52 @@ Wamp, qui continue de servir phpMyAdmin normalement sur http://localhost/.
 - Se connecter avec un compte créé par `initialiser_donnees` (voir le README du
   backend pour les comptes de démo si `charger_demo` a été lancé).
 - Si l'API ne répond pas : vérifier que la tâche tourne
-  (`schtasks /query /tn "BarkewlBackend"`, ou dans le Planificateur de tâches
+  (`schtasks /query /tn "RaqeemBackend"`, ou dans le Planificateur de tâches
   Windows > Bibliothèque), et que WampServer (MySQL) est bien démarré.
 
-## 8. Mettre à jour l'application plus tard
+## 8. Sauvegardes (à vérifier à chaque installation)
+
+- **Automatiques** : tant que le backend tourne, la base est sauvegardée toutes les
+  `SAUVEGARDE_INTERVALLE_HEURES` heures (6 par défaut) dans `backend\sauvegardes\`
+  (fichiers `raqeem_AAAAMMJJ_HHMMSS*.sql.gz`, conservés 30 jours, minimum les 7 dernières).
+- **Copie de secours** : renseigner `DOSSIER_SAUVEGARDES_COPIE` dans `backend\.env`
+  (clé USB laissée branchée, second disque, ou dossier OneDrive/Google Drive pour une copie
+  hors de la pharmacie). Fortement conseillé : un PC volé ou un disque mort = tout perdu sinon.
+- **Contrôle** : menu *Paramètres > Sauvegardes* (bouton « Sauvegarder maintenant »,
+  téléchargement). Le tableau de bord de l'administrateur affiche une alerte rouge si la
+  dernière sauvegarde a plus de 26 h.
+- **Manuel** : `deploy\sauvegarder_maintenant.bat` (à lancer avant chaque mise à jour).
+- **Restauration** : `deploy\restaurer_sauvegarde.bat` (double-clic pour choisir, ou glisser
+  un fichier `.sql.gz` depuis une clé USB dessus). Une sauvegarde de sécurité de l'état actuel
+  est faite juste avant. En ligne de commande : `python manage.py restaurer_sauvegarde <fichier>`.
+- `mysqldump` est trouvé automatiquement (WampServer, XAMPP, MySQL, MariaDB) ; sinon renseigner
+  `CHEMIN_MYSQL_BIN`. Journal des erreurs : `backend\logs\raqeem.log`.
+
+> **Tester une restauration** sur le PC du client à l'installation : une sauvegarde qu'on n'a
+> jamais restaurée n'est pas une sauvegarde.
+
+## 9. Licence (Rawafid Digital Services)
+
+Sans licence valide, RAQEEM PHARMA démarre en **mode consultation** (aucune vente).
+
+1. Lire le code du PC : `python manage.py licence` (ou *Paramètres > Licence*).
+2. Créer la licence avec l'outil éditeur (`rawafid-licences\Creer_une_licence.bat`, **jamais copié chez le client**).
+3. Activer : `python manage.py licence --activer RQM1....` ou coller la clé dans *Paramètres > Licence*.
+
+Le code du PC change si Windows est réinstallé ou si l'on change de PC : il faut alors une nouvelle licence.
+
+## 10. Mettre à jour l'application plus tard
 
 ```powershell
 REM Backend (si le code a changé)
-cd Barkewl\backend
+cd RaqeemPharma\backend
 venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
-nssm restart BarkewlBackend
+nssm restart RaqeemBackend
 
 REM Frontend (si le code a changé)
-cd Barkewl\frontend
+cd RaqeemPharma\frontend
 npm install
 npm run build
 REM rien d'autre : Apache sert directement le nouveau contenu de dist\

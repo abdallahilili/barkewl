@@ -1,0 +1,44 @@
+RAQEEM PHARMA - Installation chez le client
+Rawafid Digital Services - +222 46 63 59 96 / 31 17 70 08
+===========================================================
+
+QUEL PAQUET ?
+  - PC SANS WampServer ni MySQL : paquet COMPLET (RaqeemPharma-<version>-complet.zip). MySQL est installé
+    automatiquement, sans aucune question ; son mot de passe root est dans C:\RaqeemPharma\mysql_root.txt
+    (lisible par les administrateurs seulement).
+  - PC AVEC WampServer (ou MySQL / MariaDB) : l'un ou l'autre paquet. Le MySQL existant est utilisé (et démarré
+    s'il est arrêté) ; connaître le mot de passe MySQL de « root » (vide par défaut sous WampServer).
+  - Dans les deux cas, MySQL démarre ensuite automatiquement avec Windows.
+
+INSTALLER (15 minutes)
+  1. Copier ce dossier sur le PC (par exemple sur le Bureau).
+  2. Clic droit sur « Installer.bat » > Exécuter en tant qu'administrateur.
+  3. Répondre aux questions : mot de passe MySQL de root, puis mot de passe du propriétaire (compte « admin »).
+  4. À la fin, noter le CODE DU PC affiché (RQM-XXXX-XXXX-XXXX) et l'envoyer à Rawafid Digital Services.
+  5. Coller la clé de licence reçue dans Paramètres > Licence.
+
+  Le logiciel est installé dans C:\RaqeemPharma, démarre tout seul avec Windows, et s'ouvre par
+  le raccourci « RAQEEM PHARMA » du bureau (adresse http://localhost:8080).
+
+PLUSIEURS POSTES (2 caisses ou plus)
+  Installer sur le PC principal avec :  Installer.bat -Reseau
+  Les autres postes ouvrent simplement dans leur navigateur : http://<adresse-IP-du-PC-principal>:8080
+
+APRÈS L'INSTALLATION (à faire avec le pharmacien)
+  - Paramètres > Pharmacie : nom, logo, téléphones.
+  - Utilisateurs : un compte par personne ; code PIN pour le propriétaire et le pharmacien.
+  - Paramètres > Sauvegardes : régler une copie de secours (clé USB ou OneDrive) dans
+    C:\RaqeemPharma\app\backend\.env  (ligne DOSSIER_SAUVEGARDES_COPIE=), puis vérifier.
+  - Tester une restauration de sauvegarde.
+
+METTRE À JOUR (nouvelle version)
+  1. Copier le dossier de la NOUVELLE version sur le PC.
+  2. Clic droit sur « Mettre_a_jour.bat » > Exécuter en tant qu'administrateur.
+  La mise à jour fait d'abord une sauvegarde ; en cas de problème, l'ancienne version et les données
+  sont remises en place automatiquement.
+
+EN CAS DE PROBLÈME
+  - Journal du serveur : C:\RaqeemPharma\journaux\serveur.log
+  - Le logiciel ne s'ouvre pas : vérifier que MySQL est démarré, puis redémarrer le PC.
+  - Redémarrer le logiciel sans redémarrer le PC (en administrateur) :
+        schtasks /end /tn RaqeemPharma   puis   schtasks /run /tn RaqeemPharma

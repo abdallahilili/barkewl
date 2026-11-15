@@ -4,7 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from apps.caisse.models import ModePaiement
-from apps.commun.constantes import CAISSIER
+from apps.commun.constantes import ROLES_SANS_PRIX_ACHAT
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.parametres import identite_documents_vente
 from apps.commun.references import prochaine_reference
@@ -32,7 +32,7 @@ class LigneDocumentVenteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         donnees = super().to_representation(instance)
         requete = self.context.get("request")
-        if requete and getattr(requete.user, "role", None) == CAISSIER:
+        if requete and getattr(requete.user, "role", None) in ROLES_SANS_PRIX_ACHAT:
             donnees.pop("medicament_prix_achat", None)
         return donnees
 

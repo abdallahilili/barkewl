@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.commun.constantes import ADMIN, CAISSIER, TOUS_LES_ROLES
+from apps.commun.constantes import ADMIN, CAISSIER, ROLES_APPROBATEURS, TOUS_LES_ROLES
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.utilitaires import lire_date
 from apps.commun.vues_base import ViewSetGestion
@@ -84,7 +84,7 @@ class SessionCaisseViewSet(viewsets.ReadOnlyModelViewSet):
     def mouvements(self, request, pk=None):
         session = self.get_object()
         if request.method == "POST":
-            if session.caissier_id != request.user.pk and request.user.role != ADMIN:
+            if session.caissier_id != request.user.pk and request.user.role not in ROLES_APPROBATEURS:
                 raise ErreurMetier("Vous ne pouvez pas modifier la caisse d'un autre caissier.")
             serializer = MouvementManuelSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)

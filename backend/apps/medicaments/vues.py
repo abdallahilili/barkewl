@@ -12,6 +12,7 @@ from apps.commun.parametres import obtenir_entier
 from apps.commun.serializers import JournalAuditSerializer
 from apps.commun.vues_base import ViewSetGestion
 
+from .conditionnement import conditionnements_disponibles, decrire_quantite, libelle, multiplicateur, prix_conditionnement
 from .models import Categorie, Lot, Medicament
 from .serializers import CategorieSerializer, LotSerializer, MedicamentSerializer
 
@@ -124,13 +125,26 @@ class MedicamentViewSet(ViewSetGestion):
         resultat = []
         for m in medicaments:
             lots = par_medicament.get(m.id, [])
+            prix_boite = lots[0].lot.prix_vente_effectif if lots else m.prix_vente
+            conditionnements = []
+            for code in conditionnements_disponibles(m):
+                par = multiplicateur(m, code)
+                conditionnements.append({
+                    "code": code, "libelle": libelle(m, code), "libelle_pluriel": libelle(m, code, 2),
+                    "unites": par, "prix": prix_conditionnement(m, code, prix_boite),
+                    # Une boîte entamée ne peut plus être vendue comme boîte : on compte par lot.
+                    "disponible": sum(s.quantite // par for s in lots),
+                })
             resultat.append(
                 {
                     "id": m.id, "nom": m.nom, "nom_generique": m.nom_generique, "dosage": m.dosage,
                     "forme": m.forme, "code": m.code, "code_barre": m.code_barre,
                     "emplacement": m.emplacement,
-                    "prix_vente": lots[0].lot.prix_vente_effectif if lots else m.prix_vente,
+                    "prix_vente": prix_boite,
                     "stock_disponible": sum(s.quantite for s in lots),
+                    "stock_texte": decrire_quantite(m, sum(s.quantite for s in lots)),
+                    "unites_par_boite": m.unites_par_boite,
+                    "conditionnements": conditionnements,
                     "prochaine_peremption": lots[0].lot.date_peremption if lots else None,
                     "frequence_vente": m.frequence_vente,
                 }

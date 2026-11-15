@@ -1,4 +1,5 @@
 import getpass
+import os
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -8,6 +9,7 @@ from apps.commun.parametres import DEFAUTS, obtenir_parametre
 from apps.commun.models import Parametre
 from apps.depots.models import Depot
 from apps.utilisateurs.models import Utilisateur
+from apps.utilisateurs.serializers import verifier_robustesse
 
 
 class Command(BaseCommand):
@@ -15,14 +17,18 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--identifiant", default="admin")
-        parser.add_argument("--mot-de-passe", dest="mot_de_passe", default=None)
+        # Pas d'option « --mot-de-passe » : sur la ligne de commande, il serait visible par les autres
+        # programmes du PC. Il est demandé au clavier ou transmis par la variable RAQEEM_ADMIN_MDP.
 
     def handle(self, *args, **options):
         identifiant = options["identifiant"]
         if not Utilisateur.objects.filter(identifiant=identifiant).exists():
-            mot_de_passe = options["mot_de_passe"] or getpass.getpass(f"Mot de passe pour « {identifiant} » (8 caractères min.) : ")
-            if len(mot_de_passe) < 8:
-                raise CommandError("Le mot de passe doit contenir au moins 8 caractères.")
+            mot_de_passe = os.environ.pop("RAQEEM_ADMIN_MDP", "") or getpass.getpass(
+                f"Mot de passe pour « {identifiant} » (8 caractères min.) : ")
+            problemes = verifier_robustesse(mot_de_passe, Utilisateur(identifiant=identifiant, nom="Admin", prenom="Compte"))
+            if problemes:
+                # Code 3 : l'installateur redemande un autre mot de passe.
+                raise CommandError("Mot de passe refusé : " + " ".join(problemes), returncode=3)
             Utilisateur.objects.creer_utilisateur(identifiant, mot_de_passe, nom="Admin", prenom="Compte", role=ADMIN)
             self.stdout.write(self.style.SUCCESS(f"Administrateur « {identifiant} » créé."))
         depot, _ = Depot.objects.get_or_create(nom="Pharmacie", defaults={"description": "Dépôt de vente principal"})
