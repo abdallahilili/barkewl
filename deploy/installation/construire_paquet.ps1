@@ -127,7 +127,28 @@ if (-not $SansMysql) {
         throw "Signature de vc_redist.x64.exe invalide : paquet refusé."
     }
     Copy-Item $vcredist (Join-Path $sortie "vc_redist.x64.exe")
-    Write-Host "  OK MySQL $VersionMysql (signature Oracle vérifiée) et Visual C++ (signature Microsoft vérifiée)" -ForegroundColor Green
+
+    # HeidiSQL portable (gratuit, signé par son auteur) : consulter la base sans phpMyAdmin, pour le support.
+    $versionHeidi = "12.22"
+    $archiveHeidi = Join-Path $cache "HeidiSQL_${versionHeidi}_64_Portable.zip"
+    if (-not (Test-Path $archiveHeidi)) {
+        Write-Host "  Téléchargement de HeidiSQL $versionHeidi..."
+        Invoke-WebRequest "https://github.com/HeidiSQL/HeidiSQL/releases/download/v$versionHeidi/HeidiSQL_${versionHeidi}_64_Portable.zip" -OutFile $archiveHeidi -UseBasicParsing
+    }
+    $empreintesHeidi = @{ "12.22" = "7B36821FA3E16CC37B511D41747EFA4C8B980D1E3FA937E52C5931BCC4EE79B4" }
+    if ($empreintesHeidi[$versionHeidi] -and (Get-FileHash $archiveHeidi -Algorithm SHA256).Hash -ne $empreintesHeidi[$versionHeidi]) {
+        throw "Empreinte de HeidiSQL incorrecte : archive refusée."
+    }
+    $dossierHeidi = Join-Path $sortie "outils\HeidiSQL"
+    Expand-Archive -Path $archiveHeidi -DestinationPath $dossierHeidi -Force
+    $signature = Get-AuthenticodeSignature (Join-Path $dossierHeidi "heidisql.exe")
+    if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "Ansgar Becker") {
+        throw "Signature de heidisql.exe invalide : paquet refusé."
+    }
+    [IO.File]::WriteAllText((Join-Path $sortie "outils\base_de_donnees.ps1"), [IO.File]::ReadAllText((Join-Path $Ici "base_de_donnees.ps1")), $avecBom)
+    $texte = [IO.File]::ReadAllText((Join-Path $Ici "Base_de_donnees.bat")) -replace "`r?`n", "`r`n"
+    [IO.File]::WriteAllText((Join-Path $sortie "Base_de_donnees.bat"), $texte, [Text.Encoding]::GetEncoding(1252))
+    Write-Host "  OK MySQL $VersionMysql (signature Oracle), Visual C++ (signature Microsoft), HeidiSQL $versionHeidi (signature vérifiée)" -ForegroundColor Green
 
     $zipComplet = Join-Path $Racine "dist-installation\$nom-complet.zip"
     if (Test-Path $zipComplet) { Remove-Item $zipComplet }

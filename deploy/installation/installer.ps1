@@ -168,7 +168,8 @@ Write-Host "  =====================================================" -Foreground
 Write-Host "    RAQEEM PHARMA  -  Installation" -ForegroundColor White
 Write-Host "    Rawafid Digital Services" -ForegroundColor Gray
 Write-Host "  =====================================================" -ForegroundColor DarkCyan
-$version = (Get-Content (Join-Path $Paquet "VERSION.txt") -ErrorAction SilentlyContinue | Select-Object -First 1)
+# [string] : sinon ConvertTo-Json (installation.json) écrit tout l'objet fichier de PowerShell au lieu de « 1.0.1 ».
+$version = [string](Get-Content (Join-Path $Paquet "VERSION.txt") -ErrorAction SilentlyContinue | Select-Object -First 1)
 Write-Host "    Version $version  ->  $Dossier" -ForegroundColor Gray
 
 if (-not $SansTache) {
@@ -238,7 +239,8 @@ Titre "4/8  Base de données MySQL"
 $fichierRoot = Join-Path $Dossier "mysql_root.txt"
 $mysqlInclus = $false
 $surCePc = $MysqlHote -in "127.0.0.1", "localhost"
-if ($surCePc -and (Get-Service $NomServiceMysql -ErrorAction SilentlyContinue)) {
+$serviceInclus = Get-CimInstance Win32_Service -Filter "Name='$NomServiceMysql'" -ErrorAction SilentlyContinue
+if ($surCePc -and $serviceInclus -and $serviceInclus.PathName -like "*$(Join-Path $Dossier 'mysql\bin')*") {
     # Reprise : le MySQL inclus a déjà été installé par une installation interrompue.
     Start-Service -Name $NomServiceMysql -ErrorAction SilentlyContinue
     $MysqlPort = [int]((Get-Content (Join-Path $Dossier "mysql.ini") | Where-Object { $_ -like "port=*" } | Select-Object -First 1).Substring(5))
@@ -271,6 +273,14 @@ if ($mysqlInclus) {
     $codeRoot = $LASTEXITCODE
     Remove-Item Env:RAQEEM_MYSQL_ROOT_MDP -ErrorAction SilentlyContinue
     if ($codeRoot -ne 0) { Echec "Sécurisation du MySQL inclus impossible." }
+    # Outil d'accès à la base (HeidiSQL) : dossier réservé aux administrateurs (il peut mémoriser la connexion).
+    if (Test-Path (Join-Path $Paquet "outils\HeidiSQL\heidisql.exe")) {
+        robocopy (Join-Path $Paquet "outils") (Join-Path $Dossier "outils") /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+        if ($LASTEXITCODE -ge 8) { Echec "Copie de l'outil d'accès à la base impossible." }
+        Copy-Item (Join-Path $Paquet "Base_de_donnees.bat") $Dossier -Force
+        if (-not $SansTache) { icacls (Join-Path $Dossier "outils") /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" | Out-Null }
+        Ok "Accès à la base : $Dossier\Base_de_donnees.bat (administrateurs)"
+    }
 } else {
     Write-Host "    Le serveur MySQL (WampServer, MySQL ou MariaDB) doit être démarré sur ${MysqlHote}:${MysqlPort}."
     if ($NonInteractif) { $mdpAdminMysql = $env:RAQEEM_MYSQL_ADMIN_MDP }
