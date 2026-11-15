@@ -70,5 +70,6 @@ Avec WampServer, la base `raqeem` reste dans WampServer (à supprimer dans phpMy
 | L'installation s'arrête | l'écran affiche la cause (et les dernières lignes du journal) : photo à envoyer à Rawafid |
 | « Le port … est interdit » | relancer l'installation sans `-Port` (choix automatique) |
 | MySQL ne démarre pas (paquet complet) | `C:\RaqeemPharma\journaux\mysql.err` |
+| « La base raqeem existe déjà et contient des données » | une installation précédente a laissé ses données (dossier supprimé, Windows réinstallé…) : taper **REPRENDRE** pour réinstaller en les gardant (sauvegarde faite avant ; comptes, mots de passe et licence conservés) |
 | Licence expirée | le logiciel passe en lecture seule : émettre une nouvelle licence |
 | Fonction absente du menu (ex. facturation) | elle n'est pas dans l'offre de la licence : émettre une licence Professionnel |

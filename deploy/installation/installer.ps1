@@ -20,7 +20,8 @@ param(
     [string]$BdUtilisateur = "raqeem",
     [switch]$Reseau,            # plusieurs postes : le serveur accepte les connexions du réseau local
     [switch]$SansTache,         # tests : pas de tâche planifiée, de raccourci ni de pare-feu
-    [switch]$NonInteractif      # tests : mots de passe lus dans RAQEEM_MYSQL_ADMIN_MDP et RAQEEM_ADMIN_MDP
+    [switch]$NonInteractif,     # tests : mots de passe lus dans RAQEEM_MYSQL_ADMIN_MDP et RAQEEM_ADMIN_MDP
+    [switch]$ReprendreBase      # réutiliser sans question une base existante qui contient des données
 )
 $ErrorActionPreference = "Stop"
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
@@ -229,11 +230,28 @@ if ($mysqlInclus) {
 $mdpBd = (Natif { & $py (Join-Path $Paquet "outils_installation.py") mot_de_passe }).Trim()
 $env:RAQEEM_MYSQL_HOTE = $MysqlHote; $env:RAQEEM_MYSQL_PORT = "$MysqlPort"; $env:RAQEEM_MYSQL_ADMIN = $MysqlAdmin
 $env:RAQEEM_MYSQL_ADMIN_MDP = $mdpAdminMysql; $env:RAQEEM_BD_NOM = $BdNom; $env:RAQEEM_BD_UTILISATEUR = $BdUtilisateur; $env:RAQEEM_BD_MDP = $mdpBd
+$repriseBase = $false
+if ($ReprendreBase) { $env:RAQEEM_REPRENDRE_BASE = "1"; $repriseBase = $true }
 Natif { & $py (Join-Path $Paquet "outils_installation.py") base }
 $codeBase = $LASTEXITCODE
-Remove-Item Env:RAQEEM_MYSQL_ADMIN_MDP, Env:RAQEEM_BD_MDP -ErrorAction SilentlyContinue
+if ($codeBase -eq 3 -and -not $NonInteractif) {
+    # Base d'une installation précédente (dossier supprimé, Windows réinstallé…) : on propose de la reprendre.
+    Write-Host ""
+    Write-Host "    Ces données viennent d'une installation précédente de RAQEEM PHARMA sur ce PC." -ForegroundColor Yellow
+    Write-Host "    Tapez REPRENDRE pour réinstaller le logiciel en GARDANT ces données"
+    Write-Host "    (comptes et mots de passe, médicaments, stock, ventes, licence)."
+    $reponse = Read-Host "    Autre réponse : annuler sans rien modifier"
+    if ($reponse.Trim().ToUpper() -eq "REPRENDRE") {
+        $env:RAQEEM_REPRENDRE_BASE = "1"; $repriseBase = $true
+        Natif { & $py (Join-Path $Paquet "outils_installation.py") base }
+        $codeBase = $LASTEXITCODE
+    }
+}
+Remove-Item Env:RAQEEM_MYSQL_ADMIN_MDP, Env:RAQEEM_BD_MDP, Env:RAQEEM_REPRENDRE_BASE -ErrorAction SilentlyContinue
+if ($codeBase -eq 3) { Echec "Installation annulée : la base « $BdNom » existante n'a pas été modifiée." }
 if ($codeBase -ne 0) { Echec "Base de données non préparée : voir le message ci-dessus (MySQL démarré ? mot de passe correct ?)." }
-Ok "Base « $BdNom » prête (compte dédié « $BdUtilisateur »)"
+if ($repriseBase) { Ok "Base « $BdNom » reprise avec ses données (compte dédié « $BdUtilisateur »)" }
+else { Ok "Base « $BdNom » prête (compte dédié « $BdUtilisateur »)" }
 
 # ---------------------------------------------------------------- 5. Configuration
 Titre "5/8  Configuration"
@@ -270,32 +288,44 @@ Ok "Configuration écrite (mode production, clé secrète aléatoire)"
 Titre "6/8  Préparation de la base"
 Push-Location (Join-Path $Dossier "app\backend")
 try {
-    Executer $py @("manage.py", "migrate", "--noinput", "-v", "0") "Préparation de la base impossible."
-    Ok "Tables créées (InnoDB)"
-    Write-Host "    Compte du PROPRIÉTAIRE (identifiant : admin)."
-    # Le mot de passe passe par une variable d'environnement de ce seul processus (jamais par la ligne de
-    # commande, visible des autres programmes) ; la commande le vérifie (longueur, mots trop courants…).
-    while ($true) {
-        if ($NonInteractif) { $mdpAdmin = $env:RAQEEM_ADMIN_MDP }
-        else {
-            $mdpAdmin = Read-Secret "    Choisissez son mot de passe (8 caractères min., pas uniquement des chiffres)"
-            $confirmation = Read-Secret "    Confirmez le mot de passe"
-            if ($mdpAdmin -ne $confirmation) { Write-Host "    Les deux mots de passe sont différents." -ForegroundColor Yellow; continue }
-        }
-        if ([string]::IsNullOrEmpty($mdpAdmin)) {
-            if ($NonInteractif) { Echec "Mot de passe du propriétaire absent (RAQEEM_ADMIN_MDP)." }
-            Write-Host "    Le mot de passe ne peut pas être vide." -ForegroundColor Yellow; continue
-        }
-        $env:RAQEEM_ADMIN_MDP = $mdpAdmin
-        Natif { & $py manage.py initialiser_donnees --identifiant admin }
-        $codeAdmin = $LASTEXITCODE
-        Remove-Item Env:RAQEEM_ADMIN_MDP -ErrorAction SilentlyContinue
-        $mdpAdmin = $null; $confirmation = $null
-        if ($codeAdmin -eq 0) { break }
-        if ($codeAdmin -eq 3 -and -not $NonInteractif) { Write-Host "    Choisissez un autre mot de passe." -ForegroundColor Yellow; continue }
-        Echec "Création du compte propriétaire impossible."
+    if ($repriseBase) {
+        # Base reprise : sauvegarde AVANT toute modification (mise à jour des tables).
+        $sortie = Natif { & $py manage.py sauvegarder 2>&1 } | Out-String
+        if ($LASTEXITCODE -ne 0 -or $sortie -notmatch "\.sql") { Write-Host $sortie; Echec "Sauvegarde de la base reprise impossible : ses données n'ont pas été modifiées." }
+        Ok "Sauvegarde de sécurité de la base reprise (dossier $Dossier\sauvegardes)"
     }
-    Ok "Compte « admin » créé, dépôts, caisse et modes de paiement prêts"
+    Executer $py @("manage.py", "migrate", "--noinput", "-v", "0") "Préparation de la base impossible."
+    Ok "Tables créées ou mises à jour (InnoDB)"
+    if ($repriseBase) {
+        # Comptes existants conservés (le propriétaire garde son mot de passe) ; seuls les éléments manquants sont créés.
+        Executer $py @("manage.py", "initialiser_donnees", "--identifiant", "admin") "Préparation des données de base impossible."
+        Ok "Données conservées ; le compte « admin » garde son mot de passe de l'installation précédente"
+    } else {
+        Write-Host "    Compte du PROPRIÉTAIRE (identifiant : admin)."
+        # Le mot de passe passe par une variable d'environnement de ce seul processus (jamais par la ligne de
+        # commande, visible des autres programmes) ; la commande le vérifie (longueur, mots trop courants…).
+        while ($true) {
+            if ($NonInteractif) { $mdpAdmin = $env:RAQEEM_ADMIN_MDP }
+            else {
+                $mdpAdmin = Read-Secret "    Choisissez son mot de passe (8 caractères min., pas uniquement des chiffres)"
+                $confirmation = Read-Secret "    Confirmez le mot de passe"
+                if ($mdpAdmin -ne $confirmation) { Write-Host "    Les deux mots de passe sont différents." -ForegroundColor Yellow; continue }
+            }
+            if ([string]::IsNullOrEmpty($mdpAdmin)) {
+                if ($NonInteractif) { Echec "Mot de passe du propriétaire absent (RAQEEM_ADMIN_MDP)." }
+                Write-Host "    Le mot de passe ne peut pas être vide." -ForegroundColor Yellow; continue
+            }
+            $env:RAQEEM_ADMIN_MDP = $mdpAdmin
+            Natif { & $py manage.py initialiser_donnees --identifiant admin }
+            $codeAdmin = $LASTEXITCODE
+            Remove-Item Env:RAQEEM_ADMIN_MDP -ErrorAction SilentlyContinue
+            $mdpAdmin = $null; $confirmation = $null
+            if ($codeAdmin -eq 0) { break }
+            if ($codeAdmin -eq 3 -and -not $NonInteractif) { Write-Host "    Choisissez un autre mot de passe." -ForegroundColor Yellow; continue }
+            Echec "Création du compte propriétaire impossible."
+        }
+        Ok "Compte « admin » créé, dépôts, caisse et modes de paiement prêts"
+    }
 } finally { Pop-Location }
 
 # ---------------------------------------------------------------- 7. Démarrage automatique

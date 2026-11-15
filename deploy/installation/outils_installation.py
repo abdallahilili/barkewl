@@ -9,6 +9,7 @@ Les mots de passe passent par des variables d'environnement, jamais par la ligne
     python outils_installation.py base                   crée la base et le compte MySQL dédié
         RAQEEM_MYSQL_HOTE, RAQEEM_MYSQL_PORT, RAQEEM_MYSQL_ADMIN, RAQEEM_MYSQL_ADMIN_MDP,
         RAQEEM_BD_NOM, RAQEEM_BD_UTILISATEUR, RAQEEM_BD_MDP
+        RAQEEM_REPRENDRE_BASE=1 : réutilise une base existante qui contient des données (sinon code de sortie 3)
 """
 import os
 import secrets
@@ -115,11 +116,22 @@ def base():
             if c.fetchone()[0]:
                 c.execute(f"SELECT COUNT(*) FROM `{nom}`.`utilisateurs`")
                 utilisee = c.fetchone()[0] > 0
+            if utilisee and e.get("RAQEEM_REPRENDRE_BASE") != "1":
+                # Base d'une installation précédente (dossier supprimé, Windows réinstallé…) : jamais touchée
+                # sans accord. Code 3 : l'installateur montre ce résumé et propose de reprendre ces données.
+                print(f"La base « {nom} » existe déjà et contient des données :")
+                for table, libelle in (("utilisateurs", "comptes"), ("medicaments", "médicaments"), ("ventes", "ventes")):
+                    try:
+                        c.execute(f"SELECT COUNT(*) FROM `{nom}`.`{table}`")
+                        print(f"    {c.fetchone()[0]} {libelle}")
+                    except pymysql.MySQLError:
+                        pass
+                sys.exit(3)
             if utilisee:
-                sys.exit(f"La base « {nom} » existe déjà et contient des données : elle n'est pas modifiée. "
-                         "Utilisez « Mettre_a_jour.bat », ou choisissez un autre nom de base.")
-            c.execute(f"DROP DATABASE `{nom}`")
-            print(f"Base « {nom} » d'une installation interrompue (vide) : recréée.")
+                print(f"Base « {nom} » reprise : ses données sont conservées.")
+            else:
+                c.execute(f"DROP DATABASE `{nom}`")
+                print(f"Base « {nom} » d'une installation interrompue (vide) : recréée.")
         c.execute(f"CREATE DATABASE IF NOT EXISTS `{nom}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
         for hote in ("localhost", "127.0.0.1"):
             c.execute("CREATE USER IF NOT EXISTS %s@%s IDENTIFIED BY %s", (utilisateur, hote, mdp))

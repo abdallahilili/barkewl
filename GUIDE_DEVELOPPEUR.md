@@ -226,6 +226,7 @@ d'erreur ne doit pas arrêter le script) ; ne jamais analyser une phrase accentu
 | Serveur jamais lancé / arrêté après 3 jours | `schtasks` : pas sur batterie, limite 72 h | `Register-ScheduledTask` avec réglages explicites |
 | Mise à jour refusée « sauvegarde impossible » | phrase accentuée déformée par la console | repérage par l'extension `.sql.gz` |
 | WampServer fermé = pas de base | services MySQL en démarrage manuel | service trouvé (port ou `my.ini`) et passé en automatique |
+| Réinstallation refusée : « la base existe et contient des données » | dossier `C:\RaqeemPharma` supprimé à la main, base restée dans WampServer | proposition **REPRENDRE** (option `-ReprendreBase`) : sauvegarde puis reprise, comptes et licence conservés |
 | Deux MySQL sur le même port 3306 | Windows laisse ouvrir 127.0.0.1:3306 quand un MySQL écoute sur « :: » ; et un WampServer arrêté n'était pas retrouvé | `Test-PortLibre` refuse tout port déjà écouté ; recherche par `my.ini` corrigée |
 
 ---
