@@ -10,6 +10,7 @@ import { t } from '../../i18n'
 import { api } from '../../services/api'
 import { EtatLicence, lireLicence } from '../../services/licence'
 import type { ReponsePaginee, Role, Utilisateur } from '../../types'
+import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { libelleRole } from '../../utilitaires/formatage'
 
@@ -99,6 +100,7 @@ export default function Utilisateurs() {
         key={version}
         titre={t('Utilisateurs')} description={t('Un compte par personne : chacun ne voit que ce qui le concerne, et tout est tracé.')}
         endpoint="/utilisateurs/" nomElement={t('Utilisateur')} libelleNouveau={t('Nouvel utilisateur')} placeholderRecherche={t('Nom ou identifiant…')}
+        actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les comptes sélectionnés ?'), executer: desactiverEnMasse<Utilisateur>('/utilisateurs/', 'actif', (u) => u.nom_complet) }]}
         colonnes={[
           { cle: 'nom_complet', titre: t('Nom'), tri: 'nom', rendu: (u) => <span className="font-medium">{u.nom_complet}</span> },
           { cle: 'identifiant', titre: t('Identifiant'), tri: 'identifiant' },

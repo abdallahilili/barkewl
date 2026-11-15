@@ -6,6 +6,7 @@ import { EnTetePage } from '../../composants/EnTetePage'
 import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useListe, useOptions } from '../../hooks/useListe'
 import type { Achat, Fournisseur } from '../../types'
+import { annulerEnMasse } from '../../utilitaires/actionsMasse'
 import { formaterDate, formaterDateExport, formaterMontant, libelleStatut } from '../../utilitaires/formatage'
 
 import { t } from '../../i18n'
@@ -39,7 +40,12 @@ export default function Achats() {
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(a) => a.id}
-        onClicLigne={(a) => navigate(`/achats/${a.id}`)} messageVide={t('Aucun achat enregistré.')} titre={t('Achats')} />
+        onClicLigne={(a) => navigate(`/achats/${a.id}`)} messageVide={t('Aucun achat enregistré.')} titre={t('Achats')} idTableau="achats"
+        endpoint="/achats/" parametresRequete={{ statut, fournisseur, impaye, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }}
+        actionsMasse={[{
+          libelle: t('Annuler'), danger: true, confirmation: t('Annuler les achats sélectionnés ? Refusé pour ceux déjà payés ou en cas de stock déjà vendu.'),
+          executer: async (lignes) => { const r = await annulerEnMasse<Achat>('/achats/', (a) => a.reference)(lignes); liste.recharger(); return r },
+        }]} />
     </div>
   )
 }

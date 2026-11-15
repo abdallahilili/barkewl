@@ -5,6 +5,7 @@ import { PageCrud } from '../../composants/PageCrud'
 import { DetailMedicament } from '../../fonctionnalites/DetailMedicament'
 import { useAuth } from '../../hooks/useAuth'
 import type { Categorie, Medicament } from '../../types'
+import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
 import { formaterMontant, formaterNombre, gestionRayonnagesActive } from '../../utilitaires/formatage'
 
 import { t } from '../../i18n'
@@ -21,6 +22,7 @@ export default function Medicaments() {
         endpoint="/medicaments/" nomElement={t('Médicament')} libelleNouveau={t('Nouveau médicament')}
         placeholderRecherche={t('Nom, code ou code-barres…')} triInitial="nom"
         peutCreer={admin} peutModifier={admin} largeurModale="grande"
+        actionsMasse={admin ? [{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les médicaments sélectionnés ?', executer: desactiverEnMasse<Medicament>('/medicaments/', 'actif', (m) => m.nom) }] : undefined}
         filtres={[
           { nom: 'actif', libelle: t('Tous les états'), options: [{ valeur: 1, libelle: t('Actifs') }, { valeur: 0, libelle: t('Désactivés') }] },
           { nom: 'categorie', libelle: t('Toutes les catégories'), source: { endpoint: '/categories/', libelle: (c: Categorie) => c.nom } },

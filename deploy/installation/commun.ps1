@@ -23,9 +23,14 @@ function Copier($source, $cible, [string[]]$exclusions = @()) {
     if ($LASTEXITCODE -ge 8) { throw "Copie impossible : $source -> $cible" }
 }
 
-# Vrai si ce PC laisse le logiciel ouvrir ce port. Teste réellement l'ouverture : un port peut être libre
-# mais interdit par Windows (réservé pour Hyper-V / WSL / Docker : erreur 10013).
+# Vrai si ce PC laisse le logiciel ouvrir ce port :
+#   1) aucun programme n'écoute déjà sur ce port, quelle que soit l'adresse (IPv4, IPv6 « :: », 0.0.0.0).
+#      Windows accepte d'ouvrir 127.0.0.1:3306 alors qu'un MySQL écoute déjà sur « :: » port 3306 : les deux
+#      serveurs coexisteraient et le logiciel parlerait au mauvais (vu sur le PC de développement) ;
+#   2) l'ouverture réelle réussit (un port peut être libre mais interdit par Windows : Hyper-V / WSL / Docker,
+#      erreur 10013).
 function Test-PortLibre($python, [string]$adresse, [int]$numero) {
+    if (Get-NetTCPConnection -LocalPort $numero -State Listen -ErrorAction SilentlyContinue) { return $false }
     Natif { & $python -c "import socket; s = socket.socket(); s.bind(('$adresse', $numero)); s.close()" 2>$null } | Out-Null
     return ($LASTEXITCODE -eq 0)
 }

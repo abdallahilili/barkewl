@@ -127,7 +127,8 @@ export default function HistoriqueSessions() {
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(s) => s.id}
-        onClicLigne={setDetail} messageVide={t('Aucune session de caisse.')} titre={t('Historique des sessions')} />
+        onClicLigne={setDetail} messageVide={t('Aucune session de caisse.')} titre={t('Historique des sessions')} idTableau="sessions-caisse"
+        endpoint="/sessions-caisse/" parametresRequete={{ date_debut: debut, date_fin: fin, statut, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
       <DetailSession session={detail} admin={utilisateur?.role === 'ADMIN'} onFermer={() => setDetail(null)}
         onCloturee={(s) => { setDetail(s); liste.recharger() }} />
     </div>

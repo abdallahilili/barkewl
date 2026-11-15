@@ -204,7 +204,8 @@ export default function MouvementsStock({ mode }: { mode: Mode }) {
           { cle: 'motif', titre: t('Motif'), cacheParDefaut: true },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
-        nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(m) => m.id} messageVide={t('Aucun mouvement pour ces critères.')} titre={titres[mode]} />
+        nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(m) => m.id} messageVide={t('Aucun mouvement pour ces critères.')} titre={titres[mode]} idTableau={`mouvements-stock-${mode}`}
+        endpoint="/mouvements-stock/" parametresRequete={{ ...filtres, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
       {mode === 'entree' && <FormulaireEntree ouvert={modale} onFermer={() => setModale(false)} apres={liste.recharger} />}
       {mode === 'sortie' && <FormulaireSortie ouvert={modale} onFermer={() => setModale(false)} apres={liste.recharger} />}
     </div>

@@ -1,12 +1,12 @@
-import { Download, FileText, Printer } from 'lucide-react'
+import { Download, FileSpreadsheet, FileText, Printer } from 'lucide-react'
 import { ReactNode, useEffect, useState } from 'react'
 import { Chargement, EnTetePage, MessageErreur } from '../composants/EnTetePage'
 import { useAuth } from '../hooks/useAuth'
 import { useOptions } from '../hooks/useListe'
 import { api } from '../services/api'
-import type { Depot } from '../types'
+import type { Caisse, DetailModePaiement, Depot, ModePaiement } from '../types'
 import { extraireErreur } from '../utilitaires/erreurs'
-import { exporterCsv, exporterPdf } from '../utilitaires/exports'
+import { exporterCsv, exporterExcel, exporterPdf, exporterWord } from '../utilitaires/exports'
 import { aujourdhui, formaterDate, formaterDateExport, formaterDateHeure, formaterMontant, formaterNombre, ilYaJours } from '../utilitaires/formatage'
 
 import { t } from '../i18n'
@@ -31,15 +31,26 @@ function formaterExport(valeur: unknown, format?: ColonneRapport['format']) {
 
 function TableauRapport({ colonnes, lignes, nomFichier }: { colonnes: ColonneRapport[]; lignes: Ligne[]; nomFichier: string }) {
   const { utilisateur } = useAuth()
+  const [occupe, setOccupe] = useState<'excel' | 'word' | null>(null)
   const titre = nomFichier.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase())
+  const entetes = colonnes.map((c) => c.titre)
+  const lignesFormatees = () => lignes.map((l) => colonnes.map((c) => formaterExport(l[c.cle], c.format)))
   return (
     <div className="carte">
       <div className="flex justify-end gap-2 border-b border-slate-100 px-3 py-2 sans-impression">
-        <button className="btn-secondaire btn-petit" onClick={() => exporterCsv(`${nomFichier}.csv`, colonnes.map((c) => c.titre), lignes.map((l) => colonnes.map((c) => formaterExport(l[c.cle], c.format))))}><Download size={14} /> {' '}{t('Exporter en CSV')}</button>
+        <button className="btn-secondaire btn-petit" onClick={() => exporterCsv(`${nomFichier}.csv`, entetes, lignesFormatees())}><Download size={14} /> {' '}{t('Exporter en CSV')}</button>
+        <button className="btn-secondaire btn-petit" disabled={occupe === 'excel'}
+          onClick={async () => { setOccupe('excel'); try { await exporterExcel({ titre, nomFichier, entetes, lignes: lignesFormatees() }) } finally { setOccupe(null) } }}>
+          <FileSpreadsheet size={14} /> {' '}{t('Exporter en Excel')}
+        </button>
         <button className="btn-secondaire btn-petit" onClick={() => exporterPdf({
           titre, nomFichier, imprimePar: utilisateur?.nom_complet ?? '—',
-          entetes: colonnes.map((c) => c.titre), lignes: lignes.map((l) => colonnes.map((c) => formaterExport(l[c.cle], c.format))),
+          entetes, lignes: lignesFormatees(),
         })}><FileText size={14} /> {' '}{t('Exporter en PDF')}</button>
+        <button className="btn-secondaire btn-petit" disabled={occupe === 'word'}
+          onClick={async () => { setOccupe('word'); try { await exporterWord({ titre, nomFichier, entetes, lignes: lignesFormatees() }) } finally { setOccupe(null) } }}>
+          <FileText size={14} /> {' '}{t('Exporter en Word')}
+        </button>
         <button className="btn-secondaire btn-petit" onClick={() => window.print()}><Printer size={14} /> {' '}{t('Imprimer')}</button>
       </div>
       <div className="overflow-x-auto">
@@ -138,15 +149,31 @@ function RapportAchats() {
 
 function RapportCaisse() {
   const p = usePeriode()
-  interface Reponse { sessions: { id: number; date_ouverture: string; caissier_nom: string; caisse_nom: string; statut: string; montant_initial: number; montant_attendu: number | null; montant_reel: number | null; ecart: number | null; resume: { total_ventes: number; total_especes: number; total_autres_paiements: number } }[]; total_ventes: number; total_especes: number; total_autres_paiements: number; total_ecarts: number; total_manquants: number }
-  const { donnees, chargement, erreur } = useRapport<Reponse>('caisse', { date_debut: p.debut, date_fin: p.fin })
+  const caisses = useOptions<Caisse>('/caisses/')
+  const modes = useOptions<ModePaiement>('/modes-paiement/')
+  const [caisse, setCaisse] = useState('')
+  const [modePaiement, setModePaiement] = useState('')
+  interface Reponse {
+    sessions: { id: number; date_ouverture: string; caissier_nom: string; caisse_nom: string; statut: string; montant_initial: number; montant_attendu: number | null; montant_reel: number | null; ecart: number | null; resume: { total_ventes: number; total_especes: number; total_autres_paiements: number } }[]
+    total_ventes: number; total_especes: number; total_autres_paiements: number; total_ecarts: number; total_manquants: number
+    par_mode: DetailModePaiement[]
+  }
+  const { donnees, chargement, erreur } = useRapport<Reponse>('caisse', { date_debut: p.debut, date_fin: p.fin, caisse, mode_paiement: modePaiement })
   return (
     <div>
-      <Periode {...p} />
+      <Periode {...p}>
+        <div><label className="etiquette">Caisse</label><select className="champ" value={caisse} onChange={(e) => setCaisse(e.target.value)}><option value="">Toutes les caisses</option>{caisses.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}</select></div>
+        <div><label className="etiquette">Mode de paiement</label><select className="champ" value={modePaiement} onChange={(e) => setModePaiement(e.target.value)}><option value="">Tous les modes</option>{modes.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}</select></div>
+      </Periode>
       <MessageErreur message={erreur} />
       {chargement && !donnees ? <Chargement /> : donnees && (
         <>
           <Totaux elements={[{ titre: t('Ventes (sessions clôturées)'), valeur: formaterMontant(donnees.total_ventes) }, { titre: t('Encaissé en espèces'), valeur: formaterMontant(donnees.total_especes) }, { titre: t('Autres paiements'), valeur: formaterMontant(donnees.total_autres_paiements) }, { titre: t('Écarts cumulés (manquants)'), valeur: `${formaterMontant(donnees.total_ecarts)} (${formaterMontant(donnees.total_manquants)})` }]} />
+          <h3 className="mb-2 text-sm font-semibold">{t('Détail par mode de paiement (ventes et remboursements réels, sessions ouvertes incluses)')}</h3>
+          <TableauRapport nomFichier="caisse-par-mode-paiement"
+            lignes={donnees.par_mode.map((m) => ({ mode: m.mode_paiement_nom, ventes: m.ventes, remboursements: m.remboursements, net: m.net }))}
+            colonnes={[{ cle: 'mode', titre: t('Mode de paiement') }, { cle: 'ventes', titre: t('Ventes'), format: 'montant', alignement: 'droite' }, { cle: 'remboursements', titre: t('Remboursements'), format: 'montant', alignement: 'droite' }, { cle: 'net', titre: t('Net'), format: 'montant', alignement: 'droite' }]} />
+          <h3 className="mb-2 mt-5 text-sm font-semibold">{t('Sessions de caisse')}</h3>
           <TableauRapport nomFichier="sessions-de-caisse"
             lignes={donnees.sessions.map((s) => ({ id: s.id, date: s.date_ouverture, caissier: s.caissier_nom, caisse: s.caisse_nom, statut: s.statut === 'OUVERTE' ? 'Ouverte' : 'Clôturée', ventes: s.resume.total_ventes, especes: s.resume.total_especes, autres: s.resume.total_autres_paiements, attendu: s.montant_attendu ?? s.resume.total_especes, compte: s.montant_reel, ecart: s.ecart }))}
             colonnes={[{ cle: 'date', titre: t('Ouverture') }, { cle: 'caissier', titre: t('Caissier') }, { cle: 'caisse', titre: t('Caisse') }, { cle: 'statut', titre: t('État') }, { cle: 'ventes', titre: t('Ventes'), format: 'montant', alignement: 'droite' }, { cle: 'especes', titre: t('Espèces'), format: 'montant', alignement: 'droite' }, { cle: 'autres', titre: t('Autres'), format: 'montant', alignement: 'droite' }, { cle: 'attendu', titre: t('Attendu'), format: 'montant', alignement: 'droite' }, { cle: 'compte', titre: t('Compté'), format: 'montant', alignement: 'droite' }, { cle: 'ecart', titre: t('Écart'), format: 'montant', alignement: 'droite' }]} />

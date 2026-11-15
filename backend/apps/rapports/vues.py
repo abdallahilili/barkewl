@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.achats.models import Achat
-from apps.caisse.models import SessionCaisse
+from apps.caisse.models import MouvementCaisse, SessionCaisse
 from apps.caisse.serializers import SessionCaisseSerializer
+from apps.caisse.services import detail_par_mode
 from apps.commun.constantes import ADMIN, CAISSIER, MAGASINIER, PHARMACIEN, ROLES_SANS_PRIX_ACHAT, TOUS_LES_ROLES
 from apps.commun import sauvegarde
 from apps.commun.exceptions import ErreurMetier
@@ -99,16 +100,23 @@ class RapportCaisseView(APIView):
         sessions = SessionCaisse.objects.filter(date_ouverture__date__range=(debut, fin)).select_related("caissier", "caisse__depot")
         if request.query_params.get("caissier"):
             sessions = sessions.filter(caissier_id=request.query_params["caissier"])
+        if request.query_params.get("caisse"):
+            sessions = sessions.filter(caisse_id=request.query_params["caisse"])
         donnees = SessionCaisseSerializer(sessions, many=True, context={"request": request}).data
         fermees = sessions.filter(statut="FERMEE")
         agregat = fermees.aggregate(
             ventes=_somme("total_ventes"), especes=_somme("total_especes"), autres=_somme("total_autres_paiements"),
             ecarts=_somme("ecart"), ecarts_negatifs=_somme("ecart", filter=Q(ecart__lt=0)),
         )
+        # Détail par mode de paiement : à partir des mouvements réels (toutes sessions de la période,
+        # ouvertes ou fermées), donc plus précis qu'un simple cumul espèces/autres.
+        par_mode = detail_par_mode(MouvementCaisse.objects.filter(session__in=sessions))
+        if request.query_params.get("mode_paiement"):
+            par_mode = [m for m in par_mode if str(m["mode_paiement"]) == request.query_params["mode_paiement"]]
         return Response({"date_debut": debut, "date_fin": fin, "sessions": donnees,
                          "total_ventes": agregat["ventes"], "total_especes": agregat["especes"],
                          "total_autres_paiements": agregat["autres"], "total_ecarts": agregat["ecarts"],
-                         "total_manquants": agregat["ecarts_negatifs"]})
+                         "total_manquants": agregat["ecarts_negatifs"], "par_mode": par_mode})
 
 
 CATEGORIES_MOUVEMENTS = {

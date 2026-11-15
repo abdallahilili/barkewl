@@ -76,7 +76,9 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(v) => v.id} onClicLigne={ouvrirDetail} messageVide={t('Aucune vente trouvée.')}
-        titre={modeRecus ? t('Reçus') : t('Historique des ventes')} />
+        titre={modeRecus ? t('Reçus') : t('Historique des ventes')} idTableau={modeRecus ? 'recus' : 'ventes'}
+        endpoint={modeRecus ? '/recus/' : '/ventes/'}
+        parametresRequete={{ ...(modeRecus ? {} : { date_debut: debut, date_fin: fin, statut }), ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
 
       <Modale ouverte={!!detail} titre={detail ? t('Vente {reference}', { reference: detail.reference }) : ''} onFermer={() => setDetail(null)} largeur="grande"
         pied={<>

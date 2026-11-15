@@ -254,6 +254,14 @@ export interface DocumentVente {
   pharmacie?: IdentiteDocumentVente
 }
 
+export interface DetailModePaiement {
+  mode_paiement: number
+  mode_paiement_nom: string
+  mode_paiement_type: string
+  ventes: number
+  remboursements: number
+  net: number
+}
 export interface ResumeSession {
   nombre_ventes: number
   total_ventes: number
@@ -263,6 +271,7 @@ export interface ResumeSession {
   entrees_manuelles: number
   sorties_manuelles: number
   montant_attendu: number
+  par_mode: DetailModePaiement[]
 }
 export interface SessionCaisse {
   id: number

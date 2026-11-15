@@ -76,7 +76,8 @@ export default function EtatStock() {
           { cle: 'etat', titre: t('État'), rendu: (s) => <Badge ton={tonEtatStock(s.etat)}>{libelleEtatStock(s.etat)}</Badge> },
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
-        nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(s) => s.id} messageVide={t('Aucune ligne de stock pour ces critères.')} titre={t('État du stock')} />
+        nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(s) => s.id} messageVide={t('Aucune ligne de stock pour ces critères.')} titre={t('État du stock')} idTableau="etat-stock"
+        endpoint="/stocks/" parametresRequete={{ ...filtres, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
     </div>
   )
 }

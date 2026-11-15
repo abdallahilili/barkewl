@@ -6,6 +6,7 @@ import { PageCrud } from '../../composants/PageCrud'
 import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useListe } from '../../hooks/useListe'
 import type { Client, Vente } from '../../types'
+import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
 import { formaterDateHeure, formaterDateHeureExport, formaterMontant, libelleStatut } from '../../utilitaires/formatage'
 
 import { t } from '../../i18n'
@@ -22,7 +23,7 @@ function HistoriqueClient({ client, onFermer }: { client: Client | null; onFerme
         { cle: 'statut', titre: t('État'), rendu: (v) => <Badge ton={tonStatut(v.statut)}>{libelleStatut(v.statut)}</Badge> },
       ]} lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} cleLigne={(v) => v.id} messageVide={t('Aucun achat pour ce client.')}
-        titre={client ? t('Achats — {nom}', { nom: client.nom }) : t('Achats')} />
+        titre={client ? t('Achats — {nom}', { nom: client.nom }) : t('Achats')} endpoint={client ? `/clients/${client.id}/historique/` : undefined} />
     </Modale>
   )
 }
@@ -48,6 +49,7 @@ export default function Clients() {
           { nom: 'notes', libelle: t('Notes'), type: 'zone' },
         ]}
         actionsLigne={(c) => <button className="btn-discret btn-petit" onClick={() => setClient(c)}><History size={14} /> {' '}{t('Achats')}</button>}
+        actionsMasse={[{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les clients sélectionnés ?'), executer: desactiverEnMasse<Client>('/clients/', 'actif', (c) => c.nom) }]}
       />
       <HistoriqueClient client={client} onFermer={() => setClient(null)} />
     </>

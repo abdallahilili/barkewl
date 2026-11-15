@@ -101,6 +101,29 @@ class TestVente(BaseTest):
         self.assertEqual(self.stock(self.lot_court), 10)
         self.assertEqual(MouvementStock.objects.filter(type_mouvement="VENTE").count(), 0)
 
+    def test_detail_par_mode_paiement(self):
+        from apps.caisse.models import SessionCaisse
+        from apps.caisse.services import calculer_resume
+
+        vente1 = creer_vente(
+            utilisateur=self.caissier, articles=[{"medicament": self.med, "quantite": 2}],
+            paiements=[{"mode_paiement": self.especes, "montant": Decimal("200")}],
+        )
+        vente2 = creer_vente(
+            utilisateur=self.caissier, articles=[{"medicament": self.med, "quantite": 1}],
+            paiements=[{"mode_paiement": self.bankily, "montant": Decimal("100")}],
+        )
+        annuler_vente(vente2.pk, self.caissier, "Erreur de commande")
+        session = SessionCaisse.objects.get(caissier=self.caissier, statut="OUVERTE")
+        par_mode = {d["mode_paiement_nom"]: d for d in calculer_resume(session)["par_mode"]}
+        self.assertEqual(par_mode["Espèces"]["ventes"], Decimal("200"))
+        self.assertEqual(par_mode["Espèces"]["remboursements"], Decimal("0"))
+        self.assertEqual(par_mode["Espèces"]["net"], Decimal("200"))
+        self.assertEqual(par_mode["Bankily"]["ventes"], Decimal("100"))
+        self.assertEqual(par_mode["Bankily"]["remboursements"], Decimal("100"))
+        self.assertEqual(par_mode["Bankily"]["net"], Decimal("0"))
+        self.assertEqual(vente1.statut, "VALIDEE")
+
     def test_vente_sans_session_refusee(self):
         with self.assertRaises(ErreurMetier):
             creer_vente(utilisateur=self.magasinier, articles=[{"medicament": self.med, "quantite": 1}],
@@ -310,6 +333,23 @@ class TestAPI(BaseTest):
         for g in ("caissier", "depot", "medicament"):
             self.assertEqual(c.get(f"/api/rapports/ventes/?regroupement={g}").status_code, 200, g)
         self.assertEqual(c.get("/api/rapports/achats/?regroupement=fournisseur").status_code, 200)
+
+    def test_rapport_caisse_detail_par_mode_et_filtres(self):
+        ouvrir_session(utilisateur=self.caissier, caisse_id=self.caisse.pk, montant_initial=Decimal("0"))
+        self.vendre(3, paiement=[{"mode_paiement": self.especes, "montant": Decimal("300")}])
+        c = self.client_pour(self.admin)
+        r = c.get("/api/rapports/caisse/")
+        self.assertEqual(r.status_code, 200)
+        noms = {d["mode_paiement_nom"] for d in r.data["par_mode"]}
+        self.assertIn("Espèces", noms)
+        r = c.get(f"/api/rapports/caisse/?caisse={self.caisse.pk}")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(len(r.data["sessions"]) >= 1)
+        autre_caisse = Caisse.objects.create(nom="Caisse 2", depot=self.depot)
+        r = c.get(f"/api/rapports/caisse/?caisse={autre_caisse.pk}")
+        self.assertEqual(r.data["sessions"], [])
+        r = c.get(f"/api/rapports/caisse/?mode_paiement={self.bankily.pk}")
+        self.assertEqual(r.data["par_mode"], [])
 
     def test_medicament_creation_code_auto_et_audit(self):
         c = self.client_pour(self.admin)
