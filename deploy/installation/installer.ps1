@@ -107,6 +107,15 @@ if (-not $SansTache) {
     $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if (-not $admin) { Echec "Lancez « Installer.bat » par clic droit > Exécuter en tant qu'administrateur." }
 }
+# Paquet complet ? (zip ouvert sans « Extraire tout », décompression interrompue, antivirus qui retire un fichier…)
+$manquants = @("python\python.exe", "lib\django", "app\backend\manage.py", "app\interface\index.html", "commun.ps1") |
+    Where-Object { -not (Test-Path (Join-Path $Paquet $_)) }
+if ($manquants) {
+    Echec ("Le paquet est incomplet dans $Paquet (manque : $($manquants -join ', ')).`n" +
+        "        1) Clic droit sur le fichier .zip > « Extraire tout », puis lancez Installer.bat depuis le dossier extrait`n" +
+        "           (ne pas le lancer depuis l'intérieur du zip).`n" +
+        "        2) Si le problème continue : l'antivirus a peut-être retiré un fichier (voir son historique de protection).")
+}
 if (Test-Path (Join-Path $Dossier "installation.json")) {
     Echec "RAQEEM PHARMA est déjà installé dans $Dossier. Pour une nouvelle version, utilisez « Mettre_a_jour.bat »."
 }
@@ -123,8 +132,12 @@ Titre "1/8  Python"
 # Indépendant de tout autre Python présent sur le PC (l'installateur classique, lui, réutilise un Python
 # 3.12 existant et ignore le dossier demandé).
 New-Item -ItemType Directory -Force -Path $Dossier | Out-Null
-robocopy (Join-Path $Paquet "python") (Join-Path $Dossier "python") /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-if ($LASTEXITCODE -ge 8) { Echec "Copie de Python impossible." }
+$journalCopie = robocopy (Join-Path $Paquet "python") (Join-Path $Dossier "python") /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2
+if ($LASTEXITCODE -ge 8) {
+    # Cause exacte donnée par robocopy (ex. « Accès refusé » : fichier bloqué par l'antivirus ou programme en cours).
+    $journalCopie | Where-Object { $_ -match "ERR|0x0" } | Select-Object -First 5 | ForEach-Object { Write-Host "      $($_.Trim())" -ForegroundColor Yellow }
+    Echec "Copie de Python impossible vers $Dossier\python (code $LASTEXITCODE). Fermez les programmes RAQEEM PHARMA ouverts, vérifiez l'antivirus, puis relancez."
+}
 $py = Join-Path $Dossier "python\python.exe"
 Ok (Natif { & $py --version })
 
