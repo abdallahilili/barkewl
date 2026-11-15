@@ -6,6 +6,7 @@ import { EnTetePage } from '../../composants/EnTetePage'
 import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useListe } from '../../hooks/useListe'
 import type { DocumentVente } from '../../types'
+import { annulerEnMasse } from '../../utilitaires/actionsMasse'
 import { formaterDate, formaterDateExport, formaterMontant } from '../../utilitaires/formatage'
 
 export default function Facturation() {
@@ -37,7 +38,12 @@ export default function Facturation() {
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(d) => d.id}
-        onClicLigne={(d) => navigate(`/facturation/${d.id}`)} messageVide="Aucun document de vente enregistré." titre="Facturation" />
+        onClicLigne={(d) => navigate(`/facturation/${d.id}`)} messageVide="Aucun document de vente enregistré." titre="Facturation" idTableau="facturation"
+        endpoint="/documents-vente/" parametresRequete={{ etape, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }}
+        actionsMasse={[{
+          libelle: 'Annuler', danger: true, confirmation: 'Annuler les devis sélectionnés ? Refusé pour ceux déjà transformés en bon de livraison.',
+          executer: async (lignes) => { const r = await annulerEnMasse<DocumentVente>('/documents-vente/', (d) => d.reference)(lignes); liste.recharger(); return r },
+        }]} />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useListe, useOptions } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { Depot, LigneStock, Transfert } from '../../types'
+import { annulerEnMasse } from '../../utilitaires/actionsMasse'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { formaterDate, formaterDateHeure, formaterDateHeureExport, libelleStatut } from '../../utilitaires/formatage'
 
@@ -115,7 +116,12 @@ export default function Transferts() {
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(t) => t.id}
-        onClicLigne={(t) => { setDetail(t); setErreur(null) }} messageVide="Aucun transfert." titre="Transferts" />
+        onClicLigne={(t) => { setDetail(t); setErreur(null) }} messageVide="Aucun transfert." titre="Transferts" idTableau="transferts"
+        endpoint="/transferts/" parametresRequete={{ statut, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }}
+        actionsMasse={[{
+          libelle: 'Annuler', danger: true, confirmation: 'Annuler les transferts sélectionnés ? Le stock déplacé sera remis dans le dépôt source.',
+          executer: async (lignes) => { const r = await annulerEnMasse<Transfert>('/transferts/', (t) => t.reference)(lignes); liste.recharger(); return r },
+        }]} />
       <FormulaireTransfert ouvert={modale} onFermer={() => setModale(false)} apres={liste.recharger} />
       <Modale ouverte={!!detail} titre={detail ? `Transfert ${detail.reference}` : ''} onFermer={() => setDetail(null)} largeur="grande"
         pied={<>

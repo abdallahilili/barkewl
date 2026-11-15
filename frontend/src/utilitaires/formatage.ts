@@ -14,6 +14,14 @@ let logoPharmacie = ''
 export const definirLogoPharmacie = (valeur: string) => { logoPharmacie = valeur || '' }
 export const lireLogoPharmacie = () => logoPharmacie
 
+let adressePharmacie = ''
+export const definirAdressePharmacie = (valeur: string) => { adressePharmacie = valeur || '' }
+export const lireAdressePharmacie = () => adressePharmacie
+
+let telephonePharmacie = ''
+export const definirTelephonePharmacie = (valeur: string) => { telephonePharmacie = valeur || '' }
+export const lireTelephonePharmacie = () => telephonePharmacie
+
 const formatNombre = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 })
 const formatMontant = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 

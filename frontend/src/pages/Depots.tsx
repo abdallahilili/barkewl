@@ -2,6 +2,7 @@ import { Badge } from '../composants/Badge'
 import { PageCrud } from '../composants/PageCrud'
 import { useAuth } from '../hooks/useAuth'
 import type { Depot } from '../types'
+import { desactiverEnMasse } from '../utilitaires/actionsMasse'
 
 export default function Depots() {
   const { utilisateur } = useAuth()
@@ -12,6 +13,7 @@ export default function Depots() {
       endpoint="/depots/" nomElement="Dépôt" libelleNouveau="Nouveau dépôt" placeholderRecherche="Rechercher un dépôt…"
       peutCreer={admin} peutModifier={admin}
       filtres={[{ nom: 'actif', libelle: 'Tous les états', options: [{ valeur: 1, libelle: 'Actifs' }, { valeur: 0, libelle: 'Désactivés' }] }]}
+      actionsMasse={admin ? [{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les dépôts sélectionnés ?', executer: desactiverEnMasse<Depot>('/depots/', 'actif', (d) => d.nom) }] : undefined}
       colonnes={[
         { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (d) => <span className="font-medium">{d.nom}</span> },
         { cle: 'description', titre: 'Description' },

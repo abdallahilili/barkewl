@@ -2,7 +2,10 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useState 
 import { api } from '../services/api'
 import * as auth from '../services/auth'
 import type { Parametre, Utilisateur } from '../types'
-import { definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie } from '../utilitaires/formatage'
+import {
+  definirAdressePharmacie, definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie,
+  definirTelephonePharmacie,
+} from '../utilitaires/formatage'
 
 interface ContexteAuth {
   utilisateur: Utilisateur | null
@@ -21,6 +24,8 @@ async function chargerParametresGlobaux() {
     definirGestionRayonnages(data.find((p) => p.cle === 'gestion_rayonnages_active')?.valeur === '1')
     definirNomPharmacie(data.find((p) => p.cle === 'nom_pharmacie')?.valeur ?? 'PHARMACIE')
     definirLogoPharmacie(data.find((p) => p.cle === 'logo_pharmacie')?.valeur ?? '')
+    definirAdressePharmacie(data.find((p) => p.cle === 'adresse_pharmacie')?.valeur ?? '')
+    definirTelephonePharmacie(data.find((p) => p.cle === 'telephone_pharmacie')?.valeur ?? '')
   } catch { /* les valeurs par défaut restent utilisées */ }
 }
 

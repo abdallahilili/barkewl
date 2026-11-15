@@ -1,6 +1,7 @@
 import { Badge } from '../../composants/Badge'
 import { PageCrud } from '../../composants/PageCrud'
 import type { Fournisseur } from '../../types'
+import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
 import { formaterMontant } from '../../utilitaires/formatage'
 
 export default function Fournisseurs() {
@@ -9,6 +10,7 @@ export default function Fournisseurs() {
       titre="Fournisseurs" description="Grossistes et laboratoires. Le solde indique ce qui reste à payer sur les achats validés."
       endpoint="/fournisseurs/" nomElement="Fournisseur" libelleNouveau="Nouveau fournisseur" placeholderRecherche="Nom, téléphone, e-mail…"
       filtres={[{ nom: 'actif', libelle: 'Tous les états', options: [{ valeur: 1, libelle: 'Actifs' }, { valeur: 0, libelle: 'Désactivés' }] }]}
+      actionsMasse={[{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les fournisseurs sélectionnés ?', executer: desactiverEnMasse<Fournisseur>('/fournisseurs/', 'actif', (f) => f.nom) }]}
       colonnes={[
         { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (f) => <span className="font-medium">{f.nom}</span> },
         { cle: 'telephone', titre: 'Téléphone' },

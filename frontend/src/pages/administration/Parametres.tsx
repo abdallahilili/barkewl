@@ -9,6 +9,7 @@ import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useListe } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { Caisse, ModePaiement, Parametre } from '../../types'
+import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie, formaterDateHeure, formaterDateHeureExport } from '../../utilitaires/formatage'
 import { lireEntete, lireLogo } from '../../utilitaires/images'
@@ -216,7 +217,7 @@ function JournalAudit() {
       ]}
       titre="Journal d'audit"
       lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
-      nombrePages={liste.nombrePages} onPage={liste.setPage} cleLigne={(a) => a.id} messageVide="Aucune opération enregistrée." />
+      nombrePages={liste.nombrePages} onPage={liste.setPage} cleLigne={(a) => a.id} messageVide="Aucune opération enregistrée." idTableau="journal-audit" endpoint="/journal-audit/" />
   )
 }
 
@@ -241,6 +242,7 @@ export default function Parametres() {
       {(onglet === 'pharmacie' || onglet === 'documents' || onglet === 'medicaments') && <ParametresSection key={onglet} section={onglet} />}
       {onglet === 'caisses' && (
         <PageCrud<Caisse> sansEntete titre="Caisses" endpoint="/caisses/" nomElement="Caisse" libelleNouveau="Nouvelle caisse" placeholderRecherche="Rechercher une caisse…"
+          actionsMasse={[{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les caisses sélectionnées ?', executer: desactiverEnMasse<Caisse>('/caisses/', 'active', (c) => c.nom) }]}
           colonnes={[
             { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (c) => <span className="font-medium">{c.nom}</span> },
             { cle: 'depot_nom', titre: 'Dépôt de vente' },
@@ -254,6 +256,7 @@ export default function Parametres() {
       )}
       {onglet === 'paiements' && (
         <PageCrud<ModePaiement> sansEntete titre="Modes de paiement" endpoint="/modes-paiement/" nomElement="Mode de paiement" libelleNouveau="Nouveau mode de paiement" placeholderRecherche="Rechercher…"
+          actionsMasse={[{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les modes de paiement sélectionnés ?', executer: desactiverEnMasse<ModePaiement>('/modes-paiement/', 'actif', (m) => m.nom) }]}
           colonnes={[
             { cle: 'nom', titre: 'Nom', tri: 'nom', rendu: (m) => <span className="font-medium">{m.nom}</span> },
             { cle: 'type', titre: 'Type', rendu: (m) => ({ ESPECES: 'Espèces', MOBILE: 'Paiement mobile', CARTE: 'Carte', VIREMENT: 'Virement', AUTRE: 'Autre' }[m.type]) },

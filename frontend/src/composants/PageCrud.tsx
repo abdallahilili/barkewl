@@ -8,7 +8,7 @@ import { Champ } from './Champ'
 import { EnTetePage, MessageErreur } from './EnTetePage'
 import { Modale } from './Modale'
 import { useNotifier } from './Notifications'
-import { Colonne, TableauDonnees } from './TableauDonnees'
+import { ActionMasse, Colonne, TableauDonnees } from './TableauDonnees'
 
 type Valeur = string | number | boolean | null | undefined
 export type Formulaire = Record<string, Valeur>
@@ -120,13 +120,17 @@ interface Props<T extends { id: number }> {
   actionsEntete?: ReactNode
   largeurModale?: 'petite' | 'moyenne' | 'grande'
   sansEntete?: boolean
+  /** Identifiant stable pour mémoriser l'agencement des colonnes (localStorage). Par défaut dérivé de `endpoint`. */
+  idTableau?: string
+  /** Sélection multiple + actions groupées (désactiver, annuler…) — aucune par défaut. */
+  actionsMasse?: ActionMasse<T>[]
 }
 
 /** Page de gestion générique : liste paginée + recherche + filtres + création/modification en fenêtre modale. */
 export function PageCrud<T extends { id: number }>({
   titre, description, endpoint, nomElement, colonnes, champs, filtres = [], filtresInitiaux = {}, libelleNouveau,
   peutCreer = true, peutModifier = true, placeholderRecherche, triInitial, taillePage = 25, actionsLigne, actionsEntete,
-  largeurModale = 'moyenne', sansEntete,
+  largeurModale = 'moyenne', sansEntete, idTableau, actionsMasse,
 }: Props<T>) {
   const notifier = useNotifier()
   const [valeursFiltres, setValeursFiltres] = useState<Record<string, string>>(filtresInitiaux)
@@ -164,6 +168,11 @@ export function PageCrud<T extends { id: number }>({
     } finally { setEnvoi(false) }
   }
 
+  const actionsMasseAvecRecharge = actionsMasse?.map((a) => ({
+    ...a,
+    executer: async (lignes: T[]) => { const r = await a.executer(lignes); liste.recharger(); return r },
+  }))
+
   const colonnesFinales: Colonne<T>[] = [
     ...colonnes,
     ...((peutModifier || actionsLigne) ? [{
@@ -198,7 +207,8 @@ export function PageCrud<T extends { id: number }>({
       </BarreRecherche>
       <TableauDonnees colonnes={colonnesFinales} lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur}
         total={liste.total} page={liste.page} nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri}
-        cleLigne={(l) => l.id} titre={titre} />
+        cleLigne={(l) => l.id} titre={titre} idTableau={idTableau ?? endpoint} actionsMasse={actionsMasseAvecRecharge}
+        endpoint={endpoint} parametresRequete={{ ...valeursFiltres, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
 
       <Modale ouverte={ouvert} onFermer={() => setOuvert(false)} largeur={largeurModale}
         titre={enEdition ? `Modifier — ${nomElement.toLowerCase()}` : (libelleNouveau ?? 'Ajouter')}

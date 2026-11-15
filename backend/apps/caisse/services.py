@@ -15,8 +15,37 @@ from .models import (
 ZERO = Decimal("0")
 
 
+MONNAIE = DecimalField(max_digits=16, decimal_places=2)
+
+
 def _somme(qs):
-    return qs.aggregate(t=Coalesce(Sum("montant"), Value(ZERO), output_field=DecimalField(max_digits=16, decimal_places=2)))["t"]
+    return qs.aggregate(t=Coalesce(Sum("montant"), Value(ZERO), output_field=MONNAIE))["t"]
+
+
+def detail_par_mode(mouvements):
+    """Ventes et remboursements (net), détaillés par mode de paiement, pour un queryset de MouvementCaisse
+    (une session, ou plusieurs sessions pour une vue globale)."""
+    lignes = (
+        mouvements.filter(type_mouvement__in=[TypeMouvementCaisse.VENTE, TypeMouvementCaisse.REMBOURSEMENT])
+        .values("mode_paiement_id", "mode_paiement__nom", "mode_paiement__type", "type_mouvement")
+        .annotate(montant=Coalesce(Sum("montant"), Value(ZERO), output_field=MONNAIE))
+    )
+    par_mode = {}
+    for ligne in lignes:
+        cle = ligne["mode_paiement_id"]
+        entree = par_mode.setdefault(cle, {
+            "mode_paiement": cle, "mode_paiement_nom": ligne["mode_paiement__nom"],
+            "mode_paiement_type": ligne["mode_paiement__type"], "ventes": ZERO, "remboursements": ZERO,
+        })
+        if ligne["type_mouvement"] == TypeMouvementCaisse.VENTE:
+            entree["ventes"] += ligne["montant"]
+        else:
+            entree["remboursements"] += ligne["montant"]
+    resultat = list(par_mode.values())
+    for entree in resultat:
+        entree["net"] = entree["ventes"] - entree["remboursements"]
+    resultat.sort(key=lambda e: e["mode_paiement_nom"])
+    return resultat
 
 
 @transaction.atomic
@@ -65,6 +94,7 @@ def calculer_resume(session):
         "entrees_manuelles": entrees,
         "sorties_manuelles": sorties,
         "montant_attendu": attendu,
+        "par_mode": detail_par_mode(mouvements),
     }
 
 

@@ -8,6 +8,7 @@ import { useNotifier } from '../../composants/Notifications'
 import { PageCrud } from '../../composants/PageCrud'
 import { api } from '../../services/api'
 import type { Utilisateur } from '../../types'
+import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { libelleRole } from '../../utilitaires/formatage'
 
@@ -32,6 +33,7 @@ export default function Utilisateurs() {
       <PageCrud<Utilisateur>
         titre="Utilisateurs" description="Comptes et rôles : administrateur, caissier, magasinier."
         endpoint="/utilisateurs/" nomElement="Utilisateur" libelleNouveau="Nouvel utilisateur" placeholderRecherche="Nom ou identifiant…"
+        actionsMasse={[{ libelle: 'Désactiver', danger: true, confirmation: 'Désactiver les comptes sélectionnés ?', executer: desactiverEnMasse<Utilisateur>('/utilisateurs/', 'actif', (u) => u.nom_complet) }]}
         colonnes={[
           { cle: 'nom_complet', titre: 'Nom', tri: 'nom', rendu: (u) => <span className="font-medium">{u.nom_complet}</span> },
           { cle: 'identifiant', titre: 'Identifiant', tri: 'identifiant' },

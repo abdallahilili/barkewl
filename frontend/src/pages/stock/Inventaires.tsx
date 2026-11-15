@@ -9,6 +9,7 @@ import { TableauDonnees } from '../../composants/TableauDonnees'
 import { useListe, useOptions } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { Depot, Inventaire } from '../../types'
+import { annulerEnMasse } from '../../utilitaires/actionsMasse'
 import { extraireErreur } from '../../utilitaires/erreurs'
 import { formaterDateHeure, formaterDateHeureExport, libelleStatut } from '../../utilitaires/formatage'
 
@@ -50,7 +51,12 @@ export default function Inventaires() {
         ]}
         lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
         nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri} cleLigne={(i) => i.id}
-        onClicLigne={(i) => navigate(`/stock/inventaires/${i.id}`)} messageVide="Aucun inventaire." titre="Inventaires" />
+        onClicLigne={(i) => navigate(`/stock/inventaires/${i.id}`)} messageVide="Aucun inventaire." titre="Inventaires" idTableau="inventaires"
+        endpoint="/inventaires/" parametresRequete={{ statut, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }}
+        actionsMasse={[{
+          libelle: 'Annuler', danger: true, confirmation: 'Annuler les inventaires sélectionnés ?',
+          executer: async (lignes) => { const r = await annulerEnMasse<Inventaire>('/inventaires/', (i) => i.reference)(lignes); liste.recharger(); return r },
+        }]} />
       <Modale ouverte={modale} titre="Nouvel inventaire" onFermer={() => setModale(false)} largeur="petite"
         pied={<><button className="btn-secondaire" onClick={() => setModale(false)}>Annuler</button><button className="btn-primaire" type="submit" form="formulaire-inventaire">Créer l'inventaire</button></>}>
         <form id="formulaire-inventaire" onSubmit={creer} className="space-y-3">
