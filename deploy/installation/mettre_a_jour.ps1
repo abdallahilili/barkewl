@@ -1,7 +1,7 @@
 ﻿# RAQEEM PHARMA - mise à jour chez le client (Rawafid Digital Services).
 # Lancé par « Mettre_a_jour.bat » (en administrateur), depuis le dossier du NOUVEAU paquet.
 #
-# Sécurité : 1) sauvegarde de la base  2) copie de l'ancienne version  3) mise à jour
+# Sécurité : 1) sauvegarde de la base  2) copie de l'ancienne version (logiciel, composants, Python)  3) mise à jour
 # Si une étape échoue : l'ancienne version ET la base d'avant la mise à jour sont remises en place automatiquement.
 param(
     [string]$Dossier = "C:\RaqeemPharma",
@@ -12,25 +12,16 @@ param(
 $ErrorActionPreference = "Continue"
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
 $Paquet = Split-Path -Parent $MyInvocation.MyCommand.Path
-$NomTache = "RaqeemPharma"
+. (Join-Path $PSScriptRoot "commun.ps1")   # fonctions communes avec la mise à jour
 $app = Join-Path $Dossier "app"
 $precedent = Join-Path $Dossier "app.precedent"
 $py = Join-Path $Dossier "python\python.exe"
 $lib = Join-Path $Dossier "lib"
 $libPrecedent = Join-Path $Dossier "lib.precedent"
+$python = Join-Path $Dossier "python"
+$pythonPrecedent = Join-Path $Dossier "python.precedent"
 $backend = Join-Path $app "backend"
 
-# Python embarqué : ses chemins de recherche sont fixés par le fichier python3XX._pth (variables
-# d'environnement ignorées). On y ajoute les composants (lib) et le serveur (app\backend).
-function Write-CheminsPython($dossierInstallation) {
-    $pth = Get-ChildItem (Join-Path $dossierInstallation "python") -Filter "python3*._pth" | Select-Object -First 1
-    if (-not $pth) { throw "Fichier ._pth du Python embarqué introuvable." }
-    $zip = (Get-ChildItem (Join-Path $dossierInstallation "python") -Filter "python3*.zip" | Select-Object -First 1).Name
-    $lignes = @($zip, ".", (Join-Path $dossierInstallation "lib"), (Join-Path $dossierInstallation "app\backend"))
-    [IO.File]::WriteAllLines($pth.FullName, $lignes, (New-Object Text.UTF8Encoding $false))
-}
-function Titre($texte) { Write-Host ""; Write-Host "==> $texte" -ForegroundColor Cyan }
-function Ok($texte) { Write-Host "    OK  $texte" -ForegroundColor Green }
 function Arreter-Serveur {
     if ($SansTache) { return }
     schtasks /end /tn $NomTache 2>$null | Out-Null
@@ -38,48 +29,6 @@ function Arreter-Serveur {
         Where-Object { $_.ExecutablePath -like "$Dossier*" -and $_.CommandLine -like "*waitress*" } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     Start-Sleep -Seconds 2
-}
-# Tâche de démarrage du serveur. Pas « schtasks /create » : ses réglages par défaut empêchent le démarrage
-# d'un PC portable sur batterie et arrêtent le serveur au bout de 72 heures.
-function Enregistrer-Tache($nom, $bat) {
-    $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$bat`""
-    $declencheur = New-ScheduledTaskTrigger -AtStartup
-    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    $reglages = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
-        -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
-    Register-ScheduledTask -TaskName $nom -Action $action -Trigger $declencheur -Principal $principal -Settings $reglages -Force | Out-Null
-}
-# Diagnostic affiché si le serveur ne répond pas.
-function Afficher-EtatTache($nom) {
-    $info = Get-ScheduledTaskInfo -TaskName $nom -ErrorAction SilentlyContinue
-    $tache = Get-ScheduledTask -TaskName $nom -ErrorAction SilentlyContinue
-    if ($tache) { Write-Host "      Tâche : état $($tache.State), dernier lancement $($info.LastRunTime), résultat 0x$('{0:X}' -f $info.LastTaskResult)" }
-    else { Write-Host "      Tâche « $nom » introuvable." }
-    $batterie = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($batterie) { Write-Host "      Batterie : $($batterie.EstimatedChargeRemaining) % (statut $($batterie.BatteryStatus) ; 2 = sur secteur)" }
-}
-# Démarrage automatique de MySQL avec Windows. WampServer installe MySQL / MariaDB comme service Windows
-# en démarrage « manuel » : sans ouvrir WampServer, le logiciel n'aurait pas de base. On retrouve le service
-# qui écoute sur le port de la base et on le passe en démarrage automatique.
-function Activer-DemarrageMysql([int]$portBase) {
-    $services = @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-Object { $_.PathName -match "mysqld|mariadbd" })
-    # 1) le service dont le processus écoute sur le port de la base
-    $pids = @(Get-NetTCPConnection -LocalPort $portBase -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $_.OwningProcess })
-    $service = $services | Where-Object { $pids -contains $_.ProcessId } | Select-Object -First 1
-    # 2) sinon, le service dont le fichier my.ini (dossier de sa version, comme dans WampServer) indique ce port
-    if (-not $service) {
-        $service = $services | Where-Object {
-            $exe = ($_.PathName -replace '^"([^"]+)".*$', '$1') -replace '^(\S+\.exe).*$', '$1'
-            $ini = Join-Path (Split-Path (Split-Path $exe)) "my.ini"
-            (Test-Path $ini) -and (Select-String -Path $ini -Pattern "^\s*port\s*=\s*$portBase\s*$" -Quiet)
-        } | Select-Object -First 1
-    }
-    if (-not $service) {
-        Write-Host "    Attention : service MySQL non trouvé. Lancez WampServer au démarrage de Windows." -ForegroundColor Yellow
-        return
-    }
-    if ($service.StartMode -ne "Auto") { Set-Service -Name $service.Name -StartupType Automatic -ErrorAction Stop }
-    Ok "MySQL démarre automatiquement avec Windows (service « $($service.Name) »), sans ouvrir WampServer"
 }
 function Demarrer-Serveur {
     if ($SansTache) { return }
@@ -91,11 +40,6 @@ function Demarrer-Serveur {
     $portBase = 3306
     if ($ligne) { $portBase = [int]$ligne.Substring(8) }
     try { Activer-DemarrageMysql $portBase } catch { Write-Host "Démarrage automatique de MySQL non réglé : $($_.Exception.Message)" -ForegroundColor Yellow }
-}
-function Copier($source, $cible, [string[]]$exclusions = @()) {
-    $arguments = @($source, $cible, "/MIR", "/NFL", "/NDL", "/NJH", "/NJS", "/NP", "/XD", "__pycache__") + $exclusions
-    robocopy @arguments | Out-Null
-    if ($LASTEXITCODE -ge 8) { throw "Copie impossible : $source -> $cible" }
 }
 
 $nouvelle = (Get-Content (Join-Path $Paquet "VERSION.txt") | Select-Object -First 1)
@@ -132,6 +76,7 @@ Titre "2/5  Arrêt du logiciel et conservation de la version actuelle"
 Arreter-Serveur
 Copier $app $precedent
 Copier $lib $libPrecedent
+Copier $python $pythonPrecedent
 Ok "Version actuelle conservée dans $precedent"
 
 $baseModifiee = $false
@@ -141,6 +86,8 @@ try {
     # La configuration (.env) et les journaux du poste sont conservés.
     Copier (Join-Path $Paquet "app\backend") $backend @("/XF", ".env", "/XD", "logs", "sauvegardes")
     Copier (Join-Path $Paquet "app\interface") (Join-Path $app "interface")
+    # Python embarqué aussi : une nouvelle version du logiciel peut demander un Python plus récent.
+    Copier (Join-Path $Paquet "python") $python
     Copier (Join-Path $Paquet "lib") $lib
     Write-CheminsPython $Dossier
     # Configuration des versions antérieures : « HOTES_AUTORISES=* » (tous les noms acceptés) est remplacé
@@ -178,6 +125,8 @@ catch {
     Write-Host "Retour automatique à la version $ancienne..." -ForegroundColor Yellow
     Copier $precedent $app
     Copier $libPrecedent $lib
+    Copier $pythonPrecedent $python
+    Write-CheminsPython $Dossier
     if ($baseModifiee) {
         Push-Location $backend
         & $py manage.py restaurer_sauvegarde $fichierSauvegarde --oui
@@ -201,6 +150,11 @@ if ((Test-Path (Join-Path $Paquet "outils\HeidiSQL\heidisql.exe")) -and (Test-Pa
         Ok "Accès à la base : $Dossier\Base_de_donnees.bat (administrateurs)"
     } catch { Write-Host "Outil d'accès à la base non installé : $($_.Exception.Message)" -ForegroundColor Yellow }
 }
+# Désinstallation : script à jour dans le dossier installé, version affichée dans les applications installées.
+try {
+    Copier-Desinstallation $Paquet $Dossier
+    if (-not $SansTache) { Enregistrer-Programme $Dossier $nouvelle }
+} catch { Write-Host "Désinstallation non mise à jour : $($_.Exception.Message)" -ForegroundColor Yellow }
 # Raccourci du bureau avec l'icône RAQEEM (les anciennes versions n'en avaient pas).
 if (-not $SansTache -and (Test-Path (Join-Path $Paquet "raqeem.ico"))) {
     try {

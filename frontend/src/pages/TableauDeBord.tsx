@@ -25,7 +25,7 @@ interface Donnees {
     perimes: { lot_id: number; medicament: string; numero_lot: string; depot: string; quantite: number; quantite_texte?: string; date_peremption: string }[]
   }
   derniers_mouvements?: MouvementStock[]
-  sauvegarde?: { derniere: { date: string } | null; en_retard: boolean }
+  sauvegarde?: { derniere: { date: string } | null; en_retard: boolean; usb_en_retard?: boolean; usb_derniere_copie?: string | null }
 }
 
 function Indicateur({ titre, valeur, detail, ton = '', vers }: { titre: string; valeur: string; detail?: string; ton?: string; vers?: string }) {
@@ -79,6 +79,18 @@ export default function TableauDeBord() {
               : t('Attention : aucune sauvegarde des données n\'a encore été faite.')}
           </p>
           <Link to="/administration/parametres" state={{ onglet: 'sauvegardes' }} className="btn-primaire">{t('Sauvegarder maintenant')}</Link>
+        </div>
+      )}
+
+      {donnees.sauvegarde?.usb_en_retard && (
+        <div className="carte mb-5 flex flex-wrap items-center justify-between gap-3 border-amber-300 bg-amber-50 p-4">
+          <p className="flex items-center gap-2 text-sm text-amber-900">
+            <AlertTriangle size={16} />
+            {donnees.sauvegarde.usb_derniere_copie
+              ? t('La clé USB de sauvegarde n\'a reçu aucune copie depuis le {date} — vérifiez qu\'elle est branchée.', { date: formaterDateHeure(donnees.sauvegarde.usb_derniere_copie) })
+              : t('La clé USB de sauvegarde n\'a encore reçu aucune copie — vérifiez qu\'elle est branchée.')}
+          </p>
+          <Link to="/administration/parametres" state={{ onglet: 'sauvegardes' }} className="btn-secondaire">{t('Voir les sauvegardes')}</Link>
         </div>
       )}
 

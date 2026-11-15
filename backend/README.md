@@ -1,7 +1,7 @@
 # Gestion de pharmacie — Backend (Django REST + MySQL)
 
 API REST pour une pharmacie privée : médicaments, lots et péremptions (FEFO), dépôts, stock, achats,
-fournisseurs, ventes/caisse, inventaires, rapports. Authentification JWT, 3 rôles (Administrateur, Caissier, Magasinier).
+fournisseurs, ventes/caisse, inventaires, rapports. Authentification JWT, 4 rôles (voir plus bas).
 
 ## Installation
 
@@ -30,11 +30,17 @@ En production : `DEBUG=0`, `CLE_SECRETE` longue et aléatoire, `HOTES_AUTORISES`
 
 ## Sauvegardes
 
-Automatiques toutes les 6 h tant que le serveur tourne (`backend/sauvegardes/`, copie facultative vers
-`DOSSIER_SAUVEGARDES_COPIE`), visibles dans *Paramètres > Sauvegardes*.
+Automatiques toutes les 6 h tant que le serveur tourne (`backend/sauvegardes/`), visibles dans
+*Paramètres > Sauvegardes*.
+
+Copie de secours : brancher une clé USB ou un disque externe, puis *Paramètres > Sauvegardes > Préparer un disque*.
+Laisser la clé branchée : une copie par jour, les 5 dernières sont gardées (`SAUVEGARDE_USB_INTERVALLE_HEURES`,
+`SAUVEGARDE_USB_NOMBRE`). Conseil : utiliser deux clés et les échanger chaque semaine, en gardant l'une hors de la
+pharmacie. Option avancée, toujours disponible : `DOSSIER_SAUVEGARDES_COPIE` (copie vers un dossier fixe).
 
 ```bash
 python manage.py sauvegarder                       # sauvegarde immédiate
+python manage.py sauvegarder --usb                 # sauvegarde immédiate + copie sur les clés préparées
 python manage.py restaurer_sauvegarde              # liste des sauvegardes
 python manage.py restaurer_sauvegarde <fichier>    # restauration (sauvegarde de sécurité faite avant)
 ```
@@ -61,11 +67,15 @@ python manage.py test apps.tests                        # sur MySQL (le compte B
 
 ## Rôles
 
-| Rôle | Accès |
+| Rôle (code) | Accès |
 |---|---|
-| Administrateur | tout, y compris achats, fournisseurs, rapports, utilisateurs, paramètres, annulation de vente |
-| Caissier | caisse, ventes, reçus, clients, consultation du stock (sans prix d'achat) |
-| Magasinier | stock, entrées/sorties, transferts, inventaires, lots, consultation des médicaments |
+| Propriétaire (`ADMIN`) | tout, y compris achats, fournisseurs, rapports, utilisateurs, paramètres, marges |
+| Pharmacien (`PHARMACIEN`) | droits Vendeur + Magasinier, approuve les annulations par code PIN ; ne voit pas les prix d'achat |
+| Vendeur (`CAISSIER`) | caisse, ventes, reçus, clients, consultation du stock (sans prix d'achat) |
+| Magasinier (`MAGASINIER`) | stock, entrées/sorties, transferts, inventaires, lots, consultation des médicaments |
+
+Les rôles et fonctions disponibles dépendent aussi de l'offre de la licence (Essentiel / Professionnel / Réseau) :
+voir [GUIDE_DEVELOPPEUR.md](../GUIDE_DEVELOPPEUR.md), section 3.4.
 
 ## Principaux points d'accès (préfixe `/api/`)
 

@@ -1,6 +1,7 @@
-import { AlertTriangle, CheckCircle2, DatabaseBackup, Download, HardDrive } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, DatabaseBackup, Download, HardDrive, Usb } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Badge } from '../composants/Badge'
+import { useConfirmer } from '../composants/Confirmation'
 import { MessageErreur } from '../composants/EnTetePage'
 import { useNotifier } from '../composants/Notifications'
 import { api } from '../services/api'
@@ -18,7 +19,26 @@ interface EtatSauvegardes {
   jours_conservation: number
   intervalle_heures: number
   fichiers: FichierSauvegarde[]
+  usb?: EtatUsb
 }
+interface LecteurExterne { racine: string; nom_volume: string; type: 'amovible' | 'disque' | null; prepare: boolean; espace_libre: number | null }
+interface LecteurUsb extends LecteurExterne {
+  identifiant: string
+  branche: boolean
+  derniere_copie: string | null
+  fichiers: FichierSauvegarde[]
+  en_retard: boolean
+}
+interface EtatUsb {
+  actif: boolean
+  intervalle_heures: number
+  nombre_conserve: number
+  lecteurs: LecteurUsb[]
+  derniere_copie: string | null
+  derniere_erreur: { date: string; message: string } | null
+  en_retard: boolean
+}
+interface ResultatCopie { racine: string; nom_volume: string; ok: boolean; fichier: string | null; erreur: string | null }
 
 const ORIGINES = { manuelle: [t('Manuelle'), 'bleu'], auto: [t('Automatique'), 'vert'], restauration: [t('Avant restauration'), 'orange'] } as const
 
@@ -97,6 +117,8 @@ export function Sauvegardes() {
         </p>
       </div>
 
+      {etat.usb && <CarteUsb usb={etat.usb} onChange={charger} />}
+
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-start text-slate-600">
@@ -118,6 +140,136 @@ export function Sauvegardes() {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+const nomLecteur = (l: { racine: string; nom_volume: string }) => (l.nom_volume ? `${l.racine} (${l.nom_volume})` : l.racine)
+
+function CarteUsb({ usb, onChange }: { usb: EtatUsb; onChange: () => void }) {
+  const notifier = useNotifier()
+  const confirmer = useConfirmer()
+  const [copieEnCours, setCopieEnCours] = useState(false)
+  const [disponibles, setDisponibles] = useState<LecteurExterne[] | null>(null)
+  const [preparation, setPreparation] = useState(false)
+
+  const signalerResultats = (resultats: ResultatCopie[]) => {
+    if (resultats.length === 0) { notifier.erreur(t('Aucune clé préparée n\'est branchée.')); return }
+    const erreurs = resultats.filter((r) => !r.ok)
+    if (erreurs.length) erreurs.forEach((r) => notifier.erreur(r.erreur ?? t('Copie impossible.')))
+    else notifier.succes(t('Sauvegarde copiée sur la clé.'))
+  }
+
+  const copier = async () => {
+    setCopieEnCours(true)
+    try { signalerResultats((await api.post<ResultatCopie[]>('/sauvegardes/usb/copier/')).data) }
+    catch (e) { notifier.erreur(extraireErreur(e)) }
+    finally { setCopieEnCours(false); onChange() }
+  }
+
+  const ouvrirListe = async () => {
+    if (disponibles) { setDisponibles(null); return }
+    try { setDisponibles((await api.get<LecteurExterne[]>('/sauvegardes/usb/lecteurs/')).data.filter((l) => !l.prepare)) }
+    catch (e) { notifier.erreur(extraireErreur(e)) }
+  }
+
+  const preparer = async (lecteur: LecteurExterne) => {
+    const ok = await confirmer({
+      titre: t('Préparer un disque'),
+      message: t('Le dossier RaqeemPharma_Sauvegardes sera créé sur {lecteur}. Les {n} sauvegardes les plus récentes y seront gardées ; les autres fichiers du disque ne sont jamais touchés.', { lecteur: nomLecteur(lecteur), n: usb.nombre_conserve }),
+      libelle: t('Préparer'),
+    })
+    if (!ok) return
+    setPreparation(true)
+    try {
+      const { data } = await api.post<{ copies: ResultatCopie[] }>('/sauvegardes/usb/preparer/', { racine: lecteur.racine })
+      setDisponibles(null)
+      signalerResultats(data.copies)
+    } catch (e) { notifier.erreur(extraireErreur(e)) }
+    finally { setPreparation(false); onChange() }
+  }
+
+  return (
+    <div className={`carte space-y-3 p-4 text-sm ${usb.en_retard ? 'border-amber-300 bg-amber-50' : ''}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 font-medium"><Usb size={16} className="text-slate-500" /> {t('Clé USB / disque externe')}</p>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-secondaire btn-petit" onClick={ouvrirListe} disabled={preparation}>{t('Préparer un disque')}</button>
+          {usb.lecteurs.some((l) => l.branche) && (
+            <button className="btn-primaire btn-petit" onClick={copier} disabled={copieEnCours}>
+              {copieEnCours ? t('Copie en cours…') : t('Copier sur la clé maintenant')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <p className="text-slate-600">
+        {usb.actif
+          ? t('Une copie est faite automatiquement toutes les {heures} h ; les {n} plus récentes sont gardées sur la clé. Laissez la clé branchée.', { heures: usb.intervalle_heures, n: usb.nombre_conserve })
+          : t('Copie automatique sur la clé désactivée (SAUVEGARDE_USB_INTERVALLE_HEURES = 0).')}
+      </p>
+
+      {disponibles && (
+        <div className="rounded-md border border-slate-200 bg-white p-3">
+          {disponibles.length === 0
+            ? <p className="text-slate-500">{t('Aucun nouveau disque détecté. Branchez une clé USB ou un disque externe, puis réessayez.')}</p>
+            : <ul className="space-y-2">
+                {disponibles.map((l) => (
+                  <li key={l.racine} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      <HardDrive size={14} className="me-1 inline text-slate-500" />{nomLecteur(l)}
+                      <span className="ms-2 text-xs text-slate-500">
+                        {l.type === 'disque' ? t('Disque') : t('Clé USB')}
+                        {l.espace_libre != null && ` — ${t('{taille} libres', { taille: formaterTaille(l.espace_libre) })}`}
+                      </span>
+                    </span>
+                    <button className="btn-primaire btn-petit" onClick={() => preparer(l)} disabled={preparation}>{t('Préparer')}</button>
+                  </li>
+                ))}
+              </ul>}
+        </div>
+      )}
+
+      {usb.lecteurs.length === 0 && !disponibles && (
+        <p className="text-amber-700">{t('Aucun disque préparé. Branchez une clé USB, puis cliquez sur « Préparer un disque ».')}</p>
+      )}
+
+      {usb.lecteurs.map((l) => (
+        <div key={l.identifiant} className="rounded-md border border-slate-200 bg-white p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{nomLecteur(l)}</span>
+            {l.branche ? <Badge ton="vert">{t('Branché')}</Badge> : <Badge ton="gris">{t('Débranché')}</Badge>}
+            {l.en_retard && <Badge ton="orange">{t('En retard')}</Badge>}
+          </div>
+          <p className="mt-1 text-slate-600">
+            {l.derniere_copie ? t('Dernière copie : {date}', { date: formaterDateHeure(l.derniere_copie) }) : t('Aucune copie pour le moment')}
+            {l.espace_libre != null && <> — {t('{taille} libres', { taille: formaterTaille(l.espace_libre) })}</>}
+          </p>
+          {l.branche && (
+            <div className="mt-2">
+              <p className="text-xs text-slate-500">{t('{n} dernières sauvegardes', { n: usb.nombre_conserve })}</p>
+              {l.fichiers.length === 0
+                ? <p className="text-xs text-slate-500">{t('Aucune sauvegarde.')}</p>
+                : <ul className="mt-1 space-y-0.5 text-xs">
+                    {l.fichiers.map((f) => (
+                      <li key={f.nom} className="flex flex-wrap gap-x-3">
+                        <span className="whitespace-nowrap">{formaterDateHeure(f.date)}</span>
+                        <span className="whitespace-nowrap text-slate-500">{formaterTaille(f.taille)}</span>
+                        <span className="font-mono text-slate-600">{f.nom}</span>
+                      </li>
+                    ))}
+                  </ul>}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {usb.derniere_erreur && (
+        <p className="flex items-start gap-2 text-red-700">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <span>{t('Dernière erreur ({date}) : {message}', { date: formaterDateHeure(usb.derniere_erreur.date), message: usb.derniere_erreur.message })}</span>
+        </p>
+      )}
     </div>
   )
 }
