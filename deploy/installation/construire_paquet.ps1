@@ -14,7 +14,10 @@ param(
 $ErrorActionPreference = "Stop"
 $Ici = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Racine = Resolve-Path (Join-Path $Ici "..\..")
-$PythonDev = Join-Path $Racine "backend\venv\Scripts\python.exe"
+# Python de développement : venv dans backend\ ou à la racine du projet.
+$PythonDev = @("backend\venv\Scripts\python.exe", "venv\Scripts\python.exe") |
+    ForEach-Object { Join-Path $Racine $_ } | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $PythonDev) { throw "Environnement Python introuvable : créez backend\venv ou venv à la racine du projet." }
 
 $version = ([regex]::Match((Get-Content (Join-Path $Racine "backend\config\version.py") -Raw), 'VERSION\s*=\s*"([^"]+)"')).Groups[1].Value
 $nom = "RaqeemPharma-$version"
