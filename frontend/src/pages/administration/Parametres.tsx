@@ -171,7 +171,7 @@ function ParametresSection({ section }: { section: Section }) {
             </div>
           </div>
           <CaseACocher libelle={t('Afficher le copyright en bas des documents')} valeur={v('afficher_copyright_documents') !== '0'}
-            aide={t('Ligne très petite en bas des reçus, factures, rapports et exports : « Développé par : Rawafid Digital Services » et son téléphone.')}
+            aide={t('Ligne très petite en bas des reçus, factures, rapports et exports : « Développé par : Rawafid Digital Services ».')}
             onChange={(c) => maj('afficher_copyright_documents', c ? '1' : '0')} />
           <CaseACocher libelle={t('Afficher les colonnes Prix et Total sur le bon de livraison')} valeur={v('bl_afficher_prix') === '1'}
             aide={t('Désactivé : le bon de livraison ne contient alors ni prix ni total.')}
