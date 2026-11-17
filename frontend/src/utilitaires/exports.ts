@@ -25,7 +25,7 @@ function nettoyerPourPdf(valeur: string) {
   return valeur.replace(/→/g, '->').replace(/←/g, '<-').replace(/[–—]/g, '-').replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
 }
 
-function telechargerBlob(blob: Blob, nomFichier: string) {
+export function telechargerBlob(blob: Blob, nomFichier: string) {
   const lien = document.createElement('a')
   lien.href = URL.createObjectURL(blob)
   lien.download = nomFichier

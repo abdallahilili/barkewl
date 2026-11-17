@@ -88,10 +88,10 @@ export const libelleRole = (role: string) =>
 export const libelleStatut = (statut: string) =>
   ({
     BROUILLON: 'Brouillon', VALIDE: 'Validé', ANNULE: 'Annulé', VALIDEE: 'Validée', ANNULEE: 'Annulée',
-    OUVERTE: 'Ouverte', FERMEE: 'Clôturée',
+    OUVERTE: 'Ouverte', FERMEE: 'Clôturée', ENVOYE: 'Envoyé', RECU: 'Marchandise reçue',
   } as Record<string, string>)[statut] ? t(({
     BROUILLON: 'Brouillon', VALIDE: 'Validé', ANNULE: 'Annulé', VALIDEE: 'Validée', ANNULEE: 'Annulée',
-    OUVERTE: 'Ouverte', FERMEE: 'Clôturée',
+    OUVERTE: 'Ouverte', FERMEE: 'Clôturée', ENVOYE: 'Envoyé', RECU: 'Marchandise reçue',
   } as Record<string, string>)[statut]) : statut
 
 /** Libellé d'un type de mouvement (stock ou caisse) dans la langue de l'interface, à partir de son code. */
@@ -107,11 +107,11 @@ export const libelleTypeMouvement = (code: string, parDefaut?: string) =>
 /** Libellés du journal d'audit (action et objet), à partir des codes enregistrés par le serveur. */
 const ACTIONS_AUDIT: Record<string, string> = {
   CREATION: 'Création', MODIFICATION: 'Modification', VALIDATION: 'Validation', PAIEMENT: 'Paiement', ANNULATION: 'Annulation',
-  OUVERTURE: 'Ouverture', CLOTURE: 'Clôture', SAUVEGARDE: 'Sauvegarde', TELECHARGEMENT: 'Téléchargement', ACTIVATION: 'Activation',
+  OUVERTURE: 'Ouverture', CLOTURE: 'Clôture', SAUVEGARDE: 'Sauvegarde', TELECHARGEMENT: 'Téléchargement', ACTIVATION: 'Activation', RETOUR: 'Retour client',
 }
 const OBJETS_AUDIT: Record<string, string> = {
-  Achat: 'Achat', SessionCaisse: 'Session de caisse', DocumentVente: 'Devis / BL / Facture', Parametre: 'Paramètre', Medicament: 'Médicament',
-  Transfert: 'Transfert', Inventaire: 'Inventaire', Utilisateur: 'Utilisateur', Vente: 'Vente', Licence: 'Licence', Client: 'Client',
+  Achat: 'Achat', BonCommande: 'Bon de commande', SessionCaisse: 'Session de caisse', DocumentVente: 'Devis / BL / Facture', Parametre: 'Paramètre', Medicament: 'Médicament',
+  Transfert: 'Transfert', Inventaire: 'Inventaire', Utilisateur: 'Utilisateur', Vente: 'Vente', RetourVente: 'Retour client', Depense: 'Dépense', Licence: 'Licence', Client: 'Client',
   Fournisseur: 'Fournisseur', Depot: 'Dépôt', Categorie: 'Catégorie', Forme: 'Forme', Dosage: 'Dosage', Caisse: 'Caisse', ModePaiement: 'Mode de paiement',
   PaiementFournisseur: 'Paiement fournisseur', 'Base de données': 'Base de données',
 }

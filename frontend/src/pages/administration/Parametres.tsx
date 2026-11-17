@@ -1,23 +1,19 @@
-import { Building2, DatabaseBackup, FileText, KeyRound, Pill, Trash2, Upload } from 'lucide-react'
+import { Building2, FileText, KeyRound, Pill, Trash2, Upload } from 'lucide-react'
 import { Licence } from '../../fonctionnalites/Licence'
 import { useLocation } from 'react-router-dom'
-import { Sauvegardes } from '../../fonctionnalites/Sauvegardes'
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from 'react'
-import { Badge } from '../../composants/Badge'
 import { EditeurTexteRiche } from '../../composants/EditeurTexteRiche'
 import { EnTetePage, MessageErreur } from '../../composants/EnTetePage'
 import { useNotifier } from '../../composants/Notifications'
-import { TableauDonnees } from '../../composants/TableauDonnees'
-import { useListe } from '../../hooks/useListe'
 import { api } from '../../services/api'
 import type { Parametre } from '../../types'
 import { extraireErreur } from '../../utilitaires/erreurs'
-import { definirCopyrightDocuments, definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie, formaterDateHeure, formaterDateHeureExport, libelleActionAudit, libelleObjetAudit } from '../../utilitaires/formatage'
+import { definirCopyrightDocuments, definirDevise, definirGestionRayonnages, definirLogoPharmacie, definirNomPharmacie } from '../../utilitaires/formatage'
 import { lireEntete, lireLogo } from '../../utilitaires/images'
 
-import { t, traduireServeur } from '../../i18n'
+import { t } from '../../i18n'
 type Section = 'pharmacie' | 'documents' | 'medicaments'
-type Onglet = Section | 'sauvegardes' | 'licence' | 'audit'
+type Onglet = Section | 'licence'
 type Valeurs = Record<string, string>
 
 // Paramètres enregistrés par chaque section (chaque onglet n'envoie que les siens).
@@ -27,7 +23,7 @@ const CLES_SECTION: Record<Section, string[]> = {
     'telephone_pharmacie_3', 'whatsapp_pharmacie', 'whatsapp_pharmacie_2', 'email_pharmacie', 'nif_pharmacie',
   ],
   documents: [
-    'devise', 'afficher_logo_documents', 'afficher_adresse_documents', 'afficher_copyright_documents', 'bl_afficher_prix', 'message_recu', 'message_devis', 'message_bl', 'message_facture',
+    'devise', 'recu_format', 'recu_langue', 'afficher_logo_documents', 'afficher_adresse_documents', 'afficher_copyright_documents', 'bl_afficher_prix', 'message_recu', 'message_devis', 'message_bl', 'message_facture',
   ],
   medicaments: ['jours_alerte_peremption', 'stock_negatif_autorise', 'gestion_rayonnages_active'],
 }
@@ -163,6 +159,22 @@ function ParametresSection({ section }: { section: Section }) {
 
       {section === 'documents' && (
         <>
+          <div className="grid grid-cols-1 gap-4 rounded border border-slate-200 p-3 sm:grid-cols-2">
+            <Champ libelle={t('Format du reçu')} aide={t('Ticket thermique pour une imprimante de caisse (rouleau 80 mm ou 58 mm), ou demi-page A4 pour une imprimante classique.')}>
+              <select className="champ" value={v('recu_format') || 'demi_a4'} onChange={(e) => maj('recu_format', e.target.value)}>
+                <option value="80mm">{t('Ticket thermique 80 mm')}</option>
+                <option value="58mm">{t('Ticket thermique 58 mm')}</option>
+                <option value="demi_a4">{t('Demi-page A4')}</option>
+              </select>
+            </Champ>
+            <Champ libelle={t('Langue du reçu')} aide={t('Langue des libellés imprimés sur le reçu (indépendante de la langue de l\'interface).')}>
+              <select className="champ" value={v('recu_langue') || 'bilingue'} onChange={(e) => maj('recu_langue', e.target.value)}>
+                <option value="fr">{t('Français')}</option>
+                <option value="ar">{t('Arabe')}</option>
+                <option value="bilingue">{t('Bilingue (français et arabe)')}</option>
+              </select>
+            </Champ>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Champ libelle={t('Devise')} aide={t('Affichée sur tous les montants (ex : MRU, MAD, EUR).')}>{texte('devise')}</Champ>
             <div className="self-end pb-2">
@@ -211,40 +223,17 @@ function ParametresSection({ section }: { section: Section }) {
   )
 }
 
-interface EntreeAudit { id: number; date_action: string; utilisateur: string; action: string; entite: string; reference: string; description: string; ancienne_valeur: unknown; nouvelle_valeur: unknown }
-
-function JournalAudit() {
-  const liste = useListe<EntreeAudit>('/journal-audit/', { taillePage: 25 })
-  return (
-    <TableauDonnees<EntreeAudit>
-      colonnes={[
-        { cle: 'date_action', titre: 'Date', rendu: (a) => formaterDateHeure(a.date_action), exportRendu: (a) => formaterDateHeureExport(a.date_action) },
-        { cle: 'utilisateur', titre: 'Utilisateur' },
-        { cle: 'action', titre: 'Action', rendu: (a) => <Badge ton="bleu">{libelleActionAudit(a.action)}</Badge>, exportRendu: (a) => libelleActionAudit(a.action) },
-        { cle: 'entite', titre: 'Objet', rendu: (a) => libelleObjetAudit(a.entite), exportRendu: (a) => libelleObjetAudit(a.entite) },
-        { cle: 'reference', titre: 'Référence' },
-        { cle: 'detail', titre: 'Détail', rendu: (a) => (
-          <span className="text-xs text-slate-600">{traduireServeur(a.description) || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} → ${JSON.stringify(a.nouvelle_valeur)}` : '')}</span>
-        ), exportRendu: (a) => traduireServeur(a.description) || (a.ancienne_valeur ? `${JSON.stringify(a.ancienne_valeur)} -> ${JSON.stringify(a.nouvelle_valeur)}` : '') },
-      ]}
-      titre={t('Journal d\'audit')}
-      lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur} total={liste.total} page={liste.page}
-      nombrePages={liste.nombrePages} onPage={liste.setPage} cleLigne={(a) => a.id} messageVide={t('Aucune opération enregistrée.')} idTableau="journal-audit" endpoint="/journal-audit/" />
-  )
-}
-
 export default function Parametres() {
   const etatNavigation = useLocation().state as { onglet?: Onglet } | null
   const [onglet, setOnglet] = useState<Onglet>(etatNavigation?.onglet ?? 'pharmacie')
   const onglets: { cle: Onglet; libelle: string; icone?: typeof Building2 }[] = [
     { cle: 'pharmacie', libelle: t('Pharmacie'), icone: Building2 }, { cle: 'documents', libelle: t('Reçus et documents'), icone: FileText },
-    { cle: 'medicaments', libelle: t('Médicaments et stock'), icone: Pill }, { cle: 'sauvegardes', libelle: t('Sauvegardes'), icone: DatabaseBackup },
+    { cle: 'medicaments', libelle: t('Médicaments et stock'), icone: Pill },
     { cle: 'licence', libelle: t('Licence'), icone: KeyRound },
-    { cle: 'audit', libelle: t('Journal d\'audit') },
   ]
   return (
     <div>
-      <EnTetePage titre={t('Paramètres')} description={t('Pharmacie, reçus et documents, médicaments et stock, sauvegardes et licence. Les caisses et modes de paiement sont dans Référentiels.')} />
+      <EnTetePage titre={t('Paramètres')} description={t('Pharmacie, reçus et documents, médicaments et stock, et licence. Sauvegardes et journal d\'audit : page Données. Les caisses et modes de paiement sont dans Référentiels.')} />
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
         {onglets.map((o) => (
           <button key={o.cle} onClick={() => setOnglet(o.cle)}
@@ -254,9 +243,7 @@ export default function Parametres() {
         ))}
       </div>
       {(onglet === 'pharmacie' || onglet === 'documents' || onglet === 'medicaments') && <ParametresSection key={onglet} section={onglet} />}
-      {onglet === 'sauvegardes' && <Sauvegardes />}
       {onglet === 'licence' && <Licence />}
-      {onglet === 'audit' && <JournalAudit />}
     </div>
   )
 }

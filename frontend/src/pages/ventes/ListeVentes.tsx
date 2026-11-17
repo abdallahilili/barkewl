@@ -1,9 +1,10 @@
-import { Printer } from 'lucide-react'
+import { Printer, Undo2 } from 'lucide-react'
 import { FormEvent, useState } from 'react'
 import { Badge, tonStatut } from '../../composants/Badge'
 import { Champ } from '../../composants/Champ'
 import { EnTetePage, MessageErreur } from '../../composants/EnTetePage'
 import { Modale } from '../../composants/Modale'
+import { ModaleRetour } from '../../composants/ModaleRetour'
 import { useNotifier } from '../../composants/Notifications'
 import { RecuImpression } from '../../composants/RecuImpression'
 import { BarreRecherche } from '../../composants/BarreRecherche'
@@ -28,6 +29,7 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
   const nomMode = modes.find((m) => String(m.id) === modePaiement)?.nom
   const liste = useListe<Vente>(modeRecus ? '/recus/' : '/ventes/', { filtres: modeRecus ? {} : { date_debut: debut, date_fin: fin, statut, mode_paiement: modePaiement }, triInitial: '-date_vente' })
   const [detail, setDetail] = useState<Vente | null>(null)
+  const [venteRetour, setVenteRetour] = useState<Vente | null>(null)
   const [recu, setRecu] = useState<Recu | null>(null)
   const [motif, setMotif] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
@@ -56,6 +58,10 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
       setDetail(null); liste.recharger()
     } catch (err) { setErreur(extraireErreur(err)) }
   }
+
+  // Une vente qui a déjà un retour ne peut plus être annulée (le serveur la refuse) : on passe par un nouveau retour.
+  const aDesRetours = !!detail?.lignes?.some((l) => l.deja_retourne > 0)
+  const resteARetourner = !!detail?.lignes?.some((l) => l.retournable > 0)
 
   return (
     <div>
@@ -105,7 +111,8 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
         pied={<>
           <button className="btn-secondaire" onClick={() => setDetail(null)}>{t('Fermer')}</button>
           {detail && <button className="btn-secondaire" onClick={() => voirRecu(detail)}><Printer size={16} /> {' '}{t('Reçu')}</button>}
-          {detail?.statut === 'VALIDEE' && ['ADMIN', 'PHARMACIEN', 'CAISSIER'].includes(utilisateur?.role ?? '') && !annulation && <button className="btn-danger" onClick={() => setAnnulation(true)}>{t('Annuler cette vente')}</button>}
+          {detail?.statut === 'VALIDEE' && resteARetourner && ['ADMIN', 'PHARMACIEN', 'CAISSIER'].includes(utilisateur?.role ?? '') && !annulation && <button className="btn-secondaire" onClick={() => { setVenteRetour(detail); setDetail(null) }}><Undo2 size={16} /> {' '}{t('Retour partiel')}</button>}
+          {detail?.statut === 'VALIDEE' && !aDesRetours && ['ADMIN', 'PHARMACIEN', 'CAISSIER'].includes(utilisateur?.role ?? '') && !annulation && <button className="btn-danger" onClick={() => setAnnulation(true)}>{t('Annuler cette vente')}</button>}
         </>}>
         {detail && (
           <div className="space-y-4">
@@ -115,7 +122,7 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-start text-slate-600"><tr><th className="px-3 py-2">{t('Médicament')}</th><th className="px-3 py-2">{t('Lot')}</th><th className="px-3 py-2 text-end">{t('Qté')}</th><th className="px-3 py-2 text-end">{t('Prix')}</th><th className="px-3 py-2 text-end">{t('Total')}</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {detail.lignes?.map((l) => <tr key={l.id}><td className="px-3 py-2">{l.medicament_nom}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2 text-end">{l.quantite}{l.conditionnement !== 'BOITE' && <span className="text-slate-500"> {l.conditionnement_libelle}</span>}</td><td className="px-3 py-2 text-end">{formaterMontant(l.prix_unitaire)}</td><td className="px-3 py-2 text-end">{formaterMontant(l.total)}</td></tr>)}
+                  {detail.lignes?.map((l) => <tr key={l.id}><td className="px-3 py-2">{l.medicament_nom}{l.deja_retourne > 0 && <span className="block text-xs text-amber-700">{t('{n} déjà rendu(s)', { n: l.deja_retourne })}</span>}</td><td className="px-3 py-2">{l.numero_lot}</td><td className="px-3 py-2 text-end">{l.quantite}{l.conditionnement !== 'BOITE' && <span className="text-slate-500"> {l.conditionnement_libelle}</span>}</td><td className="px-3 py-2 text-end">{formaterMontant(l.prix_unitaire)}</td><td className="px-3 py-2 text-end">{formaterMontant(l.total)}</td></tr>)}
                 </tbody>
               </table>
             </div>
@@ -145,6 +152,8 @@ export default function ListeVentes({ modeRecus = false }: { modeRecus?: boolean
           </div>
         )}
       </Modale>
+      <ModaleRetour vente={venteRetour} onFermer={() => setVenteRetour(null)}
+        onFait={(r) => { setVenteRetour(null); notifier.succes(t('Retour {reference} enregistré : remboursement de {montant} en caisse.', { reference: r.reference, montant: formaterMontant(r.total) })); liste.recharger() }} />
       <RecuImpression recu={recu} onFermer={() => setRecu(null)} />
     </div>
   )

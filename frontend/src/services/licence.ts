@@ -36,3 +36,19 @@ export function lienWhatsappLicence(etat: EtatLicence) {
   const texte = `Bonjour ${etat.editeur.nom}, je souhaite ${etat.statut === 'NON_ACTIVEE' ? 'activer' : 'renouveler'} ma licence ${NOM_LOGICIEL}. Code du PC : ${etat.empreinte}`
   return `https://wa.me/${etat.editeur.whatsapp}?text=${encodeURIComponent(texte)}`
 }
+
+/** Assistance technique RAQEEM PHARMA sur WhatsApp (Mauritanie, +222). */
+export const ASSISTANCE_WHATSAPP = '22246635996'
+export const ASSISTANCE_AFFICHAGE = '+222 46 63 59 96'
+
+export function lienAssistanceWhatsapp(pharmacie?: string) {
+  const texte = `Bonjour, j'ai besoin d'aide sur ${NOM_LOGICIEL}${pharmacie ? ` (${pharmacie})` : ''}.`
+  return `https://wa.me/${ASSISTANCE_WHATSAPP}?text=${encodeURIComponent(texte)}`
+}
+
+/** Numéros de téléphone et e-mail de l'assistance, affichés dans le menu de la page de connexion. */
+export const ASSISTANCE_TELEPHONES = [
+  { affichage: '+222 32 10 33 54', lien: '+22232103354' },
+  { affichage: '+222 31 17 70 08', lien: '+22231177008' },
+]
+export const ASSISTANCE_EMAIL = 'contact@rawafid.mr'

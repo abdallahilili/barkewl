@@ -30,9 +30,10 @@ Chez le client, **un seul programme** tourne : Django (via Waitress, `python -m 
 | `stock` | stocks par dépôt, mouvements, transferts, inventaires, alertes |
 | `depots` | dépôts (pharmacie, magasin) |
 | `achats`, `fournisseurs` | achats et fournisseurs |
-| `ventes`, `caisse` | ventes, reçus, sessions et mouvements de caisse |
+| `ventes`, `caisse` | ventes, reçus, **retours clients** (`RetourVente`), sessions et mouvements de caisse |
+| `depenses` | dépenses (loyer, électricité, salaires…), payées depuis la caisse ou autrement ; jamais supprimées, seulement annulées |
 | `facturation` | devis, bons de livraison, factures (offre Professionnel et plus) |
-| `rapports` | rapports et tableau de bord |
+| `rapports` | rapports et tableau de bord ; `calculs.py` = chiffre d'affaires net des retours et coût d'achat ; `vues_gestion.py` = produits (plus / moins vendus, dormants), bénéfice estimé, compte fournisseur |
 | `licence` | licence signée, offres, mode lecture seule |
 | `tests` | tous les tests automatiques du serveur |
 
@@ -84,6 +85,17 @@ en anglais (`password`, `is_active`…). Voir `backend/README.md`.
 - **Tout ou rien** : chaque opération est une transaction (`transaction.atomic`). D'où **InnoDB obligatoire**
   (MyISAM ignore les transactions sans prévenir) : forcé par `settings.py`, migration `commun.0002`, contrôle `raqeem.W001`.
 - **Le serveur décide** des lots, prix et totaux ; l'interface n'envoie que médicament, quantité et paiements.
+- **Retours clients** (`apps/ventes/services.py::retourner_articles`) : retour partiel avec motif ; état *revendable*
+  (le lot d'origine récupère les unités, mouvement `RETOUR`) ou *non revendable* (pas de retour en stock) ; le
+  remboursement est un `MouvementCaisse` REMBOURSEMENT dans la session ouverte de celui qui fait le retour. Le vendeur
+  a besoin du PIN d'un approbateur (comme l'annulation). Une vente qui a un retour ne peut plus être annulée.
+- **Dépenses** (`apps/depenses`) : payée depuis la caisse = sortie manuelle d'espèces (motif « Dépense DEP-… ») ;
+  l'annuler = entrée manuelle inverse. Réservées au Propriétaire (module `depenses`).
+- **Chiffres** : le chiffre d'affaires est net des retours (retours datés du jour où le client rend l'article).
+  Bénéfice estimé = ventes nettes − coût d'achat des produits vendus (un retour revendable retire son coût, un retour
+  non revendable le garde) − dépenses validées de la période.
+- **Reçu** : paramètres `recu_format` (`80mm`, `58mm`, `demi_a4`) et `recu_langue` (`fr`, `ar`, `bilingue`),
+  renvoyés dans `mise_en_page` des données du reçu (`composants/RecuImpression.tsx`, `RecuTicket.tsx`).
 
 ### 3.3 Textes de l'interface : toujours `t()` + traduction arabe
 ```tsx

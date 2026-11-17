@@ -1,16 +1,21 @@
 import type { ReactElement } from 'react'
 import Achats from '../pages/achats/Achats'
 import AchatDetail from '../pages/achats/AchatDetail'
+import BonCommandeDetail from '../pages/achats/BonCommandeDetail'
+import BonsCommande from '../pages/achats/BonsCommande'
 import Fournisseurs from '../pages/achats/Fournisseurs'
 import Utilisateurs from '../pages/administration/Utilisateurs'
+import Donnees from '../pages/administration/Donnees'
 import Parametres from '../pages/administration/Parametres'
 import Referentiels from '../pages/administration/Referentiels'
 import HistoriqueSessions from '../pages/caisse/HistoriqueSessions'
 import SessionActuelle from '../pages/caisse/SessionActuelle'
+import Depenses from '../pages/depenses/Depenses'
 import DocumentVenteDetail from '../pages/facturation/DocumentVenteDetail'
 import Facturation from '../pages/facturation/Facturation'
 import Lots from '../pages/medicaments/Lots'
 import Medicaments from '../pages/medicaments/Medicaments'
+import Guide from '../pages/Guide'
 import Rapports from '../pages/Rapports'
 import EtatStock from '../pages/stock/EtatStock'
 import InventaireDetail from '../pages/stock/InventaireDetail'
@@ -22,6 +27,7 @@ import Clients from '../pages/ventes/Clients'
 import ListeVentes from '../pages/ventes/ListeVentes'
 import NouvelleVente from '../pages/ventes/NouvelleVente'
 import Recus from '../pages/ventes/Recus'
+import RetoursClients from '../pages/ventes/RetoursClients'
 
 export interface RouteProtegee { chemin: string; module: string; element: ReactElement }
 
@@ -31,6 +37,7 @@ export const routesProtegees: RouteProtegee[] = [
   { chemin: '/ventes/nouvelle', module: 'ventes', element: <NouvelleVente /> },
   { chemin: '/ventes', module: 'ventes', element: <ListeVentes /> },
   { chemin: '/recus', module: 'ventes', element: <Recus /> },
+  { chemin: '/retours', module: 'ventes', element: <RetoursClients /> },
   { chemin: '/clients', module: 'ventes', element: <Clients /> },
   { chemin: '/stock', module: 'stock_etat', element: <EtatStock /> },
   { chemin: '/stock/entrees', module: 'stock_gestion', element: <MouvementsStock mode="entree" /> },
@@ -44,14 +51,20 @@ export const routesProtegees: RouteProtegee[] = [
   { chemin: '/achats', module: 'achats', element: <Achats /> },
   { chemin: '/achats/nouveau', module: 'achats', element: <AchatDetail /> },
   { chemin: '/achats/:id', module: 'achats', element: <AchatDetail /> },
+  { chemin: '/achats/commandes', module: 'achats', element: <BonsCommande /> },
+  { chemin: '/achats/commandes/nouveau', module: 'achats', element: <BonCommandeDetail /> },
+  { chemin: '/achats/commandes/:id', module: 'achats', element: <BonCommandeDetail /> },
   { chemin: '/fournisseurs', module: 'achats', element: <Fournisseurs /> },
   { chemin: '/facturation', module: 'facturation', element: <Facturation /> },
   { chemin: '/facturation/nouveau', module: 'facturation', element: <DocumentVenteDetail /> },
   { chemin: '/facturation/:id', module: 'facturation', element: <DocumentVenteDetail /> },
   { chemin: '/caisse', module: 'caisse', element: <SessionActuelle /> },
   { chemin: '/caisse/historique', module: 'caisse', element: <HistoriqueSessions /> },
+  { chemin: '/depenses', module: 'depenses', element: <Depenses /> },
+  { chemin: '/guide', module: 'tableau_de_bord', element: <Guide /> },
   { chemin: '/rapports', module: 'rapports', element: <Rapports /> },
   { chemin: '/administration/utilisateurs', module: 'administration', element: <Utilisateurs /> },
   { chemin: '/administration/parametres', module: 'administration', element: <Parametres /> },
+  { chemin: '/administration/donnees', module: 'administration', element: <Donnees /> },
   { chemin: '/referentiels', module: 'administration', element: <Referentiels /> },
 ]

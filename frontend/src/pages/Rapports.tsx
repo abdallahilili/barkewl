@@ -1,17 +1,19 @@
-import { Download, FileSpreadsheet, FileText, Printer } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, Boxes, Download, FileSpreadsheet, FileText, LucideIcon, Moon, Package, PiggyBank, Printer, ShoppingCart, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { ReactNode, useEffect, useState } from 'react'
 import { Chargement, EnTetePage, MessageErreur } from '../composants/EnTetePage'
 import { PiedLogiciel } from '../composants/PiedLogiciel'
 import { useAuth } from '../hooks/useAuth'
 import { useOptions } from '../hooks/useListe'
 import { api } from '../services/api'
-import type { Caisse, DetailModePaiement, Depot, ModePaiement } from '../types'
+import type { Caisse, DetailModePaiement, Depot, Fournisseur, ModePaiement } from '../types'
+import { libelleCategorieDepense } from './depenses/categories'
 import { extraireErreur } from '../utilitaires/erreurs'
 import { exporterCsv, exporterExcel, exporterPdf, exporterWord } from '../utilitaires/exports'
 import { aujourdhui, formaterDate, formaterDateExport, formaterDateHeure, formaterMontant, formaterNombre, ilYaJours } from '../utilitaires/formatage'
 
 import { Langue, langueCourante, t, traduireServeur, tVers } from '../i18n'
-type Onglet = 'ventes' | 'achats' | 'caisse' | 'stock' | 'mouvements'
+type Rapport = 'ventes' | 'plus_vendus' | 'moins_vendus' | 'dormants' | 'benefice' | 'achats' | 'fournisseur' | 'caisse' | 'stock' | 'mouvements'
 type Ligne = Record<string, string | number | null>
 
 /** `titre` est le texte français brut (pas de `t(...)`) : traduit à l'affichage et, indépendamment,
@@ -88,17 +90,18 @@ function Totaux({ elements }: { elements: { titre: string; valeur: string }[] })
   )
 }
 
-function useRapport<T>(chemin: string, params: Record<string, string>) {
+function useRapport<T>(chemin: string, params: Record<string, string>, actif = true) {
   const [donnees, setDonnees] = useState<T | null>(null)
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState<string | null>(null)
   const cle = JSON.stringify(params)
   useEffect(() => {
+    if (!actif) return
     setChargement(true)
     const filtres = Object.fromEntries(Object.entries(JSON.parse(cle) as Record<string, string>).filter(([, v]) => v !== ''))
     api.get<T>(`/rapports/${chemin}/`, { params: filtres }).then((r) => { setDonnees(r.data); setErreur(null) })
       .catch((e) => setErreur(extraireErreur(e))).finally(() => setChargement(false))
-  }, [chemin, cle])
+  }, [chemin, cle, actif])
   return { donnees, chargement, erreur }
 }
 
@@ -121,7 +124,7 @@ function usePeriode() {
 function RapportVentes() {
   const p = usePeriode()
   const [regroupement, setRegroupement] = useState('jour')
-  const { donnees, chargement, erreur } = useRapport<{ lignes: Ligne[]; nombre_ventes: number; chiffre_affaires: number }>('ventes', { date_debut: p.debut, date_fin: p.fin, regroupement })
+  const { donnees, chargement, erreur } = useRapport<{ lignes: Ligne[]; nombre_ventes: number; chiffre_affaires: number; ventes_brutes: number; total_retours: number }>('ventes', { date_debut: p.debut, date_fin: p.fin, regroupement })
   const titres: Record<string, string> = { jour: 'Jour', caissier: 'Caissier', depot: 'Dépôt', medicament: 'Médicament' }
   return (
     <div>
@@ -129,9 +132,116 @@ function RapportVentes() {
       <MessageErreur message={erreur} />
       {chargement && !donnees ? <Chargement /> : donnees && (
         <>
-          <Totaux elements={[{ titre: t('Chiffre d\'affaires'), valeur: formaterMontant(donnees.chiffre_affaires) }, { titre: t('Nombre de ventes'), valeur: formaterNombre(donnees.nombre_ventes) }]} />
+          <Totaux elements={[{ titre: t('Ventes brutes'), valeur: formaterMontant(donnees.ventes_brutes) }, { titre: t('Retours clients'), valeur: formaterMontant(donnees.total_retours) }, { titre: t('Chiffre d\'affaires (net des retours)'), valeur: formaterMontant(donnees.chiffre_affaires) }, { titre: t('Nombre de ventes'), valeur: formaterNombre(donnees.nombre_ventes) }]} />
           <TableauRapport nomFichier={`ventes-par-${regroupement}`} lignes={donnees.lignes}
-            colonnes={[{ cle: 'libelle', titre: titres[regroupement] }, { cle: 'nombre', titre: regroupement === 'medicament' ? 'Quantité vendue' : 'Ventes', format: 'nombre', alignement: 'droite' }, { cle: 'total', titre: 'Total', format: 'montant', alignement: 'droite' }]} />
+            colonnes={[{ cle: 'libelle', titre: titres[regroupement] }, { cle: 'nombre', titre: regroupement === 'medicament' ? 'Quantité vendue (nette)' : 'Ventes', format: 'nombre', alignement: 'droite' }, { cle: 'brut', titre: 'Ventes brutes', format: 'montant', alignement: 'droite' }, { cle: 'retours', titre: 'Retours', format: 'montant', alignement: 'droite' }, { cle: 'total', titre: 'Net', format: 'montant', alignement: 'droite' }]} />
+        </>
+      )}
+    </div>
+  )
+}
+
+type TypeProduits = 'plus_vendus' | 'moins_vendus' | 'dormants'
+
+function RapportProduits({ type }: { type: TypeProduits }) {
+  const p = usePeriode()
+  const [limite, setLimite] = useState('20')
+  const [jours, setJours] = useState('90')
+  const dormants = type === 'dormants'
+  interface Reponse { lignes: Ligne[]; nombre_produits?: number; valeur_immobilisee?: number; nombre_produits_vendus?: number }
+  const { donnees, chargement, erreur } = useRapport<Reponse>('produits', dormants ? { type, jours } : { type, date_debut: p.debut, date_fin: p.fin, limite })
+  return (
+    <div>
+      {dormants ? (
+        <div className="mb-4 flex flex-wrap items-end gap-3 sans-impression">
+          <div><label className="etiquette">{t('Sans vente depuis (jours)')}</label><input className="champ w-28" type="number" min={1} value={jours} onChange={(e) => setJours(e.target.value)} /></div>
+        </div>
+      ) : (
+        <Periode {...p}>
+          <div><label className="etiquette">{t('Nombre de produits')}</label><input className="champ w-28" type="number" min={1} max={500} value={limite} onChange={(e) => setLimite(e.target.value)} /></div>
+        </Periode>
+      )}
+      <MessageErreur message={erreur} />
+      {chargement && !donnees ? <Chargement /> : donnees && (
+        dormants ? (
+          <>
+            <p className="mb-3 text-sm text-slate-600">{t('Produits en stock qui ne se sont pas vendus depuis {jours} jours (ou jamais).', { jours })}</p>
+            <Totaux elements={[{ titre: t('Produits dormants'), valeur: formaterNombre(donnees.nombre_produits) }, { titre: t('Valeur immobilisée (prix d\'achat)'), valeur: formaterMontant(donnees.valeur_immobilisee) }]} />
+            <TableauRapport nomFichier="produits-dormants"
+              lignes={donnees.lignes.map((l) => ({ ...l, derniere: l.derniere_vente ? formaterDate(String(l.derniere_vente)) : t('Jamais vendu') }))}
+              colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'quantite_texte', titre: 'Stock' }, { cle: 'valeur', titre: 'Valeur', format: 'montant', alignement: 'droite' }, { cle: 'derniere', titre: 'Dernière vente' }, { cle: 'jours_sans_vente', titre: 'Jours sans vente', format: 'nombre', alignement: 'droite' }]} />
+          </>
+        ) : (
+          <TableauRapport nomFichier={type === 'plus_vendus' ? 'produits-les-plus-vendus' : 'produits-les-moins-vendus'} lignes={donnees.lignes}
+            colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'quantite_texte', titre: 'Quantité vendue (nette)' }, { cle: 'boites', titre: 'Équivalent boîtes', format: 'nombre', alignement: 'droite' }, { cle: 'montant', titre: 'Montant', format: 'montant', alignement: 'droite' }]} />
+        )
+      )}
+    </div>
+  )
+}
+
+function RapportBenefice() {
+  const p = usePeriode()
+  interface Reponse {
+    ventes_brutes: number; retours: number; ventes_nettes: number; cout_achat: number; marge_brute: number; depenses: number; benefice_estime: number
+    depenses_par_categorie: { categorie: string; total: number }[]
+  }
+  const { donnees, chargement, erreur } = useRapport<Reponse>('benefice', { date_debut: p.debut, date_fin: p.fin })
+  return (
+    <div>
+      <Periode {...p} />
+      <MessageErreur message={erreur} />
+      {chargement && !donnees ? <Chargement /> : donnees && (
+        <>
+          <Totaux elements={[{ titre: t('Ventes nettes des retours'), valeur: formaterMontant(donnees.ventes_nettes) }, { titre: t('Coût d\'achat des produits vendus'), valeur: formaterMontant(donnees.cout_achat) }, { titre: t('Dépenses'), valeur: formaterMontant(donnees.depenses) }, { titre: t('Bénéfice estimé'), valeur: formaterMontant(donnees.benefice_estime) }]} />
+          <TableauRapport nomFichier="bénéfice-estimé"
+            lignes={[
+              { ligne: t('Ventes'), montant: donnees.ventes_brutes },
+              { ligne: t('− Retours clients'), montant: donnees.retours },
+              { ligne: t('= Ventes nettes'), montant: donnees.ventes_nettes },
+              { ligne: t('− Coût d\'achat des produits vendus'), montant: donnees.cout_achat },
+              { ligne: t('= Marge brute'), montant: donnees.marge_brute },
+              ...donnees.depenses_par_categorie.map((d) => ({ ligne: `− ${libelleCategorieDepense(d.categorie)}`, montant: d.total })),
+              { ligne: t('− Total des dépenses'), montant: donnees.depenses },
+              { ligne: t('= Bénéfice estimé'), montant: donnees.benefice_estime },
+            ]}
+            colonnes={[{ cle: 'ligne', titre: 'Poste' }, { cle: 'montant', titre: 'Montant', format: 'montant', alignement: 'droite' }]} />
+          <p className="mt-3 text-xs text-slate-500">{t('Estimation : le coût d\'achat est calculé avec le prix d\'achat des lots vendus. Un produit rendu et revendable est remis en stock (son coût est retiré) ; un produit rendu non revendable reste une perte. Les dépenses annulées ne comptent pas.')}</p>
+        </>
+      )}
+    </div>
+  )
+}
+
+function RapportFournisseur() {
+  const fournisseurs = useOptions<Fournisseur>('/fournisseurs/')
+  const [fournisseur, setFournisseur] = useState('')
+  const [debut, setDebut] = useState(ilYaJours(90))
+  const [fin, setFin] = useState(aujourdhui())
+  interface Reponse {
+    fournisseur: { nom: string; telephone: string }; solde_initial: number; total_facture: number; total_paye: number; solde_final: number
+    lignes: { date: string; type: string; libelle: string; facture: number; paye: number; solde: number }[]
+  }
+  const { donnees, chargement, erreur } = useRapport<Reponse>('fournisseur', fournisseur ? { fournisseur, date_debut: debut, date_fin: fin } : { fournisseur: '' }, !!fournisseur)
+  return (
+    <div>
+      <Periode debut={debut} fin={fin} setDebut={setDebut} setFin={setFin}>
+        <div><label className="etiquette">{t('Fournisseur')}</label>
+          <select className="champ" value={fournisseur} onChange={(e) => setFournisseur(e.target.value)}>
+            <option value="">{t('— Choisir un fournisseur —')}</option>{fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+          </select></div>
+      </Periode>
+      {!fournisseur ? <p className="text-sm text-slate-500">{t('Choisissez un fournisseur pour afficher son relevé de compte.')}</p> : (
+        <>
+          <MessageErreur message={erreur} />
+          {chargement && !donnees ? <Chargement /> : donnees && (
+            <>
+              <Totaux elements={[{ titre: t('Solde au début de la période'), valeur: formaterMontant(donnees.solde_initial) }, { titre: t('Facturé (achats)'), valeur: formaterMontant(donnees.total_facture) }, { titre: t('Payé'), valeur: formaterMontant(donnees.total_paye) }, { titre: t('Solde dû à la fin'), valeur: formaterMontant(donnees.solde_final) }]} />
+              <TableauRapport nomFichier={`releve-fournisseur-${donnees.fournisseur.nom}`}
+                lignes={[{ date: debut, libelle: t('Solde reporté'), facture: null, paye: null, solde: donnees.solde_initial }, ...donnees.lignes]}
+                colonnes={[{ cle: 'date', titre: 'Date', format: 'date' }, { cle: 'libelle', titre: 'Opération' }, { cle: 'facture', titre: 'Facturé', format: 'montant', alignement: 'droite' }, { cle: 'paye', titre: 'Payé', format: 'montant', alignement: 'droite' }, { cle: 'solde', titre: 'Solde dû', format: 'montant', alignement: 'droite' }]} />
+            </>
+          )}
         </>
       )}
     </div>
@@ -253,27 +363,73 @@ function RapportMouvements() {
   )
 }
 
-export default function Rapports() {
-  const [onglet, setOnglet] = useState<Onglet>('ventes')
-  const onglets: { cle: Onglet; libelle: string }[] = [
-    { cle: 'ventes', libelle: t('Ventes') }, { cle: 'achats', libelle: t('Achats') }, { cle: 'caisse', libelle: t('Caisse') },
-    { cle: 'stock', libelle: t('Stock') }, { cle: 'mouvements', libelle: t('Mouvements') },
+interface CarteRapport { cle: Rapport; titre: string; description: string; icone: LucideIcon; couleur: string; groupe: string }
+
+/** Les rapports sont présentés en cartes ; un clic ouvre le rapport (l'adresse mémorise le choix : retour du navigateur possible). */
+function cartesRapports(): CarteRapport[] {
+  const ventes = t('Ventes et produits'), finances = t('Argent'), stock = t('Stock')
+  return [
+    { cle: 'ventes', titre: t('Ventes'), description: t('Chiffre d\'affaires net des retours, par jour, vendeur, dépôt ou médicament.'), icone: ShoppingCart, couleur: 'bg-marque-50 text-marque-700', groupe: ventes },
+    { cle: 'plus_vendus', titre: t('Produits les plus vendus'), description: t('Le classement des médicaments qui se vendent le mieux.'), icone: TrendingUp, couleur: 'bg-emerald-50 text-emerald-700', groupe: ventes },
+    { cle: 'moins_vendus', titre: t('Produits les moins vendus'), description: t('Les médicaments qui se vendent le moins sur la période.'), icone: TrendingDown, couleur: 'bg-amber-50 text-amber-700', groupe: ventes },
+    { cle: 'dormants', titre: t('Produits dormants'), description: t('Produits en stock qui ne se vendent plus : argent immobilisé.'), icone: Moon, couleur: 'bg-violet-50 text-violet-700', groupe: ventes },
+    { cle: 'benefice', titre: t('Bénéfice estimé'), description: t('Ventes − coût d\'achat − dépenses de la période.'), icone: PiggyBank, couleur: 'bg-sky-50 text-sky-700', groupe: finances },
+    { cle: 'achats', titre: t('Achats'), description: t('Achats aux fournisseurs, montants payés et reste à payer.'), icone: Package, couleur: 'bg-orange-50 text-orange-700', groupe: finances },
+    { cle: 'fournisseur', titre: t('Compte fournisseur'), description: t('Relevé d\'un fournisseur : achats, paiements et solde dû.'), icone: FileText, couleur: 'bg-rose-50 text-rose-700', groupe: finances },
+    { cle: 'caisse', titre: t('Caisse'), description: t('Sessions de caisse, détail par mode de paiement et écarts.'), icone: Wallet, couleur: 'bg-teal-50 text-teal-700', groupe: finances },
+    { cle: 'stock', titre: t('Stock'), description: t('État, valeur, stock faible, ruptures et péremptions.'), icone: Boxes, couleur: 'bg-blue-50 text-blue-700', groupe: stock },
+    { cle: 'mouvements', titre: t('Mouvements de stock'), description: t('Entrées, sorties, transferts et ajustements.'), icone: ArrowLeftRight, couleur: 'bg-slate-100 text-slate-700', groupe: stock },
   ]
+}
+
+export default function Rapports() {
+  const [recherche, definirRecherche] = useSearchParams()
+  const cartes = cartesRapports()
+  const choisi = cartes.find((c) => c.cle === recherche.get('rapport'))
+  const ouvrir = (cle: Rapport | null) => definirRecherche(cle ? { rapport: cle } : {})
+
+  if (!choisi) {
+    const groupes = [...new Set(cartes.map((c) => c.groupe))]
+    return (
+      <div>
+        <EnTetePage titre={t('Rapports')} description={t('Choisissez un rapport. Chacun est exportable (Excel, PDF, Word, CSV) ou imprimable.')} />
+        <div className="space-y-6">
+          {groupes.map((groupe) => (
+            <section key={groupe}>
+              <h2 className="mb-2 text-sm font-semibold text-slate-500">{groupe}</h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {cartes.filter((c) => c.groupe === groupe).map((c) => (
+                  <button key={c.cle} type="button" onClick={() => ouvrir(c.cle)}
+                    className="carte flex items-start gap-4 p-4 text-start transition hover:-translate-y-0.5 hover:border-marque-300 hover:shadow-md">
+                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${c.couleur}`}><c.icone size={21} /></span>
+                    <span className="min-w-0">
+                      <span className="block font-bold text-nuit-800">{c.titre}</span>
+                      <span className="mt-0.5 block text-sm text-slate-500">{c.description}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const cle = choisi.cle
   return (
     <div>
-      <EnTetePage titre={t('Rapports')} description={t('Chiffres essentiels, exportables en CSV ou imprimables.')} />
-      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200 sans-impression">
-        {onglets.map((o) => (
-          <button key={o.cle} onClick={() => setOnglet(o.cle)}
-            className={`whitespace-nowrap border-b-2 px-4 py-2 text-sm ${onglet === o.cle ? 'border-marque-600 font-medium text-marque-800' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>{o.libelle}</button>
-        ))}
-      </div>
+      <EnTetePage titre={choisi.titre} description={choisi.description}
+        actions={<button className="btn-secondaire sans-impression" onClick={() => ouvrir(null)}><ArrowLeft size={16} className="rtl:-scale-x-100" /> {t('Tous les rapports')}</button>} />
       <div className="zone-impression">
-        {onglet === 'ventes' && <RapportVentes />}
-        {onglet === 'achats' && <RapportAchats />}
-        {onglet === 'caisse' && <RapportCaisse />}
-        {onglet === 'stock' && <RapportStock />}
-        {onglet === 'mouvements' && <RapportMouvements />}
+        {cle === 'ventes' && <RapportVentes />}
+        {(cle === 'plus_vendus' || cle === 'moins_vendus' || cle === 'dormants') && <RapportProduits key={cle} type={cle} />}
+        {cle === 'benefice' && <RapportBenefice />}
+        {cle === 'achats' && <RapportAchats />}
+        {cle === 'fournisseur' && <RapportFournisseur />}
+        {cle === 'caisse' && <RapportCaisse />}
+        {cle === 'stock' && <RapportStock />}
+        {cle === 'mouvements' && <RapportMouvements />}
         <PiedLogiciel />
       </div>
     </div>

@@ -9,7 +9,7 @@ from .audit import enregistrer_audit
 from .constantes import TOUS_LES_ROLES
 from .exceptions import ErreurMetier
 from .models import JournalAudit
-from .parametres import DEFAUTS, PARAMETRES_IMAGE, definir_parametre, obtenir_parametre
+from .parametres import DEFAUTS, PARAMETRES_IMAGE, VALEURS_AUTORISEES, definir_parametre, obtenir_parametre
 from .serializers import JournalAuditSerializer
 from .vues_base import ViewSetLecture
 
@@ -45,6 +45,8 @@ class ParametresView(APIView):
         for cle, valeur in request.data.items():
             ancienne = obtenir_parametre(cle)
             if str(valeur) != ancienne:
+                if cle in VALEURS_AUTORISEES and str(valeur) not in VALEURS_AUTORISEES[cle]:
+                    raise ErreurMetier(f"Valeur invalide pour « {cle} » (valeurs possibles : {', '.join(VALEURS_AUTORISEES[cle])}).")
                 if cle == "jours_alerte_peremption" and (not str(valeur).isdigit() or int(valeur) < 1):
                     raise ErreurMetier("Le nombre de jours doit être un entier positif.")
                 definir_parametre(cle, valeur)

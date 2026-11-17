@@ -14,6 +14,7 @@ from apps.commun.constantes import ADMIN, CAISSIER, MAGASINIER, PHARMACIEN, ROLE
 from apps.commun import sauvegarde
 from apps.commun.exceptions import ErreurMetier
 from apps.commun.utilitaires import plage_dates
+from . import calculs
 from apps.medicaments.conditionnement import decrire_quantite
 from apps.stock import alertes
 from apps.stock.models import MouvementStock, Stock, TypeMouvement
@@ -30,43 +31,69 @@ def _somme(champ, **kw):
 
 
 class RapportVentesView(APIView):
-    """Ventes par jour, caissier, dépôt ou médicament (chiffre d'affaires)."""
+    """
+    Ventes par jour, caissier, dépôt ou médicament (chiffre d'affaires).
+    Chaque ligne : `brut` (ventes validées), `retours` (retours clients de la période) et `total` (net = brut - retours).
+    """
 
     roles_lecture = ()
 
     def get(self, request):
         debut, fin = plage_dates(request.query_params)
         regroupement = request.query_params.get("regroupement", "jour")
-        ventes = Vente.objects.filter(statut="VALIDEE", date_vente__date__range=(debut, fin))
-        if request.query_params.get("depot"):
-            ventes = ventes.filter(depot_id=request.query_params["depot"])
-        if request.query_params.get("caissier"):
-            ventes = ventes.filter(caissier_id=request.query_params["caissier"])
+        depot, caissier = request.query_params.get("depot"), request.query_params.get("caissier")
+        ventes = calculs.ventes_validees(debut, fin, depot, caissier)
+        retours = calculs.retours_periode(debut, fin, depot, caissier)
 
         if regroupement == "jour":
-            lignes = ventes.annotate(cle=TruncDate("date_vente")).values("cle").annotate(
-                nombre=Count("id"), total=_somme("total")).order_by("cle")
-            lignes = [{"libelle": str(l["cle"]), "nombre": l["nombre"], "total": l["total"]} for l in lignes]
+            v = ventes.annotate(cle=TruncDate("date_vente")).values("cle").annotate(nombre=Count("id"), total=_somme("total"))
+            r = retours.annotate(cle=TruncDate("date_retour")).values("cle").annotate(total=_somme("total"))
+            brut = {str(l["cle"]): (l["nombre"], l["total"]) for l in v}
+            rendu = {str(l["cle"]): l["total"] for l in r}
+            ordre = sorted(set(brut) | set(rendu))
         elif regroupement == "caissier":
-            lignes = ventes.values("caissier__prenom", "caissier__nom").annotate(
-                nombre=Count("id"), total=_somme("total")).order_by("-total")
-            lignes = [{"libelle": f'{l["caissier__prenom"]} {l["caissier__nom"]}'.strip(), "nombre": l["nombre"], "total": l["total"]} for l in lignes]
+            v = ventes.values("caissier__prenom", "caissier__nom").annotate(nombre=Count("id"), total=_somme("total"))
+            r = retours.values("vente__caissier__prenom", "vente__caissier__nom").annotate(total=_somme("total"))
+            brut = {f'{l["caissier__prenom"]} {l["caissier__nom"]}'.strip(): (l["nombre"], l["total"]) for l in v}
+            rendu = {f'{l["vente__caissier__prenom"]} {l["vente__caissier__nom"]}'.strip(): l["total"] for l in r}
+            ordre = None
         elif regroupement == "depot":
-            lignes = ventes.values("depot__nom").annotate(nombre=Count("id"), total=_somme("total")).order_by("-total")
-            lignes = [{"libelle": l["depot__nom"], "nombre": l["nombre"], "total": l["total"]} for l in lignes]
+            v = ventes.values("depot__nom").annotate(nombre=Count("id"), total=_somme("total"))
+            r = retours.values("vente__depot__nom").annotate(total=_somme("total"))
+            brut = {l["depot__nom"]: (l["nombre"], l["total"]) for l in v}
+            rendu = {l["vente__depot__nom"]: l["total"] for l in r}
+            ordre = None
         elif regroupement == "medicament":
-            from apps.ventes.models import LigneVente
+            from apps.ventes.models import LigneRetourVente, LigneVente
 
-            # Quantité vendue en unités de stock (boîtes et détail additionnés correctement).
+            # Quantité vendue en unités de stock (boîtes et détail additionnés correctement), nette des retours.
             lv = LigneVente.objects.filter(vente__in=ventes).values("medicament__nom").annotate(
-                nombre=Sum(F("quantite") * F("unites_par_conditionnement")), total=_somme("total")).order_by("-total")
-            lignes = [{"libelle": l["medicament__nom"], "nombre": l["nombre"], "total": l["total"]} for l in lv]
+                nombre=Sum(F("quantite") * F("unites_par_conditionnement")), total=_somme("total"))
+            lr = LigneRetourVente.objects.filter(retour__in=retours).values("ligne_vente__medicament__nom").annotate(
+                nombre=Sum("unites"), total=_somme("montant"))
+            brut = {l["medicament__nom"]: (l["nombre"], l["total"]) for l in lv}
+            rendu = {l["ligne_vente__medicament__nom"]: l["total"] for l in lr}
+            unites_rendues = {l["ligne_vente__medicament__nom"]: l["nombre"] for l in lr}
+            ordre = None
         else:
             raise ErreurMetier("Regroupement inconnu (jour, caissier, depot, medicament).")
 
+        lignes = []
+        for libelle in (ordre if ordre is not None else set(brut) | set(rendu)):
+            nombre, total_brut = brut.get(libelle, (0, Decimal("0")))
+            total_rendu = rendu.get(libelle, Decimal("0"))
+            if regroupement == "medicament":
+                nombre = nombre - unites_rendues.get(libelle, 0)
+            lignes.append({"libelle": libelle, "nombre": nombre, "brut": total_brut, "retours": total_rendu,
+                           "total": total_brut - total_rendu})
+        if ordre is None:
+            lignes.sort(key=lambda l: l["total"], reverse=True)
+
         agregat = ventes.aggregate(nombre=Count("id"), total=_somme("total"))
+        total_retours = retours.aggregate(t=_somme("total"))["t"]
         return Response({"date_debut": debut, "date_fin": fin, "regroupement": regroupement, "lignes": lignes,
-                         "nombre_ventes": agregat["nombre"], "chiffre_affaires": agregat["total"]})
+                         "nombre_ventes": agregat["nombre"], "ventes_brutes": agregat["total"],
+                         "total_retours": total_retours, "chiffre_affaires": agregat["total"] - total_retours})
 
 
 class RapportAchatsView(APIView):
@@ -224,7 +251,11 @@ class TableauDeBordView(APIView):
             if role == CAISSIER:
                 ventes = ventes.filter(caissier=request.user)
             agregat = ventes.aggregate(nombre=Count("id"), total=_somme("total"))
-            donnees["ventes_aujourdhui"] = {"nombre": agregat["nombre"], "total": agregat["total"]}
+            retours = calculs.retours_periode(debut, fin, caissier=request.user.pk if role == CAISSIER else None)
+            retours_total = retours.aggregate(t=_somme("total"))["t"]
+            # Chiffre d'affaires net : les retours clients de la période sont déduits.
+            donnees["ventes_aujourdhui"] = {"nombre": agregat["nombre"], "total": agregat["total"] - retours_total,
+                                            "retours": retours_total}
             dernieres = ventes.select_related("client", "caissier", "depot").prefetch_related("paiements__mode_paiement").order_by("-date_vente")[:8]
             donnees["dernieres_ventes"] = VenteListeSerializer(dernieres, many=True).data
             session = SessionCaisse.objects.select_related("caisse").filter(caissier=request.user, statut="OUVERTE").first()

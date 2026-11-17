@@ -403,3 +403,41 @@
 
 
 
+
+/* ══════════════════════════════════════════
+   Ticket de caisse thermique (80 mm / 58 mm)
+   ══════════════════════════════════════════ */
+.ticket {
+  background: #fff;
+  color: #000;
+  margin: 0 auto;
+  padding: 3mm 2mm;
+  font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+  box-shadow: 0 0 0 1px #e2e8f0;
+}
+.ticket--58 { font-size: 10px; padding: 2mm 1mm; }
+.ticket p { margin: 0; }
+.ticket-entete { text-align: center; }
+.ticket-logo { display: block; margin: 0 auto 2px; max-height: 14mm; max-width: 60%; object-fit: contain; }
+.ticket-nom { font-size: 1.25em; font-weight: 700; }
+.ticket-separateur { border-top: 1px dashed #000; margin: 4px 0; }
+/* Ligne « étiquette … valeur » : l'étiquette (parfois bilingue, donc longue) peut passer à la ligne, la valeur jamais. */
+.ticket-ligne { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.ticket-etiquette { min-width: 0; font-weight: 600; }
+.ticket-valeur { flex-shrink: 0; white-space: nowrap; text-align: end; }
+.ticket-infos { display: grid; gap: 1px; }
+.ticket-paiements { display: grid; gap: 1px; margin-top: 2px; }
+.ticket-annule { text-align: center; font-weight: 700; margin: 3px 0; }
+.ticket-article { margin-bottom: 3px; break-inside: avoid; }
+.ticket-article-nom { font-weight: 600; overflow-wrap: anywhere; }
+.ticket-article-detail { display: flex; justify-content: space-between; gap: 6px; }
+.ticket-total { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-size: 1.25em; font-weight: 800; line-height: 1.2; }
+.ticket-total-etiquette { min-width: 0; letter-spacing: 0.04em; text-transform: uppercase; }
+.ticket-message { text-align: center; font-size: 0.95em; }
+.ticket-message p, .ticket-message div { margin: 0; }
+.ticket .pied-logiciel { margin-top: 4px; text-align: center; font-size: 8px; }
+@media print {
+  .ticket { box-shadow: none !important; margin: 0 !important; }
+}

@@ -11,7 +11,7 @@ from apps.medicaments.models import Lot
 from apps.stock.models import TypeMouvement
 from apps.stock.services import appliquer_mouvement
 
-from .models import Achat
+from .models import Achat, BonCommande, StatutBonCommande
 
 
 @transaction.atomic
@@ -113,3 +113,36 @@ def annuler_achat(achat_id, utilisateur):
     enregistrer_audit(utilisateur, "ANNULATION", "Achat", achat.pk, reference=achat.reference,
                       ancienne={"statut": ancien_statut}, nouvelle={"statut": "ANNULE"})
     return achat
+
+
+def _changer_statut_bon(bon_id, utilisateur, depuis, vers, message_erreur):
+    bon = BonCommande.objects.select_for_update().get(pk=bon_id)
+    if bon.statut not in depuis:
+        raise ErreurMetier(message_erreur)
+    ancien = bon.statut
+    bon.statut = vers
+    bon.save(update_fields=["statut"])
+    enregistrer_audit(utilisateur, "ANNULATION" if vers == StatutBonCommande.ANNULE else "MODIFICATION", "BonCommande",
+                      bon.pk, reference=bon.reference, ancienne={"statut": ancien}, nouvelle={"statut": vers})
+    return bon
+
+
+@transaction.atomic
+def envoyer_bon_commande(bon_id, utilisateur):
+    """Brouillon -> Envoyé : le bon est figé (plus de modification). Aucun effet sur le stock."""
+    if not BonCommande.objects.get(pk=bon_id).lignes.exists():
+        raise ErreurMetier("Ce bon de commande ne contient aucune ligne.")
+    return _changer_statut_bon(bon_id, utilisateur, (StatutBonCommande.BROUILLON,), StatutBonCommande.ENVOYE,
+                               "Seul un bon de commande en brouillon peut être marqué comme envoyé.")
+
+
+@transaction.atomic
+def marquer_bon_recu(bon_id, utilisateur):
+    return _changer_statut_bon(bon_id, utilisateur, (StatutBonCommande.ENVOYE,), StatutBonCommande.RECU,
+                               "Seul un bon de commande envoyé peut être marqué comme reçu.")
+
+
+@transaction.atomic
+def annuler_bon_commande(bon_id, utilisateur):
+    return _changer_statut_bon(bon_id, utilisateur, (StatutBonCommande.BROUILLON, StatutBonCommande.ENVOYE),
+                               StatutBonCommande.ANNULE, "Ce bon de commande ne peut plus être annulé.")

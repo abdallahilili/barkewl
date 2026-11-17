@@ -1,21 +1,30 @@
 import { Printer } from 'lucide-react'
 import type { Recu } from '../types'
-import { formaterDateHeure, formaterNombre, libelleDeviseBilingue } from '../utilitaires/formatage'
+import { formaterDateHeure, formaterNombre, libelleDeviseBilingue, libelleDeviseVers } from '../utilitaires/formatage'
 import { EnTeteDocument, MessagePied } from './EnTeteDocument'
 import { Modale } from './Modale'
 import { t } from '../i18n'
 import { Bilingue } from './Bilingue'
 import { PiedLogiciel } from './PiedLogiciel'
+import { RecuTicket } from './RecuTicket'
 
 export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer: () => void }) {
+  // Format (ticket 80 mm / 58 mm, demi-A4) et langue (français, arabe, bilingue) : réglés dans les paramètres.
+  const { format, langue } = recu?.mise_en_page ?? { format: 'demi_a4' as const, langue: 'bilingue' as const }
+  const devise = !recu ? '' : langue === 'bilingue' ? libelleDeviseBilingue(recu.pharmacie.devise) : libelleDeviseVers(recu.pharmacie.devise, langue)
   return (
-    <Modale ouverte={!!recu} titre={recu ? `${t('Reçu')} ${recu.reference}` : t('Reçu')} onFermer={onFermer} largeur="grande"
+    <Modale ouverte={!!recu} titre={recu ? `${t('Reçu')} ${recu.reference}` : t('Reçu')} onFermer={onFermer} largeur={format === 'demi_a4' ? 'grande' : 'petite'}
       pied={<>
         <button className="btn-secondaire" onClick={onFermer}>{t('Fermer')}</button>
         <button className="btn-primaire" onClick={() => window.print()}><Printer size={16} /> {' '}{t('Imprimer')}</button>
       </>}>
-      {recu && (
-        <div className="zone-impression impression-multipage w-full bg-white text-black" dir="ltr">
+      {recu && format !== 'demi_a4' && (
+        <div className="flex justify-center overflow-x-auto bg-slate-100 p-3">
+          <RecuTicket recu={recu} format={format} langue={langue} />
+        </div>
+      )}
+      {recu && format === 'demi_a4' && (
+        <div className="zone-impression impression-multipage w-full bg-white text-black" dir={langue === 'ar' ? 'rtl' : 'ltr'}>
           <style>{`
             @media print {
               @page {
@@ -34,21 +43,21 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
               <div className="recu-info-grille">
                 <div className="recu-info-col">
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label"><Bilingue texte="Reçu N° :" /></span>
+                    <span className="recu-info-label"><Bilingue langue={langue} texte="Reçu N° :" /></span>
                     <span className="recu-info-valeur">{recu.reference}</span>
                   </div>
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label"><Bilingue texte="Client :" /></span>
+                    <span className="recu-info-label"><Bilingue langue={langue} texte="Client :" /></span>
                     <span className="recu-info-valeur">{recu.client ?? '—'}</span>
                   </div>
                 </div>
                 <div className="recu-info-col">
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label"><Bilingue texte="Date :" /></span>
+                    <span className="recu-info-label"><Bilingue langue={langue} texte="Date :" /></span>
                     <span className="recu-info-valeur">{formaterDateHeure(recu.date_vente)}</span>
                   </div>
                   <div className="recu-info-ligne">
-                    <span className="recu-info-label"><Bilingue texte="Caissier :" /></span>
+                    <span className="recu-info-label"><Bilingue langue={langue} texte="Caissier :" /></span>
                     <span className="recu-info-valeur">{recu.caissier}</span>
                   </div>
                 </div>
@@ -56,17 +65,17 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
 
               {/* ── Cancelled banner ── */}
               {recu.statut === 'ANNULEE' && (
-                <div className="recu-annulee">★★★ <Bilingue texte="VENTE ANNULÉE" /> ★★★</div>
+                <div className="recu-annulee">★★★ <Bilingue langue={langue} texte="VENTE ANNULÉE" /> ★★★</div>
               )}
 
               {/* ── Items table with rounded corners ── */}
               <table className="recu-table">
                 <thead>
                   <tr>
-                    <th className="recu-th recu-th-gauche"><Bilingue texte="Médicament" /></th>
-                    <th className="recu-th recu-th-centre"><Bilingue texte="Qté" /></th>
-                    <th className="recu-th recu-th-droite"><Bilingue texte="P.U." /></th>
-                    <th className="recu-th recu-th-droite"><Bilingue texte="Total" /></th>
+                    <th className="recu-th recu-th-gauche"><Bilingue langue={langue} texte="Médicament" /></th>
+                    <th className="recu-th recu-th-centre"><Bilingue langue={langue} texte="Qté" /></th>
+                    <th className="recu-th recu-th-droite"><Bilingue langue={langue} texte="P.U." /></th>
+                    <th className="recu-th recu-th-droite"><Bilingue langue={langue} texte="Total" /></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -86,8 +95,8 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
 
               {/* ── Total row ── */}
               <div className="recu-total-ligne">
-                <span className="recu-total-label"><Bilingue texte="TOTAL À PAYER" /></span>
-                <span className="recu-total-montant">{formaterNombre(recu.total)} {libelleDeviseBilingue(recu.pharmacie.devise)}</span>
+                <span className="recu-total-label"><Bilingue langue={langue} texte="TOTAL À PAYER" /></span>
+                <span className="recu-total-montant">{formaterNombre(recu.total)} {devise}</span>
               </div>
 
               {/* ── Payment details (aligned right under total) ── */}
@@ -95,19 +104,19 @@ export function RecuImpression({ recu, onFermer }: { recu: Recu | null; onFermer
                 {recu.paiements.map((p, i) => (
                   <div key={i} className="recu-paiement-ligne">
                     <span className="recu-paiement-mode">{p.mode_paiement} :</span>
-                    <span className="recu-paiement-montant">{formaterNombre(p.montant)} {libelleDeviseBilingue(recu.pharmacie.devise)}</span>
+                    <span className="recu-paiement-montant">{formaterNombre(p.montant)} {devise}</span>
                   </div>
                 ))}
                 {recu.montant_recu != null && (
                   <div className="recu-paiement-ligne">
-                    <span className="recu-paiement-mode"><Bilingue texte="Reçu :" /></span>
-                    <span className="recu-paiement-montant">{formaterNombre(recu.montant_recu)} {libelleDeviseBilingue(recu.pharmacie.devise)}</span>
+                    <span className="recu-paiement-mode"><Bilingue langue={langue} texte="Reçu :" /></span>
+                    <span className="recu-paiement-montant">{formaterNombre(recu.montant_recu)} {devise}</span>
                   </div>
                 )}
                 {recu.rendu != null && (
                   <div className="recu-paiement-ligne">
-                    <span className="recu-paiement-mode"><Bilingue texte="Rendu :" /></span>
-                    <span className="recu-paiement-montant">{formaterNombre(recu.rendu)} {libelleDeviseBilingue(recu.pharmacie.devise)}</span>
+                    <span className="recu-paiement-mode"><Bilingue langue={langue} texte="Rendu :" /></span>
+                    <span className="recu-paiement-montant">{formaterNombre(recu.rendu)} {devise}</span>
                   </div>
                 )}
               </div>

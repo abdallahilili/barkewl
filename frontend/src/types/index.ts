@@ -206,6 +206,43 @@ export interface Achat {
   lignes?: LigneAchat[]
 }
 
+export type StatutBonCommande = 'BROUILLON' | 'ENVOYE' | 'RECU' | 'ANNULE'
+
+export interface LigneBonCommande {
+  id?: number
+  medicament: number | null
+  medicament_nom?: string
+  medicament_dosage?: string
+  medicament_code?: string
+  designation?: string
+  quantite: number
+  /** Prix d'achat estimé (indicatif) de la boîte. */
+  prix_achat: number
+  total?: number
+}
+
+/** Commande adressée à un fournisseur (sans effet sur le stock). */
+export interface BonCommande {
+  id: number
+  reference: string
+  fournisseur: number
+  fournisseur_nom: string
+  fournisseur_telephone?: string
+  fournisseur_adresse?: string
+  fournisseur_email?: string
+  depot: number
+  depot_nom: string
+  date_commande: string
+  date_livraison_prevue: string | null
+  statut: StatutBonCommande
+  statut_libelle: string
+  total: number
+  utilisateur_nom: string
+  note?: string
+  lignes?: LigneBonCommande[]
+  pharmacie?: IdentiteDocument
+}
+
 export type EtapeDocumentVente = 'DEVIS' | 'BON_LIVRAISON' | 'FACTURE'
 
 export interface LigneDocumentVente {
@@ -272,6 +309,8 @@ export interface ResumeSession {
   total_especes: number
   total_autres_paiements: number
   remboursements_especes: number
+  nombre_retours: number
+  total_retours: number
   entrees_manuelles: number
   sorties_manuelles: number
   montant_attendu: number
@@ -321,8 +360,60 @@ export interface Vente {
   montant_recu?: number | null
   motif_annulation?: string
   annulation_approuvee_par_nom?: string | null
-  lignes?: { id: number; medicament_nom: string; numero_lot: string; conditionnement: Conditionnement; conditionnement_libelle: string; quantite: number; prix_unitaire: number; total: number }[]
-  paiements?: { id: number; mode_paiement_nom: string; montant: number }[]
+  lignes?: LigneVenteDetail[]
+  paiements?: { id: number; mode_paiement: number; mode_paiement_nom: string; montant: number }[]
+}
+
+export interface LigneVenteDetail {
+  id: number
+  medicament_nom: string
+  numero_lot: string
+  conditionnement: Conditionnement
+  conditionnement_libelle: string
+  quantite: number
+  prix_unitaire: number
+  total: number
+  /** Quantité déjà rendue par le client / encore rendable (dans le conditionnement vendu). */
+  deja_retourne: number
+  retournable: number
+}
+
+export type EtatRetour = 'REVENDABLE' | 'NON_REVENDABLE'
+
+export interface RetourClient {
+  id: number
+  reference: string
+  date_retour: string
+  vente: number
+  vente_reference: string
+  client_nom: string | null
+  utilisateur_nom: string
+  approuve_par_nom: string | null
+  mode_paiement_nom: string
+  motif: string
+  total: number
+  lignes?: { id: number; ligne_vente: number; medicament_nom: string; numero_lot: string; conditionnement: Conditionnement; conditionnement_libelle: string; quantite: number; etat: EtatRetour; montant: number }[]
+}
+
+export type CategorieDepense = 'LOYER' | 'ELECTRICITE' | 'EAU' | 'SALAIRES' | 'INTERNET_TELEPHONE' | 'TRANSPORT' | 'ENTRETIEN' | 'TAXES' | 'FOURNITURES' | 'AUTRE'
+
+export interface Depense {
+  id: number
+  reference: string
+  categorie: CategorieDepense
+  categorie_libelle: string
+  libelle: string
+  montant: number
+  date_depense: string
+  payee_depuis_caisse: boolean
+  mode_paiement: number | null
+  mode_paiement_nom: string | null
+  note: string
+  utilisateur_nom: string
+  statut: 'VALIDEE' | 'ANNULEE'
+  date_annulation: string | null
+  annule_par_nom: string | null
+  motif_annulation: string
 }
 
 /** Coordonnées de la pharmacie imprimées en en-tête des reçus et documents de vente. */
@@ -353,8 +444,13 @@ export interface IdentiteDocumentVente extends IdentiteDocument {
   bl_afficher_prix: boolean
 }
 
+export type FormatRecu = '80mm' | '58mm' | 'demi_a4'
+export type LangueRecu = 'fr' | 'ar' | 'bilingue'
+
 export interface Recu {
   id: number
+  /** Format et langue choisis dans les paramètres. */
+  mise_en_page?: { format: FormatRecu; langue: LangueRecu }
   reference: string
   date_vente: string
   statut: string

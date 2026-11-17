@@ -2,7 +2,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum
 from django.db.models.functions import Greatest
 from django.utils import timezone
 
@@ -17,7 +17,7 @@ from apps.medicaments.models import Medicament
 from apps.stock.models import TypeMouvement
 from apps.stock.services import appliquer_mouvement, selectionner_lots_fefo
 
-from .models import LigneVente, PaiementVente, StatutVente, Vente
+from .models import EtatRetour, LigneRetourVente, LigneVente, PaiementVente, RetourVente, StatutVente, Vente
 
 DEUX_DECIMALES = Decimal("0.01")
 
@@ -110,6 +110,8 @@ def annuler_vente(vente_id, utilisateur, motif, approbateur=None):
     vente = Vente.objects.select_for_update().select_related("session", "depot").get(pk=vente_id)
     if vente.statut != StatutVente.VALIDEE:
         raise ErreurMetier("Cette vente est déjà annulée.")
+    if vente.retours.exists():
+        raise ErreurMetier("Cette vente a déjà fait l'objet d'un retour client : elle ne peut plus être annulée.")
     if vente.session.statut == StatutSession.OUVERTE:
         session_cible = SessionCaisse.objects.select_for_update().get(pk=vente.session_id)
     else:
@@ -141,3 +143,114 @@ def annuler_vente(vente_id, utilisateur, motif, approbateur=None):
                       ancienne={"statut": "VALIDEE"}, nouvelle=nouvelle,
                       description=f"Approuvée par {nouvelle['approuve_par']}" if approbateur else "")
     return vente
+
+
+def quantites_deja_retournees(vente):
+    """{ligne_vente_id: quantité déjà rendue (dans le conditionnement vendu)} pour une vente."""
+    lignes = LigneRetourVente.objects.filter(ligne_vente__vente=vente).values("ligne_vente_id").annotate(q=Sum("quantite"))
+    return {l["ligne_vente_id"]: l["q"] for l in lignes}
+
+
+def articles_retournables(vente):
+    """Pour chaque ligne de la vente : quantité vendue, déjà rendue et encore rendable."""
+    deja = quantites_deja_retournees(vente)
+    resultat = []
+    for ligne in vente.lignes.select_related("medicament", "lot"):
+        rendu = deja.get(ligne.pk, 0)
+        resultat.append({"ligne": ligne, "deja_retourne": rendu, "retournable": ligne.quantite - rendu})
+    return resultat
+
+
+@transaction.atomic
+def retourner_articles(*, vente_id, utilisateur, lignes, motif, mode_paiement=None, approbateur=None):
+    """
+    Retour partiel : un ou plusieurs articles d'une vente validée sont rendus par le client.
+      - revendable : le produit retourne en stock (même lot) ;
+      - non revendable : il ne revient pas en stock (déjà sorti à la vente, il est perdu) ;
+      - le remboursement est enregistré en caisse, dans la session ouverte de celui qui fait le retour.
+    `lignes` : [{"ligne_vente": <LigneVente ou id>, "quantite": n, "etat": "REVENDABLE" | "NON_REVENDABLE"}].
+    """
+    if not motif or not motif.strip():
+        raise ErreurMetier("Un motif de retour est obligatoire.")
+    if not lignes:
+        raise ErreurMetier("Choisissez au moins un article à retourner.")
+    vente = (Vente.objects.select_for_update().select_related("depot", "session", "client").get(pk=vente_id))
+    if vente.statut != StatutVente.VALIDEE:
+        raise ErreurMetier("Cette vente est annulée : aucun retour n'est possible.")
+    session = (SessionCaisse.objects.select_for_update()
+               .filter(caissier=utilisateur, statut=StatutSession.OUVERTE).first())
+    if session is None:
+        raise ErreurMetier("Aucune session de caisse ouverte : ouvrez une session pour enregistrer le remboursement.")
+
+    paiements = list(vente.paiements.select_related("mode_paiement"))
+    if mode_paiement is None:
+        mode_paiement = next((p.mode_paiement for p in paiements if p.mode_paiement.type == "ESPECES"),
+                             paiements[0].mode_paiement if paiements else None)
+    payes = {p.mode_paiement_id: Decimal("0") for p in paiements}
+    for p in paiements:
+        payes[p.mode_paiement_id] += p.montant
+    if mode_paiement is None or mode_paiement.pk not in payes:
+        raise ErreurMetier("Le remboursement doit se faire avec un mode de paiement utilisé pour cette vente.")
+
+    par_ligne = {l.pk: l for l in vente.lignes.select_related("medicament", "lot__medicament")}
+    deja = quantites_deja_retournees(vente)
+    demandes, vues = [], set()
+    for entree in lignes:
+        ligne = entree["ligne_vente"]
+        ligne = par_ligne.get(getattr(ligne, "pk", ligne))
+        if ligne is None:
+            raise ErreurMetier("Un des articles ne fait pas partie de cette vente.")
+        if ligne.pk in vues:
+            raise ErreurMetier(f"« {ligne.medicament.nom} » est indiqué deux fois : regroupez les quantités.")
+        vues.add(ligne.pk)
+        quantite = int(entree["quantite"])
+        if quantite <= 0:
+            raise ErreurMetier("La quantité retournée doit être supérieure à zéro.")
+        if entree["etat"] not in EtatRetour.values:
+            raise ErreurMetier("État du produit invalide (revendable ou non revendable).")
+        possible = ligne.quantite - deja.get(ligne.pk, 0)
+        if quantite > possible:
+            raise ErreurMetier(
+                f"« {ligne.medicament.nom} » : {quantite} à retourner, mais il n'en reste que {possible} "
+                "à retourner sur cette vente.")
+        if entree["etat"] == EtatRetour.REVENDABLE and ligne.lot.est_perime:
+            raise ErreurMetier(
+                f"« {ligne.medicament.nom} » (lot {ligne.lot.numero_lot}) est périmé : il ne peut pas "
+                "revenir en stock. Indiquez « non revendable ».")
+        demandes.append((ligne, quantite, entree["etat"]))
+
+    montants = [(prix * quantite).quantize(DEUX_DECIMALES) for prix, quantite in
+                ((ligne.prix_unitaire, quantite) for ligne, quantite, _ in demandes)]
+    total = sum(montants, Decimal("0"))
+    deja_rembourse = (RetourVente.objects.filter(vente=vente, mode_paiement=mode_paiement)
+                      .aggregate(t=Sum("total"))["t"] or Decimal("0"))
+    if deja_rembourse + total > payes[mode_paiement.pk]:
+        raise ErreurMetier(
+            f"Le remboursement ({total}) dépasse ce qui a été réglé en « {mode_paiement.nom} » sur cette vente "
+            "et qui n'a pas encore été remboursé : choisissez un autre mode de remboursement.")
+
+    retour = RetourVente.objects.create(
+        reference=prochaine_reference("RET"), vente=vente, session=session, mode_paiement=mode_paiement,
+        utilisateur=utilisateur, approuve_par=approbateur, motif=motif.strip()[:255], total=total,
+    )
+    for (ligne, quantite, etat), montant in zip(demandes, montants):
+        unites = quantite * ligne.unites_par_conditionnement
+        LigneRetourVente.objects.create(retour=retour, ligne_vente=ligne, quantite=quantite, unites=unites,
+                                        etat=etat, montant=montant)
+        if etat == EtatRetour.REVENDABLE:
+            appliquer_mouvement(lot=ligne.lot, depot=vente.depot, quantite=unites, type_mouvement=TypeMouvement.RETOUR,
+                                utilisateur=utilisateur, motif=f"Retour client {retour.reference} ({vente.reference})",
+                                reference=retour.reference)
+        Medicament.objects.filter(pk=ligne.medicament_id).update(
+            frequence_vente=Greatest(F("frequence_vente") - unites, 0))
+    MouvementCaisse.objects.create(
+        session=session, type_mouvement=TypeMouvementCaisse.REMBOURSEMENT, mode_paiement=mode_paiement,
+        montant=total, motif=f"Retour {retour.reference} — vente {vente.reference}", vente=vente, utilisateur=utilisateur,
+    )
+    nouvelle = {"vente": vente.reference, "total": str(total), "motif": retour.motif,
+                "articles": [f"{l.medicament.nom} × {q} ({e})" for l, q, e in demandes]}
+    if approbateur:
+        nouvelle["approuve_par"] = approbateur.nom_complet or approbateur.identifiant
+    enregistrer_audit(utilisateur, "RETOUR", "RetourVente", retour.pk, reference=retour.reference, nouvelle=nouvelle,
+                      description=f"Approuvé par {nouvelle['approuve_par']}" if approbateur else "")
+    return retour

@@ -26,7 +26,15 @@ DEFAUTS = {
     "afficher_adresse_documents": ("1", "Afficher l'adresse sur les documents imprimés [1 = oui, 0 = non]"),
     "bl_afficher_prix": ("1", "Afficher les colonnes Prix et Total sur le bon de livraison [1 = oui, 0 = non]"),
     "afficher_copyright_documents": ("1", "Afficher le copyright et le contact de l'éditeur en bas des documents [1 = oui, 0 = non]"),
+    "recu_format": ("demi_a4", "Format du reçu imprimé [80mm = ticket thermique 80 mm, 58mm = ticket thermique 58 mm, demi_a4 = demi-page A4]"),
+    "recu_langue": ("bilingue", "Langue du reçu imprimé [fr = français, ar = arabe, bilingue = français et arabe]"),
     "gestion_rayonnages_active": ("0", "Activer la gestion des rayonnages (emplacement des médicaments) [1 = oui, 0 = non]"),
+}
+
+# Valeurs acceptées pour les paramètres à choix fermé (refusées par l'API des paramètres sinon).
+VALEURS_AUTORISEES = {
+    "recu_format": ("80mm", "58mm", "demi_a4"),
+    "recu_langue": ("fr", "ar", "bilingue"),
 }
 
 # Paramètres contenant une image (data URL) : jamais recopiés tels quels dans le journal d'audit.
@@ -60,6 +68,15 @@ def definir_parametre(cle, valeur):
 def message_vide(texte):
     """Vrai si un message (texte riche HTML) ne contient rien d'imprimable."""
     return not re.sub(r"<[^>]*>|&nbsp;", " ", texte or "").strip()
+
+
+def mise_en_page_recu():
+    """Format et langue du reçu choisis dans les paramètres (valeur inconnue : réglage d'origine)."""
+    resultat = {}
+    for cle, autorisees in VALEURS_AUTORISEES.items():
+        valeur = obtenir_parametre(cle).strip()
+        resultat[cle.removeprefix("recu_")] = valeur if valeur in autorisees else DEFAUTS[cle][0]
+    return resultat
 
 
 def identite_documents():

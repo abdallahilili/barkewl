@@ -49,6 +49,7 @@ const maximum = (p: LignePanier[], l: RefLigne) => {
 export default function NouvelleVente() {
   const notifier = useNotifier()
   const champRecherche = useRef<HTMLInputElement>(null)
+  const panierRef = useRef<HTMLElement>(null)
   const [session, setSession] = useState<SessionCaisse | null>(null)
   const [chargement, setChargement] = useState(true)
   const [texte, setTexte] = useState('')
@@ -208,15 +209,15 @@ export default function NouvelleVente() {
   const paiementOk = Math.abs(reste) < 0.005 && paiements.every((p) => p.mode_paiement) && (montantRecu === '' || especes === 0 || Number(montantRecu) >= especes)
 
   return (
-    <div>
+    <div className={panier.length > 0 ? 'pb-20 lg:pb-0' : ''}>
       <EnTetePage titre={t('Nouvelle vente')} description={t('{caisse} — dépôt : {depot}', { caisse: session.caisse_nom, depot: session.depot_nom })}
         actions={<span className="text-xs text-slate-500">{t('F2 : rechercher · F9 : encaisser')}</span>} />
       <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
         <section>
-          <div className="relative">
+          <div className="relative sticky top-16 z-10 -mx-2 bg-[#F3F6F8] px-2 pb-2 pt-1">
             <input ref={champRecherche} autoFocus className="champ py-3 text-base" value={texte} onChange={(e) => setTexte(e.target.value)} onKeyDown={surEntree}
               placeholder={t('Scannez un code-barres ou tapez le nom du médicament…')} aria-label={t('Recherche de médicament')} />
-            {recherche && <span className="absolute end-3 top-3.5 text-xs text-slate-400">{t('Recherche…')}</span>}
+            {recherche && <span className="absolute end-5 top-[1.15rem] text-xs text-slate-400">{t('Recherche…')}</span>}
           </div>
           {resultats.length > 0 && (
             <p className="mb-2 mt-3 text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -262,9 +263,9 @@ export default function NouvelleVente() {
           </div>
         </section>
 
-        <aside className="carte flex flex-col self-start">
+        <aside ref={panierRef} className="carte flex flex-col self-start lg:sticky lg:top-[4.75rem] lg:max-h-[calc(100vh-9.5rem)]">
           <div className="border-b border-slate-200 px-4 py-3"><h2 className="font-semibold">{t('Panier')}</h2></div>
-          <div className="max-h-[52vh] divide-y divide-slate-100 overflow-y-auto">
+          <div className="max-h-[52vh] divide-y divide-slate-100 overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
             {panier.length === 0 && <p className="px-4 py-8 text-center text-sm text-slate-500">{t('Le panier est vide. Recherchez un médicament pour l\'ajouter.')}</p>}
             {panier.map((l) => (
               <div key={l.cle} className="px-4 py-3">
@@ -307,6 +308,25 @@ export default function NouvelleVente() {
           </div>
         </aside>
       </div>
+
+      {/* Mobile : le panier est sous la liste des médicaments ; cette barre reste toujours visible (au-dessus du copyright)
+          avec le total, un accès au panier et le bouton Encaisser. */}
+      {panier.length > 0 && (
+        <div className="fixed inset-x-0 bottom-9 z-30 flex items-center gap-3 border-t border-slate-200 bg-white px-4 py-2.5 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] lg:hidden sans-impression">
+          <button type="button" onClick={() => panierRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="flex min-w-0 flex-1 items-center gap-3 text-start" aria-label={t('Panier')}>
+            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marque-50 text-marque-700">
+              <ShoppingCart size={20} />
+              <span className="absolute -end-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-marque-600 px-1 text-xs font-bold text-white">{panier.length}</span>
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="block text-xs text-slate-500">{t('Panier')}</span>
+              <span className="block truncate text-lg font-bold">{formaterMontant(total)}</span>
+            </span>
+          </button>
+          <button type="button" className="btn-succes px-5 py-2.5 text-base" onClick={ouvrirPaiement}>{t('Encaisser')}</button>
+        </div>
+      )}
 
       <Modale ouverte={modalePaiement} titre={t('Encaissement')} onFermer={() => setModalePaiement(false)} largeur="moyenne"
         pied={<><button className="btn-secondaire" onClick={() => setModalePaiement(false)}>{t('Retour au panier')}</button>

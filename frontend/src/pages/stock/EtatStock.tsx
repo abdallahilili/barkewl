@@ -10,21 +10,15 @@ import type { Categorie, Depot, LigneStock, SyntheseStock } from '../../types'
 import { formaterDate, formaterDateExport, formaterMontant, formaterNombre, libelleEtatStock } from '../../utilitaires/formatage'
 
 import { t } from '../../i18n'
-const filtresEtat = [
-  { valeur: '', libelle: t('Tous les états') },
-  { valeur: 'stock_faible', libelle: t('Stock faible') },
-  { valeur: 'rupture', libelle: t('Rupture') },
-  { valeur: 'proche_peremption', libelle: t('Bientôt périmés') },
-  { valeur: 'perime', libelle: t('Périmés') },
-]
+// Onglets d'état : le compteur vient de la synthèse du serveur ; la clé est le filtre envoyé à l'API.
+type CleEtat = '' | 'stock_faible' | 'rupture' | 'proche_peremption' | 'perime'
 
-function Indicateur({ titre, valeur, ton = '', onClic, actif }: { titre: string; valeur: string; ton?: string; onClic?: () => void; actif?: boolean }) {
+function Indicateur({ titre, valeur }: { titre: string; valeur: string }) {
   return (
-    <button type="button" onClick={onClic} disabled={!onClic}
-      className={`carte p-3 text-start ${onClic ? 'hover:border-marque-500' : ''} ${actif ? 'border-marque-600 ring-1 ring-marque-600' : ''}`}>
+    <div className="carte p-3">
       <p className="text-xs text-slate-500">{titre}</p>
-      <p className={`mt-1 text-xl font-semibold ${ton}`}>{valeur}</p>
-    </button>
+      <p className="mt-1 text-xl font-semibold">{valeur}</p>
+    </div>
   )
 }
 
@@ -35,8 +29,15 @@ export default function EtatStock() {
   const categories = useOptions<Categorie>('/categories/')
   const [depot, setDepot] = useState('')
   const [categorie, setCategorie] = useState('')
-  const [etat, setEtat] = useState('')
+  const [etat, setEtat] = useState<CleEtat>('')
   const [synthese, setSynthese] = useState<SyntheseStock | null>(null)
+  const onglets: { cle: CleEtat; libelle: string; ton: string; compteur?: (x: SyntheseStock | null) => number | undefined }[] = [
+    { cle: '', libelle: t('Tous'), ton: '' },
+    { cle: 'stock_faible', libelle: t('Stock faible'), ton: 'bg-amber-100 text-amber-800', compteur: (x) => x?.nombre_stock_faible },
+    { cle: 'rupture', libelle: t('Ruptures'), ton: 'bg-red-100 text-red-800', compteur: (x) => x?.nombre_ruptures },
+    { cle: 'proche_peremption', libelle: t('Bientôt périmés'), ton: 'bg-amber-100 text-amber-800', compteur: (x) => x?.nombre_bientot_perimes },
+    { cle: 'perime', libelle: t('Périmés'), ton: 'bg-red-100 text-red-800', compteur: (x) => x?.nombre_perimes },
+  ]
   const filtres: Record<string, string> = { depot, categorie }
   if (etat) filtres[etat] = '1'
   const liste = useListe<LigneStock>('/stocks/', { filtres, triInitial: 'lot__medicament__nom' })
@@ -48,20 +49,28 @@ export default function EtatStock() {
   return (
     <div>
       <EnTetePage titre={t('État du stock')} description={t('Une ligne par lot et par dépôt. Les lots sont classés du plus proche de la péremption au plus lointain.')} />
-      {synthese && (
-        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-          {voirPrixAchat && synthese.valeur_totale != null && <Indicateur titre={t('Valeur du stock (prix d\'achat)')} valeur={formaterMontant(synthese.valeur_totale)} />}
+      {synthese && (voirPrixAchat && synthese.valeur_totale != null) && (
+        <div className="mb-4 grid grid-cols-2 gap-3 md:max-w-lg">
+          <Indicateur titre={t('Valeur du stock (prix d\'achat)')} valeur={formaterMontant(synthese.valeur_totale)} />
           <Indicateur titre={t('Médicaments en stock')} valeur={formaterNombre(synthese.nombre_medicaments)} />
-          <Indicateur titre={t('Stock faible')} valeur={formaterNombre(synthese.nombre_stock_faible)} ton={synthese.nombre_stock_faible ? 'text-amber-700' : ''} onClic={() => setEtat(etat === 'stock_faible' ? '' : 'stock_faible')} actif={etat === 'stock_faible'} />
-          <Indicateur titre={t('Ruptures')} valeur={formaterNombre(synthese.nombre_ruptures)} ton={synthese.nombre_ruptures ? 'text-red-700' : ''} onClic={() => setEtat(etat === 'rupture' ? '' : 'rupture')} actif={etat === 'rupture'} />
-          <Indicateur titre={t('Bientôt périmés')} valeur={formaterNombre(synthese.nombre_bientot_perimes)} ton={synthese.nombre_bientot_perimes ? 'text-amber-700' : ''} onClic={() => setEtat(etat === 'proche_peremption' ? '' : 'proche_peremption')} actif={etat === 'proche_peremption'} />
-          <Indicateur titre={t('Périmés')} valeur={formaterNombre(synthese.nombre_perimes)} ton={synthese.nombre_perimes ? 'text-red-700' : ''} onClic={() => setEtat(etat === 'perime' ? '' : 'perime')} actif={etat === 'perime'} />
         </div>
       )}
+      <div role="tablist" aria-label={t('État du stock')} className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200 sans-impression">
+        {onglets.map((o) => {
+          const actif = etat === o.cle
+          const n = o.compteur?.(synthese)
+          return (
+            <button key={o.cle || 'tous'} type="button" role="tab" aria-selected={actif} onClick={() => setEtat(o.cle)}
+              className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm transition-colors ${actif ? 'border-marque-600 font-semibold text-marque-800' : 'border-transparent text-slate-600 hover:text-slate-900'}`}>
+              {o.libelle}
+              {n != null && <span className={`min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-center text-xs font-semibold tabular-nums ${n > 0 ? o.ton : 'bg-slate-100 text-slate-500'}`}>{formaterNombre(n)}</span>}
+            </button>
+          )
+        })}
+      </div>
       <BarreRecherche valeur={liste.recherche} onChange={liste.setRecherche} placeholder={t('Médicament, code, code-barres ou lot…')}>
         <select className="champ w-auto" value={depot} onChange={(e) => setDepot(e.target.value)} aria-label={t('Dépôt')}><option value="">{t('Tous les dépôts')}</option>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select>
         <select className="champ w-auto" value={categorie} onChange={(e) => setCategorie(e.target.value)} aria-label={t('Catégorie')}><option value="">{t('Toutes les catégories')}</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}</select>
-        <select className="champ w-auto" value={etat} onChange={(e) => setEtat(e.target.value)} aria-label={t('État')}>{filtresEtat.map((f) => <option key={f.valeur} value={f.valeur}>{f.libelle}</option>)}</select>
       </BarreRecherche>
       <TableauDonnees<LigneStock>
         colonnes={[

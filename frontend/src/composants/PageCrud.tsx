@@ -152,12 +152,14 @@ interface Props<T extends { id: number }> {
   idTableau?: string
   /** Sélection multiple + actions groupées (désactiver, annuler…) — aucune par défaut. */
   actionsMasse?: ActionMasse<T>[]
+  /** Tableau resserré : une hauteur fixe par ligne. */
+  compact?: boolean
 }
 
 /** Page de gestion générique : liste paginée + recherche + filtres + création/modification en fenêtre modale. */
 export function PageCrud<T extends { id: number }>({
   titre, description, endpoint, nomElement, colonnes, champs, filtres = [], filtresInitiaux = {}, libelleNouveau,
-  peutCreer = true, peutModifier = true, placeholderRecherche, triInitial, taillePage = 25, actionsLigne, actionsEntete,
+  peutCreer = true, peutModifier = true, placeholderRecherche, triInitial, taillePage = 25, actionsLigne, actionsEntete, compact,
   largeurModale = 'moyenne', sansEntete, idTableau, actionsMasse,
 }: Props<T>) {
   const notifier = useNotifier()
@@ -241,7 +243,7 @@ export function PageCrud<T extends { id: number }>({
       </BarreRecherche>
       <TableauDonnees colonnes={colonnesFinales} lignes={liste.lignes} chargement={liste.chargement} erreur={liste.erreur}
         total={liste.total} page={liste.page} nombrePages={liste.nombrePages} onPage={liste.setPage} tri={liste.tri} onTri={liste.setTri}
-        cleLigne={(l) => l.id} titre={titre} idTableau={idTableau ?? endpoint} actionsMasse={actionsMasseAvecRecharge}
+        cleLigne={(l) => l.id} titre={titre} compact={compact} idTableau={idTableau ?? endpoint} actionsMasse={actionsMasseAvecRecharge}
         endpoint={endpoint} parametresRequete={{ ...valeursFiltres, ...(liste.recherche ? { recherche: liste.recherche } : {}), ...(liste.tri ? { tri: liste.tri } : {}) }} />
 
       <Modale ouverte={ouvert} onFermer={() => setOuvert(false)} largeur={largeurModale}

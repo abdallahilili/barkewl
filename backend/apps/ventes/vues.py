@@ -14,11 +14,22 @@ from apps.utilisateurs.approbation import verifier_approbation
 from apps.medicaments.conditionnement import libelle
 
 from . import services
-from .models import Client, PaiementVente, StatutVente, Vente
+from .models import Client, PaiementVente, RetourVente, StatutVente, Vente
 from .serializers import (
-    AnnulerVenteSerializer, ApercuVenteSerializer, ClientSerializer, CreerVenteSerializer,
-    VenteListeSerializer, VenteSerializer, construire_recu,
+    AnnulerVenteSerializer, ApercuVenteSerializer, ClientSerializer, CreerRetourSerializer, CreerVenteSerializer,
+    RetourListeSerializer, RetourSerializer, VenteListeSerializer, VenteSerializer, construire_recu,
 )
+
+
+def exiger_approbation(utilisateur, donnees, phrase):
+    """Propriétaire et pharmacien : pas d'approbation. Vendeur : l'approbation sur place (identifiant + PIN du
+    propriétaire ou du pharmacien) est obligatoire ; renvoie l'approbateur (None si l'utilisateur en est un)."""
+    if utilisateur.role in ROLES_APPROBATEURS:
+        return None
+    offres.exiger_fonction("approbation")      # offre Essentiel : seul le propriétaire peut le faire
+    if not donnees.get("approbateur_identifiant") or not donnees.get("approbateur_pin"):
+        raise ErreurMetier(f"{phrase} par le propriétaire ou le pharmacien (identifiant et code PIN).")
+    return verifier_approbation(donnees["approbateur_identifiant"], donnees["approbateur_pin"])
 
 
 class ClientViewSet(ViewSetGestion):
@@ -51,7 +62,7 @@ class VenteViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = (
             Vente.objects.select_related("client", "caissier", "depot", "annule_par")
-            .prefetch_related("paiements__mode_paiement", "lignes__medicament", "lignes__lot")
+            .prefetch_related("paiements__mode_paiement", "lignes__medicament", "lignes__lot", "lignes__retours")
         )
         if self.request.user.role == CAISSIER:
             qs = qs.filter(caissier=self.request.user)
@@ -129,12 +140,7 @@ class VenteViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = AnnulerVenteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         d = serializer.validated_data
-        approbateur = None
-        if request.user.role not in ROLES_APPROBATEURS:
-            offres.exiger_fonction("approbation")      # offre Essentiel : seul le propriétaire annule
-            if not d.get("approbateur_identifiant") or not d.get("approbateur_pin"):
-                raise ErreurMetier("L'annulation doit être approuvée par le propriétaire ou le pharmacien (identifiant et code PIN).")
-            approbateur = verifier_approbation(d["approbateur_identifiant"], d["approbateur_pin"])
+        approbateur = exiger_approbation(request.user, d, "L'annulation doit être approuvée")
         services.annuler_vente(pk, request.user, d["motif"], approbateur=approbateur)
         return Response(VenteSerializer(self.get_queryset().get(pk=pk)).data)
 
@@ -158,3 +164,53 @@ class RecuViewSet(viewsets.ReadOnlyModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         return Response(construire_recu(self.get_object()))
+
+
+class RetourVenteViewSet(viewsets.ReadOnlyModelViewSet):
+    """Retours clients : liste, détail et création d'un retour partiel (jamais de modification ni de suppression)."""
+
+    roles_lecture = (CAISSIER,)
+    roles_ecriture = (CAISSIER,)
+    search_fields = ["reference", "vente__reference", "vente__client__nom", "motif"]
+    ordering_fields = ["date_retour", "reference", "total"]
+    ordering = ["-date_retour", "-id"]
+
+    def get_serializer_class(self):
+        return RetourListeSerializer if self.action == "list" else RetourSerializer
+
+    def get_queryset(self):
+        qs = (RetourVente.objects.select_related("vente__client", "utilisateur", "approuve_par", "mode_paiement")
+              .prefetch_related("lignes__ligne_vente__medicament", "lignes__ligne_vente__lot"))
+        if self.request.user.role == CAISSIER:
+            qs = qs.filter(Q(vente__caissier=self.request.user) | Q(utilisateur=self.request.user))
+        p = self.request.query_params
+        if p.get("vente"):
+            qs = qs.filter(vente_id=p["vente"])
+        debut, fin = lire_date(p.get("date_debut")), lire_date(p.get("date_fin"))
+        if debut:
+            qs = qs.filter(date_retour__date__gte=debut)
+        if fin:
+            qs = qs.filter(date_retour__date__lte=fin)
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        reponse = super().list(request, *args, **kwargs)
+        somme = self.filter_queryset(self.get_queryset()).order_by().aggregate(s=Sum("total"))["s"]
+        reponse.data["montant_total"] = somme or Decimal("0")
+        return reponse
+
+    def create(self, request):
+        serializer = CreerRetourSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        d = serializer.validated_data
+        vente = d["vente"]
+        # Un vendeur ne peut retourner que ses propres ventes (comme il ne voit que celles-là).
+        if request.user.role == CAISSIER and vente.caissier_id != request.user.pk:
+            raise ErreurMetier("Vous ne pouvez retourner que les ventes que vous avez faites.")
+        approbateur = exiger_approbation(request.user, d, "Le retour doit être approuvé")
+        retour = services.retourner_articles(
+            vente_id=vente.pk, utilisateur=request.user, motif=d["motif"], mode_paiement=d.get("mode_paiement"),
+            lignes=[{"ligne_vente": a["ligne_vente"], "quantite": a["quantite"], "etat": a["etat"]} for a in d["articles"]],
+            approbateur=approbateur,
+        )
+        return Response(RetourSerializer(self.get_queryset().get(pk=retour.pk)).data, status=201)

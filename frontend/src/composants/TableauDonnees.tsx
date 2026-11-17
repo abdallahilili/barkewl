@@ -36,6 +36,9 @@ export interface ActionMasse<T> {
   executer: (lignes: T[]) => Promise<ResultatActionMasse>
   confirmation: string
   danger?: boolean
+  /** Lignes concernées par l'action (ex. « Activer » : seulement les lignes désactivées). L'action n'est proposée que si
+   * la sélection en contient, et ne s'applique qu'à elles. Sans ce critère, toutes les lignes sélectionnées sont concernées. */
+  applicable?: (ligne: T) => boolean
 }
 
 interface Props<T> {
@@ -69,6 +72,8 @@ interface Props<T> {
   resume?: ReactNode
   /** Texte français de la ligne de total ajoutée aux exports quand une colonne a une `somme` (défaut : « Total »). */
   libelleTotal?: string
+  /** Tableau resserré : une hauteur fixe par ligne (texte sur une seule ligne, tronqué avec « … » ; infobulle = texte complet). */
+  compact?: boolean
 }
 
 const alignements = { gauche: 'text-start', droite: 'text-end', centre: 'text-center' }
@@ -94,7 +99,7 @@ function sauverEtat(idTableau: string | undefined, etat: EtatColonnes) {
 export function TableauDonnees<T>({
   colonnes, lignes, chargement, erreur, total, page, nombrePages, onPage, tri, onTri, cleLigne, onClicLigne,
   messageVide = t('Aucun résultat.'), choixColonnes = true, titre = t('Export'), exporter = true, idTableau,
-  actionsMasse, filtresColonnes = {}, onFiltreColonne, endpoint, parametresRequete, resume, libelleTotal,
+  actionsMasse, filtresColonnes = {}, onFiltreColonne, endpoint, parametresRequete, resume, libelleTotal, compact = false,
 }: Props<T>) {
   const notifier = useNotifier()
   const confirmer = useConfirmer()
@@ -191,12 +196,13 @@ export function TableauDonnees<T>({
   const lignesSelectionnees = table.getSelectedRowModel().rows.map((r) => r.original)
 
   const executerActionMasse = async (action: ActionMasse<T>) => {
-    const nombre = t(lignesSelectionnees.length > 1 ? '{n} lignes' : '{n} ligne', { n: lignesSelectionnees.length })
+    const cibles = action.applicable ? lignesSelectionnees.filter(action.applicable) : lignesSelectionnees
+    const nombre = t(cibles.length > 1 ? '{n} lignes' : '{n} ligne', { n: cibles.length })
     const ok = await confirmer({ titre: t(action.libelle), message: `${t(action.confirmation)} (${nombre})`, libelle: t(action.libelle), danger: action.danger })
     if (!ok) return
     setExecutionMasse(true)
     try {
-      const resultat = await action.executer(lignesSelectionnees)
+      const resultat = await action.executer(cibles)
       if (resultat.echecs.length === 0) notifier.succes(t('{n} ligne(s) traitée(s) avec succès.', { n: resultat.reussies }))
       else notifier.erreur(t('{reussies} réussie(s), {refusees} refusée(s) : {details}', { reussies: resultat.reussies, refusees: resultat.echecs.length, details: resultat.echecs.map((e) => `${e.libelle} (${e.raison})`).join(' · ') }))
       setRowSelection({})
@@ -215,7 +221,7 @@ export function TableauDonnees<T>({
           {actionsMasse && Object.keys(rowSelection).length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium text-slate-600">{Object.keys(rowSelection).length} {' '}{t('sélectionnée(s)')}</span>
-              {actionsMasse.map((a) => (
+              {actionsMasse.filter((a) => !a.applicable || lignesSelectionnees.some(a.applicable)).map((a) => (
                 <button key={a.libelle} type="button" disabled={executionMasse} className={a.danger ? 'btn-danger btn-petit' : 'btn-secondaire btn-petit'}
                   onClick={() => executerActionMasse(a)}>
                   {executionMasse ? <Loader2 size={14} className="animate-spin" /> : null} {a.libelle}
@@ -269,7 +275,7 @@ export function TableauDonnees<T>({
                 // Épinglage « logique » : la colonne figée reste du côté du début de ligne (à droite en arabe).
                 return (
                   <th key={header.id} style={{ width: header.getSize(), insetInlineStart: epingle === 'left' ? header.column.getStart('left') : undefined, insetInlineEnd: epingle === 'right' ? header.column.getAfter('right') : undefined }}
-                    className={`relative whitespace-nowrap px-3 py-2.5 font-medium ${alignements[alignement]} ${epingle ? 'sticky z-10 bg-slate-50' : ''}`}>
+                    className={`relative whitespace-nowrap px-3 ${compact ? 'py-2' : 'py-2.5'} font-medium ${alignements[alignement]} ${epingle ? 'sticky z-10 bg-slate-50' : ''}`}>
                     {estSelection ? (
                       <input type="checkbox" checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} aria-label={t('Tout sélectionner')} />
                     ) : (
@@ -325,14 +331,15 @@ export function TableauDonnees<T>({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className={onClicLigne ? 'cursor-pointer hover:bg-marque-50/40' : 'hover:bg-slate-50'}
+              <tr key={row.id} className={`${compact ? 'h-10' : ''} ${onClicLigne ? 'cursor-pointer hover:bg-marque-50/40' : 'hover:bg-slate-50'}`}
                 onClick={onClicLigne ? () => onClicLigne(row.original) : undefined}>
                 {row.getVisibleCells().map((cell) => {
                   const colonne = colonnesParCle[cell.column.id]
                   const epingle = cell.column.getIsPinned()
+                  const brut = compact ? (row.original as Record<string, unknown>)[cell.column.id] : undefined
                   return (
-                    <td key={cell.id} style={{ width: cell.column.getSize(), insetInlineStart: epingle === 'left' ? cell.column.getStart('left') : undefined, insetInlineEnd: epingle === 'right' ? cell.column.getAfter('right') : undefined }}
-                      className={`overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5 align-middle ${alignements[colonne?.alignement ?? 'gauche']} ${epingle ? 'sticky z-[5] bg-white' : ''}`}
+                    <td key={cell.id} title={typeof brut === 'string' && brut ? brut : undefined} style={{ width: cell.column.getSize(), insetInlineStart: epingle === 'left' ? cell.column.getStart('left') : undefined, insetInlineEnd: epingle === 'right' ? cell.column.getAfter('right') : undefined }}
+                      className={`overflow-hidden text-ellipsis whitespace-nowrap px-3 ${compact ? 'h-10 max-h-10 py-0' : 'py-2.5'} align-middle ${alignements[colonne?.alignement ?? 'gauche']} ${epingle ? 'sticky z-[5] bg-white' : ''}`}
                       onClick={cell.column.id === CLE_SELECTION ? (e) => e.stopPropagation() : undefined}>
                       {cell.column.id === CLE_SELECTION
                         ? <input type="checkbox" checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} aria-label={t('Sélectionner la ligne')} />

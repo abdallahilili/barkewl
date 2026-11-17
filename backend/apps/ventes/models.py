@@ -79,3 +79,47 @@ class PaiementVente(models.Model):
 
     class Meta:
         db_table = "paiements_vente"
+
+
+class EtatRetour(models.TextChoices):
+    REVENDABLE = "REVENDABLE", "Revendable"
+    NON_REVENDABLE = "NON_REVENDABLE", "Non revendable"
+
+
+class RetourVente(models.Model):
+    """
+    Retour partiel d'une vente : un ou plusieurs articles rendus par le client. Jamais modifié ni supprimé.
+    Le remboursement est enregistré en caisse (mouvement REMBOURSEMENT) dans la session de celui qui le fait.
+    """
+
+    reference = models.CharField(max_length=30, unique=True)
+    vente = models.ForeignKey(Vente, on_delete=models.PROTECT, related_name="retours")
+    session = models.ForeignKey("caisse.SessionCaisse", on_delete=models.PROTECT, related_name="retours_clients")
+    mode_paiement = models.ForeignKey("caisse.ModePaiement", on_delete=models.PROTECT, related_name="+")
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    # Propriétaire ou pharmacien qui a approuvé (code PIN) le retour demandé par un vendeur.
+    approuve_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                     related_name="+")
+    date_retour = models.DateTimeField(default=timezone.now, db_index=True)
+    motif = models.CharField(max_length=255)
+    total = models.DecimalField(max_digits=14, decimal_places=2)
+
+    class Meta:
+        db_table = "retours_vente"
+        ordering = ["-date_retour", "-id"]
+
+    def __str__(self):
+        return self.reference
+
+
+class LigneRetourVente(models.Model):
+    retour = models.ForeignKey(RetourVente, on_delete=models.CASCADE, related_name="lignes")
+    ligne_vente = models.ForeignKey(LigneVente, on_delete=models.PROTECT, related_name="retours")
+    # Quantité rendue, dans le conditionnement vendu (comme la ligne de vente d'origine).
+    quantite = models.PositiveIntegerField()
+    unites = models.PositiveIntegerField(help_text="Quantité rendue en unités de stock")
+    etat = models.CharField(max_length=20, choices=EtatRetour.choices)
+    montant = models.DecimalField(max_digits=14, decimal_places=2)
+
+    class Meta:
+        db_table = "lignes_retour_vente"

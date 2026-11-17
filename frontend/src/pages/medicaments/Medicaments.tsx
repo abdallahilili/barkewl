@@ -5,8 +5,9 @@ import { PageCrud } from '../../composants/PageCrud'
 import { DetailMedicament } from '../../fonctionnalites/DetailMedicament'
 import { useAuth } from '../../hooks/useAuth'
 import type { Categorie, Dosage, Forme, Medicament } from '../../types'
-import { desactiverEnMasse } from '../../utilitaires/actionsMasse'
+import { actionsActivation } from '../../utilitaires/actionsMasse'
 import { formaterMontant, formaterNombre, gestionRayonnagesActive } from '../../utilitaires/formatage'
+import { prixVenteSuggere } from '../../utilitaires/prix'
 
 import { t } from '../../i18n'
 export default function Medicaments() {
@@ -21,8 +22,8 @@ export default function Medicaments() {
         titre={t('Médicaments')} description={t('Fiche produit : prix, conditionnement (boîte, plaquette, unité), code-barres, seuil d\'alerte.')}
         endpoint="/medicaments/" nomElement={t('Médicament')} libelleNouveau={t('Nouveau médicament')}
         placeholderRecherche={t('Nom, code, code-barres, forme, dosage, laboratoire…')} triInitial="nom"
-        peutCreer={admin} peutModifier={admin} largeurModale="grande"
-        actionsMasse={admin ? [{ libelle: t('Désactiver'), danger: true, confirmation: t('Désactiver les médicaments sélectionnés ?'), executer: desactiverEnMasse<Medicament>('/medicaments/', 'actif', (m) => m.nom) }] : undefined}
+        peutCreer={admin} peutModifier={admin} largeurModale="grande" compact
+        actionsMasse={admin ? actionsActivation<Medicament>('/medicaments/', 'actif', (m) => m.nom, { desactiver: t('Désactiver les médicaments sélectionnés ?'), activer: t('Activer les médicaments sélectionnés ?') }) : undefined}
         filtres={[
           { nom: 'actif', libelle: t('Tous les états'), options: [{ valeur: 1, libelle: t('Actifs') }, { valeur: 0, libelle: t('Désactivés') }] },
           { nom: 'categorie', libelle: t('Toutes les catégories'), source: { endpoint: '/categories/', libelle: (c: Categorie) => c.nom } },
@@ -64,7 +65,7 @@ export default function Medicaments() {
           { nom: 'prix_achat', libelle: t('Prix d\'achat (boîte)'), type: 'decimal', requis: true, defaut: 0 },
           { nom: 'prix_vente', libelle: t('Prix de vente (boîte)'), type: 'decimal', requis: true, defaut: 0,
             aide: t('Suggéré automatiquement (+25% si achat < 200, +15% sinon) — modifiable.'),
-            suggererDepuis: { champ: 'prix_achat', calcul: (achat) => Math.round(achat * (achat < 200 ? 1.25 : 1.15) * 100) / 100 } },
+            suggererDepuis: { champ: 'prix_achat', calcul: prixVenteSuggere } },
           { nom: 'unites_par_boite', libelle: t('Unités par boîte'), type: 'nombre', requis: true, defaut: 1,
             aide: t('Ex. 30 comprimés. Laissez 1 si le médicament ne se vend qu\'à la boîte. Une modification convertit le stock existant.') },
           { nom: 'nom_unite_detail', libelle: t('Nom de l\'unité'), type: 'texte', aide: t('Ex. comprimé, gélule, sachet, ampoule'),

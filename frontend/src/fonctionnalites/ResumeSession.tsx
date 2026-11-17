@@ -22,6 +22,7 @@ export function ResumeSession({ session }: { session: SessionCaisse }) {
         <Carte titre={t('Encaissé en espèces')} valeur={formaterMontant(r.total_especes)} />
         <Carte titre={t('Autres paiements')} valeur={formaterMontant(r.total_autres_paiements)} />
         <Carte titre={t('Remboursements (espèces)')} valeur={formaterMontant(r.remboursements_especes)} />
+        {r.nombre_retours > 0 && <Carte titre={t('Retours clients ({nombre})', { nombre: r.nombre_retours })} valeur={formaterMontant(r.total_retours)} />}
         <Carte titre={t('Entrées manuelles')} valeur={formaterMontant(r.entrees_manuelles)} />
         <Carte titre={t('Sorties manuelles')} valeur={formaterMontant(r.sorties_manuelles)} />
         <Carte titre={t('Espèces attendues')} valeur={formaterMontant(r.montant_attendu)} ton="text-marque-700" />

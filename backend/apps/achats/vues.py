@@ -5,8 +5,11 @@ from rest_framework.response import Response
 from apps.fournisseurs.serializers import PaiementFournisseurSerializer
 
 from . import services
-from .models import Achat
-from .serializers import AchatListeSerializer, AchatSerializer, PayerAchatSerializer, ValiderAchatSerializer
+from .models import Achat, BonCommande
+from .serializers import (
+    AchatListeSerializer, AchatSerializer, BonCommandeListeSerializer, BonCommandeSerializer, PayerAchatSerializer,
+    ValiderAchatSerializer,
+)
 
 
 class AchatViewSet(viewsets.ModelViewSet):
@@ -69,3 +72,47 @@ class AchatViewSet(viewsets.ModelViewSet):
     def paiements(self, request, pk=None):
         achat = self.get_object()
         return Response(PaiementFournisseurSerializer(achat.paiements.select_related("fournisseur", "achat", "mode_paiement", "utilisateur"), many=True).data)
+
+
+class BonCommandeViewSet(viewsets.ModelViewSet):
+    """Bons de commande fournisseurs : administrateur uniquement, comme les achats.
+    Brouillon (modifiable) -> Envoyé -> Reçu, ou Annulé ; aucun effet sur le stock."""
+
+    roles_lecture = ()
+    roles_ecriture = ()
+    http_method_names = ["get", "post", "put", "patch", "head", "options"]
+    search_fields = ["reference", "fournisseur__nom", "note"]
+    ordering_fields = ["date_commande", "reference", "total", "statut", "fournisseur__nom"]
+    ordering = ["-date_commande", "-id"]
+
+    def get_serializer_class(self):
+        return BonCommandeListeSerializer if self.action == "list" else BonCommandeSerializer
+
+    def get_queryset(self):
+        qs = BonCommande.objects.select_related("fournisseur", "depot", "utilisateur").prefetch_related("lignes__medicament")
+        p = self.request.query_params
+        for parametre, champ in (("fournisseur", "fournisseur_id"), ("depot", "depot_id"), ("statut", "statut")):
+            if p.get(parametre):
+                qs = qs.filter(**{champ: p[parametre]})
+        return qs
+
+    def _reponse(self, pk):
+        return Response(BonCommandeSerializer(self.get_queryset().get(pk=pk), context=self.get_serializer_context()).data)
+
+    @action(detail=True, methods=["post"], url_path="envoyer")
+    def envoyer(self, request, pk=None):
+        self.get_object()
+        services.envoyer_bon_commande(pk, request.user)
+        return self._reponse(pk)
+
+    @action(detail=True, methods=["post"], url_path="recu")
+    def recu(self, request, pk=None):
+        self.get_object()
+        services.marquer_bon_recu(pk, request.user)
+        return self._reponse(pk)
+
+    @action(detail=True, methods=["post"], url_path="annuler")
+    def annuler(self, request, pk=None):
+        self.get_object()
+        services.annuler_bon_commande(pk, request.user)
+        return self._reponse(pk)

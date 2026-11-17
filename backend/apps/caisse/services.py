@@ -23,6 +23,10 @@ def _somme(qs):
     return qs.aggregate(t=Coalesce(Sum("montant"), Value(ZERO), output_field=MONNAIE))["t"]
 
 
+def _somme_champ(qs, champ):
+    return qs.aggregate(t=Coalesce(Sum(champ), Value(ZERO), output_field=MONNAIE))["t"]
+
+
 def detail_par_mode(mouvements):
     """Ventes et remboursements (net), détaillés par mode de paiement, pour un queryset de MouvementCaisse
     (une session, ou plusieurs sessions pour une vue globale)."""
@@ -77,7 +81,7 @@ def calculer_resume(session):
     )
     entrees = _somme(mouvements.filter(type_mouvement=TypeMouvementCaisse.ENTREE_MANUELLE))
     sorties = _somme(mouvements.filter(type_mouvement=TypeMouvementCaisse.SORTIE_MANUELLE))
-    from apps.ventes.models import Vente
+    from apps.ventes.models import RetourVente, Vente
 
     ventes_valides = Vente.objects.filter(session=session, statut="VALIDEE")
     total_ventes = ventes_valides.aggregate(
@@ -86,12 +90,15 @@ def calculer_resume(session):
     if session.statut == StatutSession.FERMEE:
         total_ventes = session.total_ventes
     attendu = session.montant_initial + ventes_especes + entrees - remboursements_especes - sorties
+    retours = RetourVente.objects.filter(session=session)
     return {
         "nombre_ventes": ventes_valides.count(),
         "total_ventes": total_ventes,
         "total_especes": ventes_especes,
         "total_autres_paiements": ventes_autres,
         "remboursements_especes": remboursements_especes,
+        "nombre_retours": retours.count(),
+        "total_retours": _somme_champ(retours, "total"),
         "entrees_manuelles": entrees,
         "sorties_manuelles": sorties,
         "montant_attendu": attendu,

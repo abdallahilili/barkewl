@@ -73,8 +73,8 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = t('Recher
 
   if (valeur) {
     return (
-      <div className="champ flex items-center justify-between">
-        <span className="truncate">{valeur.nom}</span>
+      <div className="champ flex h-auto min-h-[2.375rem] items-center justify-between" title={valeur.nom}>
+        <span className="min-w-0 whitespace-normal break-words"><bdi>{valeur.nom}</bdi></span>
         <button type="button" className="ms-2 text-slate-400 hover:text-slate-700" onClick={() => onChoisir(null)} aria-label={t('Changer de médicament')}><X size={14} /></button>
       </div>
     )
@@ -94,9 +94,9 @@ export function SelectionMedicament({ valeur, onChoisir, placeholder = t('Recher
                 <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => choisir(m)} disabled={rupture}
                   title={rupture ? t('Aucun stock disponible dans ce dépôt') : undefined}
                   className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-start text-sm ${rupture ? 'cursor-not-allowed opacity-50' : i === actif ? 'bg-marque-50' : 'hover:bg-slate-50'}`}>
-                  <span className="w-full truncate font-medium">{m.nom}</span>
+                  <span className="w-full whitespace-normal break-words font-medium"><bdi>{m.nom}</bdi></span>
                   <span className="flex w-full items-center justify-between gap-2 text-xs text-slate-500">
-                    <span className="truncate">{m.dosage} {m.forme}</span>
+                    <span className="min-w-0 whitespace-normal break-words"><bdi>{m.dosage} {m.forme}</bdi></span>
                     <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                       {depot != null && m.stock_depot != null && (
                         <span className={rupture ? 'font-medium text-red-600' : 'font-medium text-emerald-600'}>

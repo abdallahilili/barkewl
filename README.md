@@ -36,3 +36,5 @@ dash board
 - ajouter filtrage par type de Wollet avec total dans le table et l'exportation![alt text](image-1.png)
 
 - devise en arabe : MRU (أوقية)
+
+![alt text](image.png)

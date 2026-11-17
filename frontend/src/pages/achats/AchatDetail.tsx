@@ -14,6 +14,7 @@ import type { Achat, Depot, Fournisseur, ModePaiement } from '../../types'
 import { aujourdhui, formaterDateHeure, formaterMontant, libelleStatut } from '../../utilitaires/formatage'
 import { extraireErreur } from '../../utilitaires/erreurs'
 
+import { prixVenteSuggereTexte } from '../../utilitaires/prix'
 import { t } from '../../i18n'
 interface LigneSaisie {
   cle: number
@@ -24,12 +25,14 @@ interface LigneSaisie {
   quantite: string
   prix_achat: string
   prix_vente: string
+  /** Vrai dès que l'utilisateur saisit lui-même le prix de vente : on ne le recalcule plus. */
+  prix_vente_manuel: boolean
 }
 
 interface Paiement { id: number; montant: number; date_paiement: string; mode_paiement_nom: string | null; utilisateur_nom: string; reference: string }
 
 let compteur = 0
-const nouvelleLigne = (): LigneSaisie => ({ cle: ++compteur, medicament: null, numero_lot: '', date_fabrication: '', date_peremption: '', quantite: '', prix_achat: '', prix_vente: '' })
+const nouvelleLigne = (): LigneSaisie => ({ cle: ++compteur, medicament: null, numero_lot: '', date_fabrication: '', date_peremption: '', quantite: '', prix_achat: '', prix_vente: '', prix_vente_manuel: false })
 
 export default function AchatDetail() {
   const { id } = useParams()
@@ -95,7 +98,7 @@ export default function AchatDetail() {
     setLignes((a.lignes ?? []).map((l) => ({
       cle: ++compteur, medicament: l.medicament ? { id: l.medicament, nom: l.medicament_nom ?? '' } : null, numero_lot: l.numero_lot,
       date_fabrication: l.date_fabrication ?? '', date_peremption: l.date_peremption, quantite: String(l.quantite),
-      prix_achat: String(l.prix_achat), prix_vente: l.prix_vente == null ? '' : String(l.prix_vente),
+      prix_achat: String(l.prix_achat), prix_vente: l.prix_vente == null ? '' : String(l.prix_vente), prix_vente_manuel: l.prix_vente != null,
     })))
     if (a.statut === 'VALIDE') api.get<Paiement[]>(`/achats/${a.id}/paiements/`).then((r) => setPaiements(r.data)).catch(() => undefined)
   }
@@ -224,21 +227,22 @@ export default function AchatDetail() {
               <tr key={l.cle} className="align-top">
                 <td className="px-3 py-2">
                   {modifiable
-                    ? <SelectionMedicament valeur={l.medicament} onChoisir={(m) => majLigne(l.cle, m ? { medicament: { id: m.id, nom: `${m.nom} ${m.dosage}`.trim() }, prix_achat: l.prix_achat || String(m.prix_achat ?? ''), prix_vente: l.prix_vente || '' } : { medicament: null })} placeholder={t('Rechercher…')} />
+                    ? <SelectionMedicament valeur={l.medicament} onChoisir={(m) => majLigne(l.cle, m ? { medicament: { id: m.id, nom: `${m.nom} ${m.dosage}`.trim() } } : { medicament: null })} placeholder={t('Rechercher…')} />
                     : l.medicament?.nom}
                 </td>
                 <td className="px-3 py-2">{modifiable ? <input className="champ" value={l.numero_lot} onChange={(e) => majLigne(l.cle, { numero_lot: e.target.value })} aria-label={t('Numéro de lot')} /> : l.numero_lot}</td>
                 <td className="px-3 py-2">{modifiable ? <input className="champ" type="date" value={l.date_fabrication} onChange={(e) => majLigne(l.cle, { date_fabrication: e.target.value })} aria-label={t('Date de fabrication')} /> : l.date_fabrication || '—'}</td>
                 <td className="px-3 py-2">{modifiable ? <input className="champ" type="date" value={l.date_peremption} onChange={(e) => majLigne(l.cle, { date_peremption: e.target.value })} aria-label={t('Date de péremption')} /> : l.date_peremption}</td>
                 <td className="px-3 py-2 text-end">{modifiable ? <input className="champ w-24 text-end" type="number" min={1} value={l.quantite} onChange={(e) => majLigne(l.cle, { quantite: e.target.value })} aria-label={t('Quantité')} /> : l.quantite}</td>
-                <td className="px-3 py-2 text-end">{modifiable ? <input className="champ w-28 text-end" type="number" min={0} step="0.01" value={l.prix_achat} onChange={(e) => majLigne(l.cle, { prix_achat: e.target.value })} aria-label={t('Prix d\'achat')} /> : formaterMontant(Number(l.prix_achat))}</td>
-                <td className="px-3 py-2 text-end">{modifiable ? <input className="champ w-28 text-end" type="number" min={0} step="0.01" placeholder={t('Idem fiche')} value={l.prix_vente} onChange={(e) => majLigne(l.cle, { prix_vente: e.target.value })} aria-label={t('Prix de vente')} /> : (l.prix_vente ? formaterMontant(Number(l.prix_vente)) : '—')}</td>
+                <td className="px-3 py-2 text-end">{modifiable ? <input className="champ w-28 text-end" type="number" min={0} step="0.01" value={l.prix_achat} onChange={(e) => majLigne(l.cle, { prix_achat: e.target.value, ...(l.prix_vente_manuel ? {} : { prix_vente: prixVenteSuggereTexte(e.target.value) }) })} aria-label={t('Prix d\'achat')} /> : formaterMontant(Number(l.prix_achat))}</td>
+                <td className="px-3 py-2 text-end">{modifiable ? <input className="champ w-28 text-end" type="number" min={0} step="0.01" placeholder={t('Idem fiche')} value={l.prix_vente} onChange={(e) => majLigne(l.cle, { prix_vente: e.target.value, prix_vente_manuel: e.target.value !== '' })} aria-label={t('Prix de vente')} /> : (l.prix_vente ? formaterMontant(Number(l.prix_vente)) : '—')}</td>
                 <td className="px-3 py-2 pt-4 text-end font-medium">{formaterMontant((Number(l.quantite) || 0) * (Number(l.prix_achat) || 0))}</td>
                 <td className="px-3 py-2 pt-3">{modifiable && lignes.length > 1 && <button className="text-slate-400 hover:text-red-600" onClick={() => setLignes((x) => x.filter((y) => y.cle !== l.cle))} aria-label={t('Retirer la ligne')}><Trash2 size={16} /></button>}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        {modifiable && <p className="border-t border-slate-100 px-3 pt-2 text-xs text-slate-500">{t('Prix de vente calculé automatiquement (+25 % si le prix d\'achat est inférieur à 200, +15 % sinon) — modifiable.')}</p>}
         <div className="flex items-center justify-between border-t border-slate-200 px-3 py-3">
           {modifiable ? <button className="btn-secondaire btn-petit" onClick={() => setLignes((x) => [...x, nouvelleLigne()])}><Plus size={14} /> {' '}{t('Ajouter une ligne')}</button> : <span />}
           <p className="text-lg font-semibold">{t('Total :')}{' '}{formaterMontant(achat && !modifiable ? achat.total : total)}</p>

@@ -2,7 +2,7 @@ import { AlertTriangle } from 'lucide-react'
 import { ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '../composants/Badge'
-import { Chargement, EnTetePage, MessageErreur } from '../composants/EnTetePage'
+import { Chargement, MessageErreur } from '../composants/EnTetePage'
 import { libellePeriode, SelecteurPeriode, usePeriode } from '../composants/SelecteurPeriode'
 import { useAuth } from '../hooks/useAuth'
 import { api } from '../services/api'
@@ -49,7 +49,7 @@ function Panneau({ titre, vers, children }: { titre: string; vers?: string; chil
 }
 
 export default function TableauDeBord() {
-  const { utilisateur, peut } = useAuth()
+  const { peut } = useAuth()
   const [periode, setPeriode] = usePeriode()
   const [donnees, setDonnees] = useState<Donnees | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -67,7 +67,6 @@ export default function TableauDeBord() {
 
   return (
     <div>
-      <EnTetePage titre={t('Bonjour {nom}', { nom: utilisateur?.prenom || utilisateur?.nom })} description={t('Situation du {date}', { date: formaterDate(new Date().toISOString().slice(0, 10)) })} />
       <SelecteurPeriode periode={periode} onChange={setPeriode} />
 
       {donnees.sauvegarde?.en_retard && (
@@ -78,7 +77,7 @@ export default function TableauDeBord() {
               ? t('Attention : la dernière sauvegarde des données date du {date}.', { date: formaterDateHeure(donnees.sauvegarde.derniere.date) })
               : t('Attention : aucune sauvegarde des données n\'a encore été faite.')}
           </p>
-          <Link to="/administration/parametres" state={{ onglet: 'sauvegardes' }} className="btn-primaire">{t('Sauvegarder maintenant')}</Link>
+          <Link to="/administration/donnees" className="btn-primaire">{t('Sauvegarder maintenant')}</Link>
         </div>
       )}
 
@@ -90,7 +89,7 @@ export default function TableauDeBord() {
               ? t('La clé USB de sauvegarde n\'a reçu aucune copie depuis le {date} — vérifiez qu\'elle est branchée.', { date: formaterDateHeure(donnees.sauvegarde.usb_derniere_copie) })
               : t('La clé USB de sauvegarde n\'a encore reçu aucune copie — vérifiez qu\'elle est branchée.')}
           </p>
-          <Link to="/administration/parametres" state={{ onglet: 'sauvegardes' }} className="btn-secondaire">{t('Voir les sauvegardes')}</Link>
+          <Link to="/administration/donnees" className="btn-secondaire">{t('Voir les sauvegardes')}</Link>
         </div>
       )}
 

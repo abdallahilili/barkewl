@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.achats",
     "apps.ventes",
     "apps.caisse",
+    "apps.depenses",
     "apps.facturation",
     "apps.rapports",
     "apps.licence",

@@ -35,7 +35,7 @@ def roles_effectifs(role):
 MODULES_PAR_ROLE = {
     ADMIN: [
         "tableau_de_bord", "ventes", "stock_etat", "stock_gestion", "transferts", "medicaments",
-        "lots", "achats", "caisse", "facturation", "depots", "rapports", "administration",
+        "lots", "achats", "caisse", "depenses", "facturation", "depots", "rapports", "administration",
     ],
     PHARMACIEN: ["tableau_de_bord", "ventes", "stock_etat", "stock_gestion", "transferts", "medicaments", "lots",
                  "caisse", "facturation"],
