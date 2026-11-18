@@ -249,6 +249,15 @@ class TestRapports(BaseRetours):
         plus = self.admin_api.get("/api/rapports/produits/?type=plus_vendus").data["lignes"]
         self.assertEqual([l["medicament"] for l in plus], ["Paracétamol 500 mg", "Amoxicilline"])
         self.assertEqual(plus[0]["quantite"], 2)
+        # CMM = boîtes vendues par mois sur la période : 30 jours par défaut (31 jours comptés) = 1 mois.
+        brut = self.admin_api.get("/api/rapports/produits/?type=plus_vendus").data
+        self.assertEqual(brut["mois"], Decimal("1.0"))
+        self.assertEqual(brut["lignes"][0]["cmm"], Decimal("2.00"))
+        # Période de 3 mois (90 jours) : la même quantité est répartie sur 3 mois.
+        debut = (timezone.localdate() - timedelta(days=89)).isoformat()
+        trois = self.admin_api.get(f"/api/rapports/produits/?type=plus_vendus&date_debut={debut}").data
+        self.assertEqual(trois["mois"], Decimal("3.0"))
+        self.assertEqual(trois["lignes"][0]["cmm"], Decimal("0.67"))
         moins = self.admin_api.get("/api/rapports/produits/?type=moins_vendus").data["lignes"]
         self.assertEqual(moins[0]["medicament"], "Amoxicilline")
         dormants = self.admin_api.get("/api/rapports/produits/?type=dormants&jours=30").data

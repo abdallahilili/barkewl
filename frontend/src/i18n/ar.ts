@@ -1183,4 +1183,6 @@ export const AR: Record<string, string> = {
   "Boîtes vendues par mois en moyenne sur les {mois} derniers mois (retours déduits). Le badge indique pendant combien de mois le stock actuel peut tenir à ce rythme.": "عدد العلب المبيعة شهريًا في المتوسط خلال آخر {mois} أشهر (بعد خصم المرتجعات). تدل الشارة على عدد الأشهر التي يكفيها المخزون الحالي بهذا المعدل.",
   "{n} / mois": "{n} / شهر",
   "{n} mois": "{n} أشهر",
+  "CMM (consommation moyenne mensuelle) : boîtes vendues ÷ {n} mois, soit le nombre de mois de la période choisie.": "المتوسط الشهري للاستهلاك (CMM): العلب المبيعة ÷ {n} أشهر، أي عدد أشهر الفترة المختارة.",
+  "CMM (boîtes / mois)": "CMM (علب / شهر)",
 }

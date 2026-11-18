@@ -64,17 +64,20 @@ class RapportProduitsView(APIView):
             ligne[0] -= l["rendues"]
             ligne[1] -= l["montant"]
         medicaments = Medicament.objects.in_bulk([i for i, (unites, _) in net.items() if unites > 0])
+        mois = calculs.nombre_de_mois(debut, fin)
         lignes = []
         for identifiant, (unites, montant) in net.items():
             medicament = medicaments.get(identifiant)
             if medicament is None:
                 continue
             boites = (Decimal(unites) / medicament.unites_par_boite).quantize(DEUX)
+            # CMM : boîtes vendues par mois en moyenne sur la période choisie.
+            cmm = (Decimal(unites) / medicament.unites_par_boite / mois).quantize(DEUX)
             lignes.append({"medicament": _nom(medicament), "quantite": unites, "quantite_texte": decrire_quantite(medicament, unites),
-                           "boites": boites, "montant": montant})
+                           "boites": boites, "cmm": cmm, "montant": montant})
         lignes.sort(key=lambda l: (l["boites"], l["montant"]), reverse=type_rapport == "plus_vendus")
-        return Response({"type": type_rapport, "date_debut": debut, "date_fin": fin, "lignes": lignes[:limite],
-                         "nombre_produits_vendus": len(lignes)})
+        return Response({"type": type_rapport, "date_debut": debut, "date_fin": fin, "mois": mois,
+                         "lignes": lignes[:limite], "nombre_produits_vendus": len(lignes)})
 
     def dormants(self, request):
         try:

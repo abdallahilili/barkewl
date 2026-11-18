@@ -68,6 +68,13 @@ def cout_achat_ventes(debut, fin, depot=None):
 MOIS_CMM = 3
 
 
+def nombre_de_mois(debut, fin):
+    """Nombre de mois d'une période (jours comptés des deux côtés ÷ 30, arrondi à 0,1), jamais moins de 1 :
+    du 1er janvier au 31 mars = 3 mois ; une semaine compte pour 1 mois (pas d'extrapolation hasardeuse)."""
+    mois = (Decimal((fin - debut).days + 1) / 30).quantize(Decimal("0.1"))
+    return max(mois, Decimal("1"))
+
+
 def cmm_principaux(limite=8, mois=MOIS_CMM):
     """
     CMM (consommation moyenne mensuelle) : quantité vendue par mois en moyenne sur les `mois` derniers mois

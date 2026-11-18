@@ -148,7 +148,7 @@ function RapportProduits({ type }: { type: TypeProduits }) {
   const [limite, setLimite] = useState('20')
   const [jours, setJours] = useState('90')
   const dormants = type === 'dormants'
-  interface Reponse { lignes: Ligne[]; nombre_produits?: number; valeur_immobilisee?: number; nombre_produits_vendus?: number }
+  interface Reponse { lignes: Ligne[]; mois?: number; nombre_produits?: number; valeur_immobilisee?: number; nombre_produits_vendus?: number }
   const { donnees, chargement, erreur } = useRapport<Reponse>('produits', dormants ? { type, jours } : { type, date_debut: p.debut, date_fin: p.fin, limite })
   return (
     <div>
@@ -172,8 +172,11 @@ function RapportProduits({ type }: { type: TypeProduits }) {
               colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'quantite_texte', titre: 'Stock' }, { cle: 'valeur', titre: 'Valeur', format: 'montant', alignement: 'droite' }, { cle: 'derniere', titre: 'Dernière vente' }, { cle: 'jours_sans_vente', titre: 'Jours sans vente', format: 'nombre', alignement: 'droite' }]} />
           </>
         ) : (
-          <TableauRapport nomFichier={type === 'plus_vendus' ? 'produits-les-plus-vendus' : 'produits-les-moins-vendus'} lignes={donnees.lignes}
-            colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'quantite_texte', titre: 'Quantité vendue (nette)' }, { cle: 'boites', titre: 'Équivalent boîtes', format: 'nombre', alignement: 'droite' }, { cle: 'montant', titre: 'Montant', format: 'montant', alignement: 'droite' }]} />
+          <>
+            <p className="mb-3 text-sm text-slate-600">{t('CMM (consommation moyenne mensuelle) : boîtes vendues ÷ {n} mois, soit le nombre de mois de la période choisie.', { n: formaterNombre(donnees.mois) })}</p>
+            <TableauRapport nomFichier={type === 'plus_vendus' ? 'produits-les-plus-vendus' : 'produits-les-moins-vendus'} lignes={donnees.lignes}
+              colonnes={[{ cle: 'medicament', titre: 'Médicament' }, { cle: 'quantite_texte', titre: 'Quantité vendue (nette)' }, { cle: 'boites', titre: 'Équivalent boîtes', format: 'nombre', alignement: 'droite' }, { cle: 'cmm', titre: 'CMM (boîtes / mois)', format: 'nombre', alignement: 'droite' }, { cle: 'montant', titre: 'Montant', format: 'montant', alignement: 'droite' }]} />
+          </>
         )
       )}
     </div>
