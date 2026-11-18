@@ -25,6 +25,7 @@ interface Donnees {
     perimes: { lot_id: number; medicament: string; numero_lot: string; depot: string; quantite: number; quantite_texte?: string; date_peremption: string }[]
   }
   derniers_mouvements?: MouvementStock[]
+  cmm?: { mois: number; nombre_produits: number; lignes: { medicament: string; cmm: number | string; stock_texte: string; couverture_mois: number | string }[] }
   sauvegarde?: { derniere: { date: string } | null; en_retard: boolean; usb_en_retard?: boolean; usb_derniere_copie?: string | null }
 }
 
@@ -133,6 +134,29 @@ export default function TableauDeBord() {
                 {a.ruptures.map((r) => <li key={`r${r.medicament_id}`} className="flex justify-between gap-2 py-1.5"><span>{r.medicament}</span><Badge ton="rouge">{t('Rupture')}</Badge></li>)}
                 {a.stock_faible.map((r) => <li key={`f${r.medicament_id}`} className="flex justify-between gap-2 py-1.5"><span>{r.medicament}</span><Badge ton="orange">{r.stock_texte ?? r.stock} {' '}{t('/ min.')}{' '}{r.minimum}</Badge></li>)}
               </ul>
+            )}
+          </Panneau>
+        )}
+        {donnees.cmm && (
+          <Panneau titre={t('CMM — Consommation moyenne mensuelle')} vers={peut('rapports') ? '/rapports?rapport=plus_vendus' : undefined}>
+            {donnees.cmm.lignes.length === 0 ? <p className="text-slate-500">{t('Aucune vente sur les derniers mois.')}</p> : (
+              <>
+                <p className="mb-2 text-xs text-slate-500">{t('Boîtes vendues par mois en moyenne sur les {mois} derniers mois (retours déduits). Le badge indique pendant combien de mois le stock actuel peut tenir à ce rythme.', { mois: donnees.cmm.mois })}</p>
+                <ul className="divide-y divide-slate-100">
+                  {donnees.cmm.lignes.map((l) => {
+                    const mois = Number(l.couverture_mois)
+                    return (
+                      <li key={l.medicament} className="flex items-center justify-between gap-2 py-1.5">
+                        <span>{l.medicament} <span className="text-slate-500">— {l.stock_texte}</span></span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="font-medium">{t('{n} / mois', { n: formaterNombre(Number(l.cmm)) })}</span>
+                          <Badge ton={mois < 1 ? 'rouge' : mois < 2 ? 'orange' : 'vert'}>{t('{n} mois', { n: formaterNombre(mois) })}</Badge>
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
             )}
           </Panneau>
         )}

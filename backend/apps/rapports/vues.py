@@ -286,6 +286,7 @@ class TableauDeBordView(APIView):
             donnees["alertes"] = {k: alerte[k] for k in ("stock_faible", "ruptures", "peremption_proche", "perimes")}
             recents = MouvementStock.objects.select_related("utilisateur", "medicament", "lot", "depot")[:8]
             donnees["derniers_mouvements"] = MouvementStockSerializer(recents, many=True).data
+            donnees["cmm"] = calculs.cmm_principaux()
         else:
             synth = alertes.calculer_synthese()
             donnees["stock"] = {k: synth[k] for k in ("nombre_ruptures", "nombre_stock_faible", "nombre_bientot_perimes", "nombre_perimes")}

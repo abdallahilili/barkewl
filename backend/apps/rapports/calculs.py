@@ -8,10 +8,12 @@ Règles :
   - un retour revendable remet le produit en stock : son coût d'achat est retiré du coût des ventes ;
     un retour non revendable est une perte : son coût reste dans le coût des ventes.
 """
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum, Value
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from apps.ventes.models import EtatRetour, LigneRetourVente, LigneVente, RetourVente, Vente
 
@@ -61,3 +63,46 @@ def cout_achat_ventes(debut, fin, depot=None):
     retours = LigneRetourVente.objects.filter(retour__in=retours_periode(debut, fin, depot), etat=EtatRetour.REVENDABLE)
     remis_en_stock = retours.aggregate(t=somme(COUT_LIGNE_RETOUR))["t"]
     return vendu - remis_en_stock
+
+
+MOIS_CMM = 3
+
+
+def cmm_principaux(limite=8, mois=MOIS_CMM):
+    """
+    CMM (consommation moyenne mensuelle) : quantité vendue par mois en moyenne sur les `mois` derniers mois
+    (30 jours par mois), nette des retours clients. Pour chaque produit : la CMM (en boîtes) et la couverture,
+    c'est-à-dire le nombre de mois que le stock actuel permet de tenir à ce rythme.
+    Renvoie les `limite` produits qui se consomment le plus.
+    """
+    from apps.medicaments.conditionnement import decrire_quantite
+    from apps.medicaments.models import Medicament
+    from apps.stock.models import Stock
+
+    fin = timezone.localdate()
+    debut = fin - timedelta(days=30 * mois)
+    vendu = (LigneVente.objects.filter(vente__in=ventes_validees(debut, fin)).values("medicament_id")
+             .annotate(vendues=Sum(F("quantite") * F("unites_par_conditionnement"))))
+    rendu = (LigneRetourVente.objects.filter(retour__in=retours_periode(debut, fin))
+             .values("ligne_vente__medicament_id").annotate(rendues=Sum("unites")))
+    unites = {l["medicament_id"]: l["vendues"] for l in vendu}
+    for l in rendu:
+        unites[l["ligne_vente__medicament_id"]] = unites.get(l["ligne_vente__medicament_id"], 0) - l["rendues"]
+    unites = {i: u for i, u in unites.items() if u > 0}
+    medicaments = Medicament.objects.in_bulk(list(unites))
+    classes = sorted(unites, key=lambda i: Decimal(unites[i]) / medicaments[i].unites_par_boite, reverse=True)
+    retenus = classes[:limite]
+    en_stock = {l["lot__medicament_id"]: l["total"] for l in
+                Stock.objects.filter(lot__medicament_id__in=retenus).values("lot__medicament_id").annotate(total=Sum("quantite"))}
+    lignes = []
+    for i in retenus:
+        m = medicaments[i]
+        par_mois = Decimal(unites[i]) / mois                      # unités par mois
+        stock = max(en_stock.get(i, 0), 0)
+        lignes.append({
+            "medicament": f"{m.nom} {m.dosage}".strip(),
+            "cmm": (par_mois / m.unites_par_boite).quantize(Decimal("0.1")),     # boîtes par mois
+            "stock_texte": decrire_quantite(m, stock),
+            "couverture_mois": (Decimal(stock) / par_mois).quantize(Decimal("0.1")),
+        })
+    return {"mois": mois, "nombre_produits": len(unites), "lignes": lignes}

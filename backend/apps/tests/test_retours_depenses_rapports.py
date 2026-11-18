@@ -278,6 +278,17 @@ class TestRapports(BaseRetours):
         self.assertEqual(d2["solde_initial"], Decimal("600.00"))
         self.assertEqual(self.admin_api.get("/api/rapports/fournisseur/").status_code, 400)
 
+    def test_cmm_du_tableau_de_bord(self):
+        self.retourner(self.ligne_court, 3)            # 12 vendus - 3 rendus = 9 unités sur les 3 derniers mois
+        cmm = self.admin_api.get("/api/tableau-de-bord/").data["cmm"]
+        self.assertEqual((cmm["mois"], cmm["nombre_produits"]), (3, 1))
+        ligne = cmm["lignes"][0]
+        self.assertEqual(ligne["medicament"], "Paracétamol 500 mg")
+        self.assertEqual(ligne["cmm"], Decimal("3.0"))               # 9 unités / 3 mois (1 unité par boîte)
+        self.assertEqual(ligne["couverture_mois"], Decimal("23.7"))  # stock 50 + 3 + 18 = 71 ; 71 / 3
+        # Le vendeur n'a pas ce panneau.
+        self.assertNotIn("cmm", self.client_pour(self.caissier).get("/api/tableau-de-bord/").data)
+
     def test_rapports_de_gestion_reserves_au_proprietaire(self):
         for chemin in ("produits", "benefice", "fournisseur"):
             for utilisateur in (self.caissier, self.pharmacien, self.magasinier):

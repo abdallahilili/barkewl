@@ -1178,4 +1178,9 @@ export const AR: Record<string, string> = {
   "Livraison prévue": "التسليم المتوقع",
   "Total estimé": "المجموع التقديري",
   "Envoyé": "مُرسَل",
+  "CMM — Consommation moyenne mensuelle": "المتوسط الشهري للاستهلاك (CMM)",
+  "Aucune vente sur les derniers mois.": "لا توجد مبيعات في الأشهر الأخيرة.",
+  "Boîtes vendues par mois en moyenne sur les {mois} derniers mois (retours déduits). Le badge indique pendant combien de mois le stock actuel peut tenir à ce rythme.": "عدد العلب المبيعة شهريًا في المتوسط خلال آخر {mois} أشهر (بعد خصم المرتجعات). تدل الشارة على عدد الأشهر التي يكفيها المخزون الحالي بهذا المعدل.",
+  "{n} / mois": "{n} / شهر",
+  "{n} mois": "{n} أشهر",
 }
